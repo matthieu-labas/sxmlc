@@ -252,15 +252,15 @@ int XMLNode_search_attribute(XMLNode* node, char* attr_name, int isearch)
 	return -1;
 }
 
-int XMLNode_remove_attribute(XMLNode* node, int iattr)
+int XMLNode_remove_attribute(XMLNode* node, int i_attr)
 {
-	if (node == NULL || iattr < 0 || iattr >= node->n_attributes) return -1;
+	if (node == NULL || i_attr < 0 || i_attr >= node->n_attributes) return -1;
 	
 	/* Free attribute fields first */
-	free(node->attributes[iattr].name);
-	free(node->attributes[iattr].value);
+	if (node->attributes[i_attr].name != NULL) free(node->attributes[i_attr].name);
+	if (node->attributes[i_attr].value != NULL) free(node->attributes[i_attr].value);
 	
-	memmove(&node->attributes[iattr], &node->attributes[iattr+1], (node->n_attributes - iattr - 1) * sizeof(XMLAttribute));
+	memmove(&node->attributes[i_attr], &node->attributes[i_attr+1], (node->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
 	node->attributes = (XMLAttribute*)realloc(node->attributes, --(node->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
 	
 	return node->n_attributes;
@@ -328,6 +328,70 @@ int XMLNode_remove_child(XMLNode* node, int ichild)
 	node->children = (XMLNode**)realloc(node->children, --(node->n_children) * sizeof(XMLNode*)); /* Frees memory */
 	
 	return node->n_children;
+}
+
+int XMLNode_equal(XMLNode* node1, XMLNode* node2)
+{
+	int i, j;
+
+	if (node1 == node2) return true;
+
+	if (node1 == NULL || node2 == NULL) return false;
+
+	if (strcmp(node1->tag, node2->tag)) return false;
+
+	/* Test all attributes from 'node1' */
+	for (i = 0; i < node1->n_attributes; i++) {
+		if (!node1->attributes[i].active) continue;
+		j = XMLNode_search_attribute(node2, node1->attributes[i].name, 0);
+		if (j < 0) return false;
+		if (strcmp(node1->attributes[i].name, node2->attributes[j].name)) return false;
+	}
+
+	/* Test other attributes from 'node2' that might not be in 'node1' */
+	for (i = 0; i < node2->n_attributes; i++) {
+		if (!node2->attributes[i].active) continue;
+		j = XMLNode_search_attribute(node1, node2->attributes[i].name, 0);
+		if (j < 0) return false;
+		if (strcmp(node2->attributes[i].name, node1->attributes[j].name)) return false;
+	}
+
+	return true;
+}
+
+XMLNode* XMLNode_next_sibling(XMLNode* node)
+{
+	int i;
+	XMLNode* father;
+
+	if (node == NULL || node->father == NULL) return NULL;
+
+	father = node->father;
+	for (i = 0; i < father->n_children && father->children[i] != node; i++) ;
+	i++; /* father->children[i] is now 'node' next sibling */
+
+	return i < father->n_children ? father->children[i] : NULL;
+}
+
+static XMLNode* _XMLNode_next(XMLNode* node, int in_children)
+{
+	XMLNode* node2;
+
+	if (node == NULL) return NULL;
+
+	/* Check first child */
+	if (in_children && node->n_children > 0) return node->children[0];
+
+	/* Check next sibling */
+	if ((node2 = XMLNode_next_sibling(node)) != NULL) return node2;
+
+	/* Check next uncle */
+	return _XMLNode_next(node->father, false);
+}
+
+XMLNode* XMLNode_next(XMLNode* node)
+{
+	return _XMLNode_next(node, true);
 }
 
 /* --- XMLDoc methods --- */
@@ -426,6 +490,11 @@ void XMLNode_print(XMLNode* node, FILE* f, char* tag_sep, char* child_sep, int s
 		/*cur_sz_line += strlen(node->tag) + 4;*/
 		return;
 	}
+	else if (node->tag_type == TAG_CDATA) {
+		fprintf(f, "<![CDATA[%s]]/>", node->tag);
+		/*cur_sz_line += strlen(node->tag) + 13;*/
+		return;
+	}
 	else {
 		/* Print tag name */
 		fprintf(f, "<%s", node->tag);
@@ -456,7 +525,7 @@ void XMLNode_print(XMLNode* node, FILE* f, char* tag_sep, char* child_sep, int s
 	/* End the tag if there are no children and no text */
 	if (node->n_children == 0 && (node->text == NULL || node->text[0] == 0)) {
 		fprintf(f, "/>");
-		cur_sz_line += 2;
+		/*cur_sz_line += 2;*/
 		return;
 	}
 	else {
@@ -558,16 +627,30 @@ static int _parse_XML_1string(char* str, XMLNode* xmlnode)
 		return TAG_PROLOG;
 	}
 	
-	/* Comment tag */
+	/* Comment or CDATA tag */
 	if (str[1] == '!') {
-		if (strncmp(str, "<!--", 4)) return 0;
-		if (strncmp(str+len-3, "-->", 3)) return TAG_PARTIAL_COMMENT; /* There probably is a '>' inside the comment (typically when commenting tags) */
-		xmlnode->tag = (char*)malloc(len-6); /* 'len' - "<!--" and "-->" + '\0' */
-		if (xmlnode->tag == NULL) return 0;
-		strncpy(xmlnode->tag, str+4, len-7);
-		xmlnode->tag[len-7] = 0;
-		xmlnode->tag_type = TAG_COMMENT;
-		return TAG_COMMENT;
+		/* Comment */
+		if (!strncmp(str, "<!--", 4)) {
+			if (strncmp(str+len-3, "-->", 3)) return TAG_PARTIAL_COMMENT; /* There probably is a '>' inside the comment (typically when commenting tags) */
+			xmlnode->tag = (char*)malloc(len-6); /* 'len' - "<!--" and "-->" + '\0' */
+			if (xmlnode->tag == NULL) return 0;
+			strncpy(xmlnode->tag, str+4, len-7);
+			xmlnode->tag[len-7] = 0;
+			xmlnode->tag_type = TAG_COMMENT;
+			return TAG_COMMENT;
+		}
+
+		/* CDATA */
+		/* TODO: How to handle "]]/>" inside a CDATA ? */
+		if (!strncmp(str, "<![CDATA[", 9)) {
+			if (strncmp(str+len-4, "]]/>", 4)) return TAG_PARTIAL_CDATA; /* There probably is a '>' inside the CDATA */
+			xmlnode->tag = (char*)malloc(len-12); /* 'len' - "<![CDATA[" and "]]/>" + '\0' */
+			if (xmlnode->tag == NULL) return 0;
+			strncpy(xmlnode->tag, str+9, len-13);
+			xmlnode->tag[len-13] = 0;
+			xmlnode->tag_type = TAG_CDATA;
+			return TAG_CDATA;
+		}
 	}
 	
 	if (str[1] == '/') tag_end = 1;
@@ -706,8 +789,8 @@ int XMLDoc_parse_file_DOM(char* filename, XMLDoc* doc)
 			free(node);
 		}
 		else { /* Add 'node' to 'father' children */
-			/* If the line looks like a comment but is not properly finished, loop until we find the end. */
-			while (tag_type == TAG_PARTIAL_COMMENT) {
+			/* If the line looks like a comment (or CDATA) but is not properly finished, loop until we find the end. */
+			while (tag_type == TAG_PARTIAL_COMMENT || tag_type == TAG_PARTIAL_CDATA) {
 				n0 = read_line_alloc(f, &line, &sz, n0, 0, '>', true, '\n', &ncr); /* Go on reading the file from current position until next '>' */
 				if (!n0) {
 					ret = false;
@@ -784,8 +867,8 @@ int XMLDoc_parse_file_SAX(char* filename, SAX_Callbacks* sax, void* user)
 			if (exit) break;
 		}
 		else { /* Add 'node' to 'father' children */
-			/* If the line looks like a comment but is not properly finished, loop until we find the end. */
-			while (tag_type == TAG_PARTIAL_COMMENT) {
+			/* If the line looks like a comment (or CDATA) but is not properly finished, loop until we find the end. */
+			while (tag_type == TAG_PARTIAL_COMMENT || tag_type == TAG_PARTIAL_CDATA) {
 				n0 = read_line_alloc(f, &line, &sz, n0, 0, '>', true, '\n', &ncr); /* Go on reading the file from current position until next '>' */
 				if (!n0) {
 					ret = false;

@@ -110,6 +110,12 @@ margin-left: 2%;
 <div class="middle">
 <h2>How to</h2>
 
+<a href="#READ">Read an XML document from a file</a><br/>
+<a href="#WRITE">Create an XML document</a><br/>
+<a href="#SEARCH">Search an XML document</a><br/>
+
+<hr/>
+
 <h3>Handle XML documents</h3>
 <p>
 An XML document is described by the <code>XMLDoc</code> struct and is handled through all <code>XMLDoc_*</code> methods.<br/>
@@ -132,17 +138,18 @@ XMLDoc_init(doc);
 </tr></table>
 </p>
 
+<a name="READ"/>
 <h4>Read an XML document from a file</h4>
 <p>
 It is as simple as a call to one of the <code>XMLDoc_parse_file</code> method:
 <pre class="code">
 XMLDoc_parse_file("path_to_my_file.xml", &doc);
 XMLDoc_parse_file_DOM("path_to_my_file.xml", &doc);
-int XMLDoc_parse_file_SAX(char* filename, SAX_Callbacks* sax, void* user);
+XMLDoc_parse_file_SAX("path_to_my_file.xml", &sax_callbacks, &user_data);
 </pre>
 The first two methods are the same and use the DOM implementation, creating the XML tree internally.
 You can navigate through it after the whole file has been loaded (to add or remove nodes).<br/>
-The last method uses SAX implementation and calls the callback functions given in <code>sax</code>.
+The last method uses SAX implementation and calls the callback functions given in <code>sax_callbacks</code>.
 </p>
 
 <h5>SAX parser</h5>
@@ -171,6 +178,7 @@ It also has the <code>tag_type</code> attribute set to know if the node is a com
 Each callback should return non-zero to tell the parser to go on with parsing, or return 0 to stop parsing.
 </p>
 
+<a name="WRITE"/>
 <h4>Create an XML document</h4>
 <p>
 After an XML document has been initialized, you can start adding elements using the
@@ -242,10 +250,83 @@ void XMLDoc_print(XMLDoc* doc, FILE* f, char* tag_sep, char* child_sep, int sz_l
 	children tags from their father tag. <code>"\t"</code> should be used for pretty print.
 </li>
 </ul>
-Additionnal parameters can be provided to automatically split a tag on several lines according to
+Additional parameters can be provided to automatically split a tag on several lines according to
 a line size (the <code>sz_line</code> parameter), as well as specifying how many characters a <code>tab</code>
 should be accounted for (the <code>nb_char_tab</code> parameter).
 </p>
+
+<a name="SEARCH"/>
+<h4>Search in an XML document</h4>
+<p>
+The search can be performed on <code>XMLNode</code> structures, which is of course easier if the original document was read
+using the DOM function, or re-created by the user from the SAX callbacks.
+</p>
+
+<p>
+<code>XMLSearch_init</code> should be called first on an <code>XMLSearch</code> structure to zero all members.<br/>
+Then, use the <code>XMLSearch_search_set_tag</code>, <code>XMLSearch_search_set_text</code> and <code>XMLSearch_search_add_attribute</code>
+to specify one or more search criteria.
+</p>
+
+<p>
+The <code>XMLSearch</code> structure is used to search through an <code>XMLNode</code> tree, using regexp-like:
+<ul>
+<li>
+	<code>tag</code> will try to match a node tag. <code>NULL</code> or empty-string will not use the tag to test
+	nodes so any node can match.<br/>
+	Use the <code>XMLSearch_search_set_tag</code> function to set the search regexp for the tag.
+</li>
+<li>
+	<code>text</code> will try to match a node text. <code>NULL</code> will not use the text to test nodes so any
+	node can match.<br/>
+	Use the <code>XMLSearch_search_set_text</code> function to set the search regexp for the text.
+</li>
+<li>
+	<code>attributes</code> will be filled by the <code>XMLSearch_search_add_attribute</code> where is specified
+	the attribute name and potentially value. If <code>value</code> is NULL, only the attribute presence is checked.
+	An empty-string as a value is valid and will match an attribute name with an empty value (e.g. <code>name=""</code>).
+</li>
+</ul>
+Match on names and values is made using a regexp-like string. It does not fully comply to usual regexps and so far, only
+'<code>?</code>' (any single character) and '<code>*</code>' (any possibly-empty string) are available.<br/>
+The '<code>\</code>' character can be used to escape the next one.
+</p>
+
+<p>
+Use the <code>XMLSearch_next</code> function to start searching for the first matching node. The first parameter is the
+node where to start the search from. Search will be made inside the whole children tree.<br/>
+Next matching node is found by calling <code>XMLSearch_next</code> using the last matching node as a start.<br/>
+<code>NULL</code> is returned when no more matching node are found inside the original <code>from</code> node hierarchy.<br/>
+<strong>BE CAREFUL! The initial <code>from</code> node is not tested!</strong> It has to be tested separately with the
+<code>XMLSearch_node_matches</code> function.
+</p>
+
+<p>
+<pre class="code">
+XMLDoc doc;
+XMLSearch search;
+XMLNode* node;
+
+XMLDoc_init(&doc);
+XMLDoc_parse_file_DOM("my_xml_file.xml", &doc);
+
+XMLSearch_init(&search);
+XMLSearch_search_set_tag(&search, "month*");
+XMLSearch_search_add_attribute(&search, "presence", NULL);
+XMLSearch_search_add_attribute(&search, "value", "a*");
+
+node = doc.nodes[doc.i_root];
+if (XMLSearch_node_matches(node, &search))
+	printf("Found match: <%s>\n", node->tag);
+while ((node = XMLSearch_next(node, &search)) != NULL) {
+	printf("Found match: <%s>\n", node->tag);
+}
+
+XMLSearch_free(&search);
+XMLDoc_free(&doc);
+</pre>
+</p>
+
 </div>
 
 <div id="ft">

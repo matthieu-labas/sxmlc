@@ -1,64 +1,20 @@
 #pragma warning(disable : 4996)
 
 #include <stdio.h>
-#include <conio.h>
+//#include <conio.h>
 #include <ctype.h>
-#include "sxmlc.h"
 #include "utils.h"
+#include "sxmlc.h"
+#include "sxmlsearch.h"
 
-static const char* tag_type_names[] = {
-	"TAG_NONE",
-	"TAG_FATHER",
-	"TAG_SELF",
-	"TAG_END",
-	"TAG_PROLOG",
-	"TAG_COMMENT",
-	"TAG_PARTIAL_COMMENT"
-};
-
-int start_node(const XMLNode* node, XMLDoc* doc)
+void test_gen(void)
 {
-	int i;
-	printf("Start node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
-	for (i = 0; i < node->n_attributes; i++)
-		printf("\t%s=\"%s\"\n", node->attributes[i].name, node->attributes[i].value);
-	return true;
-}
-
-int end_node(const XMLNode* node, XMLDoc* doc)
-{
-	printf("End node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
-	return true;
-}
-
-int new_text(const char* text, XMLDoc* doc)
-{
-	char* p = (char*)text;
-	while(*p && isspace(*p++)) ;
-	if (*p)
-		printf("Text: [%s]\n", text);
-	return true;
-}
-
-
-int main(int argc, char** argv)
-{
-	XMLDoc doc;
-	SAX_Callbacks sax;
 	XMLNode *node, *node1;
-	FILE* f;
+	XMLDoc doc;
 	
 	XMLDoc_init(&doc);
-	
-	/*node = XMLNode_alloc(1);
-	_parse_XML_1string("<property name=\"file\" value=\"V_0050.shp\"/>", node);
-	{
-	int i;
-	for (i = 0; i < node->n_attributes; i++)
-		printf("%s: %s\n", node->attributes[i].name, node->attributes[i].value);
-	}*/
-	
-	/*node = XMLNode_alloc(1);
+
+	node = XMLNode_alloc(1);
 	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
 	XMLDoc_add_node(&doc, node, TAG_PROLOG);
 	
@@ -127,22 +83,146 @@ int main(int argc, char** argv)
 	XMLNode_set_attribute(node, "value", "machin3");
 	XMLDoc_add_child_root(&doc, node);
 	XMLDoc_print(&doc, stdout, "\n", "    ", 0, 4);
-	XMLDoc_free(&doc);*/
+	XMLDoc_free(&doc);
+}
 
-	/*if (!XMLDoc_parse_file_DOM("D:\\Sources\\sxmlc\\data\\conf.xml", &doc))
+void test_DOM(void)
+{
+	FILE* f = NULL;
+	XMLDoc doc;
+	XMLNode* node;
+
+	XMLDoc_init(&doc);
+
+	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
 		printf("Error while loading\n");
-	f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
+	//f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
+	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", 0, 4);
+	/*for (node = doc.nodes[doc.i_root]; node != NULL; node = XMLNode_next(node))
+		printf("<%s>\n", node->tag);*/
 	if (f != stdout) fclose(f);
 	printf("\nFreeing...\n");
-	XMLDoc_free(&doc);*/
+	XMLDoc_free(&doc);
+}
+
+static const char* tag_type_names[] = {
+	"TAG_NONE",
+	"TAG_FATHER",
+	"TAG_SELF",
+	"TAG_END",
+	"TAG_PROLOG",
+	"TAG_COMMENT",
+	"TAG_PARTIAL_COMMENT",
+	"TAG_CDATA",
+	"TAG_PARTIAL_CDATA"
+};
+
+int start_node(const XMLNode* node, XMLDoc* doc)
+{
+	int i;
+	printf("Start node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
+	for (i = 0; i < node->n_attributes; i++)
+		printf("\t%s=\"%s\"\n", node->attributes[i].name, node->attributes[i].value);
+	return true;
+}
+
+int end_node(const XMLNode* node, XMLDoc* doc)
+{
+	printf("End node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
+	return true;
+}
+
+int new_text(const char* text, XMLDoc* doc)
+{
+	char* p = (char*)text;
+	while(*p && isspace(*p++)) ;
+	if (*p)
+		printf("Text: [%s]\n", text);
+	return true;
+}
+
+void test_SAX(void)
+{
+	SAX_Callbacks sax;
 
 	sax.start_node = start_node;
 	sax.end_node = end_node;
 	sax.new_text = new_text;
-	if (!XMLDoc_parse_file_SAX("D:\\Sources\\sxmlc\\data\\conf.xml", &sax, NULL))
+	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL)) {
 		printf("Error while loading\n");
-	_getch();
+		return;
+	}
+}
+
+void test_search(void)
+{
+	XMLDoc doc;
+	XMLSearch search;
+	XMLNode* node;
+
+	XMLDoc_init(&doc);
+
+	XMLSearch_init(&search);
+	XMLSearch_search_set_tag(&search, "b2*");
+	XMLSearch_search_add_attribute(&search, "comment", NULL);
+	//XMLSearch_search_add_attribute(&search, "id", "8");
+
+	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc)) {
+		printf("Error while loading\n");
+		return;
+	}
+
+	printf("Start search\n");
+	node = doc.nodes[doc.i_root];
+	while ((node = XMLSearch_next(node, &search)) != NULL) {
+		printf("Found match: ");
+		XMLNode_print(node, stdout, NULL, NULL, 0, 0, 0);
+		printf("\n");
+	}
+	printf("End search\n");
+
+	XMLSearch_free(&search);
+
+	XMLDoc_free(&doc);
+}
+
+void tstre(char* s, char* p)
+{
+	if (regstrcmp(s, p))
+		printf("'%s' and '%s' match\n", s, p);
+	else
+		printf("'%s' and '%s' DON'T match\n", s, p);
+}
+
+void test_regexp(void)
+{
+	tstre("abc123", "abc123");
+	tstre("abc123", "abc123*");
+	tstre("abc123", "aXc123");
+	tstre("abc123", "a?c123");
+	tstre("abc123", "abc*");
+	tstre("abc123", "*123");
+	tstre("abc123", "a*3");
+	tstre("abc123", "a*1?3");
+	tstre("abc1X3", "a*1?3");
+	tstre("abc123", "a*1?4?");
+	tstre("abc123", "a*1?3*");
+	tstre("ab?123", "a*1?3*");
+	tstre("ab\\123", "ab\\\\123");
+	tstre("ab?123", "ab\\?12*");
+}
+
+int main(int argc, char** argv)
+{
+
+	//test_gen();
+	//test_DOM();
+	//test_SAX();
+	test_search();
+	//test_regexp();
+
+	//_getch();
 	return 0;
 }

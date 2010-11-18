@@ -246,3 +246,41 @@ int fprintHTML(FILE* f, char* str)
 	
 	return n;
 }
+
+int regstrcmp(char* str, char* pattern)
+{
+	char *p, *s;
+
+	if (str == NULL && pattern == NULL) return true;
+
+	if (str == NULL || pattern == NULL) return false;
+
+	//if (!strcmp(str, pattern)) return true;
+	p = pattern;
+	s = str;
+	while (*p) {
+		switch (*p) {
+			/* Any character matches, go to next one */
+			case '?':
+				p++;
+				s++;
+				break;
+
+			/* Go to next character in pattern and wait until it is found in 'str' */
+			case '*':
+				p++;
+				/* TODO: What if *p == '?' or '*' ??? */
+				for (; *s; s++) {
+					if (*s == *p) break;
+				}
+				break;
+
+			default:
+				if (*p == '\\') p++; /* Escape character */
+				if (*p++ != *s++) return false; /* Characters do not match */
+				break;
+		}
+	}
+
+	return true;
+}

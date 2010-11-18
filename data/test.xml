@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xml>
+	<a2 comment="Le premier"/>
+	<![CDATA[
+	#define COMMENT '>'
+	printf("Commentaire: <tag> %c", COMMENT);
+	]]/>
+	<a>
+		<a1>
+			<a1a>
+				<a1a1/>
+				<a1a2/>
+				<![CDATA[IMG_TYPE114BC4E2C8998DF0A8]]/>
+				<a1a3/>
+			</a1a>
+			<a1b>
+				<a1b1/>
+				<a1b2/>
+				<a1b3/>
+			</a1b>
+		</a1>
+		<a2 name="nomA" value="valeurA" id="8">
+			<a2a>
+				<a2a1/>
+				<a2a2 comment="oui"/>
+				<a2/>
+				<a2a3/>
+			</a2a>
+			<a2b>
+				<a2b1/>
+				<a2b2/>
+				<a2b3/>
+			</a2b>
+		</a2>
+		<b2dansa comment=""/>
+		<a3>
+			<a3a>
+				<a3a1/>
+				<a3a3/>
+				<a3a3/>
+			</a3a>
+			<a3b>
+				<a3b1/>
+				<a3b2 id="8" comment=""/>
+				<a3b3/>
+			</a3b>
+		</a3>
+	</a>
+	<b>
+		<b1>
+			<b1b>
+				<b1b1/>
+				<b1b2/>
+				<b1b3/>
+			</b1b>
+			<b1b>
+				<b1b1/>
+				<b1b2/>
+				<b1b3/>
+			</b1b>
+		</b1>
+		<b2>
+			<b2a comment="">
+				<b2a1/>
+				<b2a2/>
+				<b2a3/>
+			</b2a>
+			<b2b>
+				<b2b1/>
+				<b2b2/>
+				<b2b3/>
+			</b2b>
+		</b2>
+		<b3>
+			<b3a>
+				<b3a1/>
+				<b3a3/>
+				<b3a3/>
+			</b3a>
+			<b3b>
+				<b3b1/>
+				<b3b2/>
+				<b3b3/>
+			</b3b>
+		</b3>
+	</b>
+	<b2 comment="Le second"/>
+</xml>

@@ -19,6 +19,8 @@
 #ifndef _CXML_H_
 #define _CXML_H_
 
+#include <stdio.h>
+
 #define SXMLC_VERSION "2.0.0"
 
 #ifndef false
@@ -29,14 +31,16 @@
 #define true 1
 #endif
 
-/* Tag types */
+/* Node types */
 #define TAG_NONE	0
-#define TAG_FATHER	1	/* <tag> - Next tags will be children of this one. */
-#define TAG_SELF	2	/* <tag/> - Standalone tag. */
-#define TAG_END		3	/* </tag> - End of father tag/ */
-#define TAG_PROLOG	4	/* <?prolog?> - Prolog tag located at the beginning of XML files. */
+#define TAG_FATHER	1	/* <tag> - Next nodes will be children of this one. */
+#define TAG_SELF	2	/* <tag/> - Standalone node. */
+#define TAG_END		3	/* </tag> - End of father node. */
+#define TAG_PROLOG	4	/* <?prolog?> - Prolog node located at the beginning of XML files. */
 #define TAG_COMMENT	5	/* <!--comment--> */
 #define TAG_PARTIAL_COMMENT	6	/* <!--comment > - Comment containing a '>' which stopped file reading */
+#define TAG_CDATA	7	/* <![CDATA[ ]]/> - CDATA node */
+#define TAG_PARTIAL_CDATA	8	/* <![CDATA[ > - CDATA containing a '>' which stopped file reading */
 
 /* TODO: Performance improvement with some fixed-sized strings ??? */
 
@@ -59,8 +63,9 @@ typedef struct _XMLNode {
 	struct _XMLNode** children;
 	int n_children;
 	
-	int tag_type;	/* Tag type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
+	int tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
 	int active;		/* 'true' to tell that node is active and should be displayed by 'XMLDoc_print' */
+/* TODO: Add pointer to next sibling ? */
 	
 	void* user;	/* Pointer for user data associated to the node */
 } XMLNode;
@@ -70,9 +75,10 @@ typedef struct _XMLNode {
  */
 typedef struct _XMLDoc {
 	char filename[256];
-	XMLNode** nodes;	/* Tags before the root one (such as prolog or comments). Whole content is located in 'tag' field */
+	XMLNode** nodes;	/* Nodes before the root one (such as prolog or comments). Whole content is located in 'tag' field */
 	int n_nodes;
 	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
+/* TODO: Add 'root' member as a shortcut to nodes[i_nodes] ? */
 } XMLDoc;
 
 /*
@@ -98,6 +104,7 @@ typedef struct _SAX_Callbacks {
 	 */
 	int (*new_text)(const char* text, void* user);
 } SAX_Callbacks;
+
 
 /* --- XMLNode methods --- */
 
@@ -147,7 +154,7 @@ void XMLNode_set_active(XMLNode* node, int active);
 int XMLNode_set_tag(XMLNode* node, char* tag);
 
 /*
- Initialize 'node' as a comment tag.
+ Initialize 'node' as a comment node.
  Equivalent to 'XMLNode_set_tag(node, comment); node->tag_type = TAG_COMMENT;'.
  */
 int XMLNode_set_comment(XMLNode* node, char* comment);
@@ -166,10 +173,10 @@ int XMLNode_set_attribute(XMLNode* node, char* attr_name, char* attr_value);
 int XMLNode_search_attribute(XMLNode* node, char* attr_name, int isearch);
 
 /*
- Remove attribute index 'iattr'.
+ Remove attribute index 'i_attr'.
  Return the new number of attributes or -1 on invalid arguments.
  */
-int XMLNode_remove_attribute(XMLNode* node, int iattr);
+int XMLNode_remove_attribute(XMLNode* node, int i_attr);
 
 /*
  Set node text.
@@ -195,6 +202,23 @@ int XMLNode_search_child(XMLNode* node, char* tag, int isearch);
  */
 int XMLNode_remove_child(XMLNode* node, int ichild);
 
+/*
+ Return 'true' if 'node1' is the same as 'node2' (i.e. same tag, same active attributes).
+ */
+int XMLNode_equal(XMLNode* node1, XMLNode* node2);
+
+/*
+ Return the next sibling of node 'node', or NULL if 'node' is invalid or the last child
+ or if its father could not be determined (i.e. 'node' is a root node).
+ */
+XMLNode* XMLNode_next_sibling(XMLNode* node);
+
+/*
+ Shortcut macro to return the next node in XML order i.e. first child or next sibling, or NULL
+ if 'node' is invalid or the end of its root node is reached.
+ */
+XMLNode* XMLNode_next(XMLNode* node);
+
 
 /* --- XMLDoc methods --- */
 
@@ -210,7 +234,7 @@ void XMLDoc_init(XMLDoc* doc);
 void XMLDoc_free(XMLDoc* doc);
 
 /*
- Set the new 'doc' root tag among all existing nodes in 'doc'.
+ Set the new 'doc' root node among all existing nodes in 'doc'.
  Return 'false' if bad arguments, 'true' otherwise.
  */
 int XMLDoc_set_root(XMLDoc* doc, int i_root);
@@ -223,6 +247,13 @@ int XMLDoc_set_root(XMLDoc* doc, int i_root);
 int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
 
 /*
+ Shortcut macro to retrieve root node from a document.
+ Equivalent to
+ doc->nodes[doc->i_root]
+ */
+#define XMLDoc_root(doc) (doc)->nodes[(doc)->i_root]
+
+/*
  Shortcut macro to add a node to 'doc' root node.
  Equivalent to
  XMLDoc_add_child_root(XMLDoc* doc, XMLNode* child);
@@ -231,10 +262,10 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
 
 /*
  Prints the node and its children to a file (that can be stdout).
- - 'tag_sep' is the string to use to separate tags from each other (usually "\n").
- - 'child_sep' is the additionnal string to put for each child level (usually "\t").
+ - 'tag_sep' is the string to use to separate nodes from each other (usually "\n").
+ - 'child_sep' is the additional string to put for each child level (usually "\t").
  - 'sz_line' is the maximum number of characters that can be put on a single line. The
-   tag remainder will be output to extra lines.
+   node remainder will be output to extra lines.
  - 'nb_char_tab' is how many characters should be counted for a single '\t' when counting
    characters in the line. It usually is 8 or 4, but at least 1.
  - 'depth' is an internal parameter that is used to determine recursively how deep we are in

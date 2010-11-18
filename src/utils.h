@@ -31,6 +31,14 @@
 #define MEM_INCR_RLA 256 /* Initial buffer size and increment for memory reallocations */
 #endif
 
+#ifndef false
+#define false 0
+#endif
+
+#ifndef true
+#define true 1
+#endif
+
 /*
  Reads a line from file 'f', eventualy (re-)allocating a given buffer 'line'. Characters
  read will be stored in 'line' starting at 'i0' (this allows multiple calls to 'read_line_alloc'
@@ -79,5 +87,13 @@ char* html2str(char* str);
  Returns the number of output characters.
  */
 int fprintHTML(FILE* f, char* str);
+
+/*
+ Checks whether 'str' corresponds to 'pattern'.
+ 'pattern' can use wildcads such as '*' (any potentially empty string) or
+ '?' (any character) and use '\' as an escape character.
+ Returns 'true' when 'str' matches 'pattern', 'false' otherwise.
+ */
+int regstrcmp(char* str, char* pattern);
 
 #endif
