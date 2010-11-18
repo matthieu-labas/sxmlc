@@ -52,7 +52,7 @@ typedef struct _XMLSearch {
 	char* text;
 
 	/*
-	 Internal use only. Must be initialized to NULL.
+	 Internal use only. Must be initialized to '-1'.
 	 */
 	XMLNode* stop_at;
 } XMLSearch;
@@ -116,33 +116,13 @@ int XMLSearch_node_matches(XMLNode* node, XMLSearch* search);
 
 /*
  Search next matching node, according to search parameters given by 'search'.
- Search starts from node 'from' by scanning all its children.
+ Search starts from node 'from' by scanning all its children, and going up to siblings,
+ uncles and so on.
+ Searching for the next matching node is performed by running the search again on the last
+ matching node. So 'search' has to be initialized by 'XMLSearch_init' prior to the first call,
+ to memorize the initial 'from' node and know where to stop search.
  'from' ITSELF IS NOT CHECKED ! Direct call to 'XMLSearch_node_matches(from, search);' should
  be made if necessary.
- 'test_siblings' should be 'true' if search has to be performed on 'from' siblings as well, in which
- case it will start from the next sibling after 'from'.
- 'test_ascend' should be 'true' if search has to be run on uncles as well (siblings of 'from' father).
- <root>
-	<a>
-		<a1/>
-		<a2>
-			<a2a/>
-			<a2b/>
-		</a2>
-		<a3/>
-	</a>
-	<b>
-		<b1/>
-		<b2/>
-		<b3/>
-	</b>
- </root>
- If 'from' is node '<a2>':
-	- if 'test_siblings' if 'false', search will scan nodes '<a2a/>' and '<a2b/>' and
-	  stop, no matter the value of 'test_ascend'.
-	- if 'test_siblings' is 'true', search will scan nodes '<a2a/>' and '<a2b/>' then
-	  proceed to '<a3/>' and stop, unless 'test_ascend' is 'true', in which case it will
-	  proceed with nodes '<b>', '<b1/>', '<b2/>' and '<b3/>'.
  If the document has several root nodes, a complete search in the document should be performed
  by manually calling 'XMLSearch_next' on each root node in a for loop.
  */
