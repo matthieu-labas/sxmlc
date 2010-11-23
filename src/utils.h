@@ -67,12 +67,41 @@ int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char 
 char* strcpy_alloc(char* src);
 
 /*
+ Concatenates the string pointed at by 'src1' with 'src2' into '*src1' and
+ return it ('*src1').
+ Return NULL when out of memory.
+ */
+char* strcat_alloc(char** src1, char* src2);
+
+/*
  Strip spaces at the beginning and end of 'str', modifying 'str'.
  If 'repl_sq' is not '\0', squeezes spaces to an single character ('repl_sq').
  If not '\0', 'protect' is used to protect spaces from being deleted (usually a backslash).
  Returns the string or NULL if 'protect' is a space (which would not make sense).
  */
 char* strip_spaces(char* str, char repl_sq, char protect);
+
+/*
+ Remove '\' characters from 'str'.
+ Return 'str'.
+ */
+char* str_unescape(char* str);
+
+/*
+ Split 'str' into a left and right part around a separator 'sep'.
+ The left part is located between indexes 'l0' and 'l1' while the right part is
+ between 'r0' and 'r1' and the separator position is at 'i_sep' (whenever these are
+ not NULL).
+ If 'ignore_spaces' is 'true', computed indexes will not take into account potential
+ spaces around the separator as well as before left part and after right part.
+ if 'ignore_quotes' is 'true', " or ' will not be taken into account when parsing left
+ and right members.
+ Whenever the right member is empty (e.g. "attrib" or "attrib="), '*r0' is initialized
+ to 'str' size and '*r1' to '*r0-1'.
+ If the separator was not found (i.e. left member only), '*i_sep' is '-1'.
+ Return 'false' when 'str' is malformed, 'true' when splitting was successful.
+ */
+int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
 
 /*
  Replace occurrences of special characters HTML escape sequences (e.g. '&amp;') by its

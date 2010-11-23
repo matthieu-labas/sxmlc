@@ -1,17 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xml>
+	<configuration1>
+		<structure name="st1">
+			<structure name="st1sub1" valid="true">
+				<property name="toto" value="0"/>
+				<property name="tata" value="1"/>
+			</structure>
+			<structure name="st1sub2" valid="true">
+				<property name="toti" value="2"/>
+				<property name="tita" value="3"/>
+			</structure>
+		</structure>
+	</configuration1>
+	<configuration2>
+		<structure name="st2">
+			<structure name="st2sub1" valid="false">
+				<property name="titi" value="4"/>
+			</structure>
+			<structure name="nost2sub1" valid="true">
+				<property name="titi" value="4.1"/>
+			</structure>
+			<structure name="st2sub2" valid="true">
+				<property name="tutu" value="5"/>
+			</structure>
+		</structure>
+		<structure name="st3">
+			<property name="readonly" value="true"/>
+		</structure>
+	</configuration2>
 	<a2 comment="Le premier"/>
-	<![CDATA[
-	#define COMMENT '>'
-	printf("Commentaire: <tag> %c", COMMENT);
-	]]/>
-	<a>
+	<a id="0">
 		<a1>
 			<a1a>
 				<a1a1/>
-				<a1a2/>
-				<![CDATA[IMG_TYPE114BC4E2C8998DF0A8]]/>
-				<a1a3/>
+				<a1a2 valid="true">text inside node</a1a2>
+				<a1a3 valid="true">inside</a1a3>
+				<a1a4/>
 			</a1a>
 			<a1b>
 				<a1b1/>
@@ -23,7 +47,7 @@
 			<a2a>
 				<a2a1/>
 				<a2a2 comment="oui"/>
-				<a2/>
+				<a2 id="9"/>
 				<a2a3/>
 			</a2a>
 			<a2b>
@@ -62,6 +86,7 @@
 		<b2>
 			<b2a comment="">
 				<b2a1/>
+				<![CDATA[IMG_TYPE114BC4E2C8998DF0A8]]/>
 				<b2a2/>
 				<b2a3/>
 			</b2a>
@@ -85,4 +110,8 @@
 		</b3>
 	</b>
 	<b2 comment="Le second"/>
+	<![CDATA[
+	#define COMMENT '>'
+	printf("Commentaire: <tag> %c", COMMENT);
+	]]/>
 </xml>

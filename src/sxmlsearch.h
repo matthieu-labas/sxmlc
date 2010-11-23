@@ -24,7 +24,6 @@
  A pointer to such structure is given to search functions which can modify
  its content (the 'from' structure).
  */
-/* TODO: Add filter on node type ? */
 typedef struct _XMLSearch {
 	/*
 	 Search for nodes which tag match this 'tag' field.
@@ -35,12 +34,14 @@ typedef struct _XMLSearch {
 	/*
 	 Search for nodes which attributes match all the ones described.
 	 If NULL, all nodes will be matching.
-	 The 'attribute->active' should be 'false' to de-activate test on a specific attribute.
 	 The 'attribute->name' should not be NULL. If corresponding 'attribute->value'
 	 is NULL or an empty-string, search will return the first node with an attribute
 	 'attribute->name', no matter what is its value.
 	 If 'attribute->value' is not NULL, a matching node should have an attribute
 	 'attribute->name' with the corresponding value 'attribute->value'.
+	 When 'attribute->value' is not NULL, the 'attribute->active' should be 'true'
+	 to specify that values should be equal, or 'false' to specify that values should
+	 be different.
 	 */
 	XMLAttribute* attributes;
 	int n_attributes;
@@ -52,10 +53,29 @@ typedef struct _XMLSearch {
 	char* text;
 
 	/*
-	 Internal use only. Must be initialized to '-1'.
+	 Next search to perform on children of a node matching current struct.
+	 Used to search for nodes children of specific nodes (used in XPath queries).
+	 */
+	struct _XMLSearch* next;
+	struct _XMLSearch* prev;
+
+	/*
+	 Internal use only. Must be initialized to '-1' prior to first search.
 	 */
 	XMLNode* stop_at;
 } XMLSearch;
+
+typedef int (*REGEXPR_COMPARE)(char* str, char* pattern);
+
+/*
+ Set a new comparison function to evaluate whether a string matches a given pattern.
+ The default one is the "regstrcmp" which handles limited regular expressions.
+ 'fct' prototype is 'int fct(char* str, char* pattern)' where 'str' is the string to
+ evaluate the match for and 'pattern' the pattern. It should return 'true' (=1) when
+ 'str' matches 'pattern' and 'false' (=0) when it does not.
+ Return the previous function used for matching.
+ */
+REGEXPR_COMPARE XMLSearch_set_regexpr_compare(REGEXPR_COMPARE fct);
 
 /*
  Initialize 'search' struct to an empty search.
@@ -65,10 +85,14 @@ typedef struct _XMLSearch {
 int XMLSearch_init(XMLSearch* search);
 
 /*
- Free all 'search' members.
+ Free all 'search' members except for the 'search->next' member that should be freed
+ by its creator, unless 'free_next' is 'true'.
+ It is recommended that 'free_next' is positioned to 'true' only when the creator did not
+ handle the whole memory allocation chain, e.g. when using 'XMLSearch_init_from_XPath'
+ that allocates all search structs.
  Return 'false' when 'search' is NULL.
  */
-int XMLSearch_free(XMLSearch* search);
+int XMLSearch_free(XMLSearch* search, int free_next);
 
 /*
  Set the search based on tag.
@@ -81,22 +105,23 @@ int XMLSearch_search_set_tag(XMLSearch* search, char* tag);
 /*
  Add an attribute search criteria.
  'attr_name' is mandatory. 'attr_value' should be NULL to test for attribute presence only
- (no test on value).
- An empty string for 'attr_value' is not an equivalent to 'NULL'!
+ (no test on value).  An empty string for 'attr_value' is not an equivalent to 'NULL'!
+ 'value_equal' should be specified to test for attribute value equality (='true') or
+ difference (='false).
  Return the index of the new attribute, or '-1' for memory error.
  */
-int XMLSearch_search_add_attribute(XMLSearch* search, char* attr_name, char* attr_value);
+int XMLSearch_search_add_attribute(XMLSearch* search, char* attr_name, char* attr_value, int value_equal);
 
 /*
  Search for attribute 'attr_name' in Search attribute list and return its index
  or '-1' if not found.
  */
-int XMLSearch_get_attribute_index(XMLSearch* search, char* attr_name);
+int XMLSearch_search_get_attribute_index(XMLSearch* search, char* attr_name);
 
 /*
  Removes the search attribute given by its index 'i_attr'.
  */
-int XMLSearch_remove_attribute(XMLSearch* search, int i_attr);
+int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr);
 
 /*
  Set the search based on text content.
@@ -107,9 +132,47 @@ int XMLSearch_remove_attribute(XMLSearch* search, int i_attr);
 int XMLSearch_search_set_text(XMLSearch* search, char* text);
 
 /*
- Check whether a 'node' matches 'search' criterias.
+ Set an additional search on children nodes of a previously matching node.
+ Search struct are chained to finally return the node matching the last search struct,
+ which father node matches the previous search struct, and so on.
+ This allows describing more complex search queries like XPath
+ "//FatherTag[@attrib=val]/ChildTag/".
+ In this case, a first search struct would have 'search->tag = "FatherTag"' and
+ 'search->attributes[0] = { "attrib", "val" }' and a second search struct with
+ 'search->tag = "ChildTag"'.
+ If 'children_search' is NULL, next search is removed. Freeing previous search is to be
+ performed by its owner.
+ Return 'true' when association has been made, 'false' when an error occurred.
+ */
+int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_search);
+
+/*
+ Compute an XPath-equivalent string of the 'search' criteria.
+ 'xpath' is a pointer to a string that will be allocated by the function and should
+ be freed after use.
+ 'quote' is the quote character to be used (e.g. '"' or '\''). If null, '"' will be used.
+ A NULL 'search' will return an empty string.
+ Return 'false' for a memory problem, 'true' otherwise.
+ */
+char* XMLSearch_get_XPath_string(XMLSearch* search, char** xpath, char quote);
+
+/*
+ Initialize a 'search' struct from an XPath-like query. "XPath-like" means that
+ it does not fully comply to XPath standard.
+ 'xpath' should be like "tag[.=text, @attrib="value", @attrib!='value']/tag...".
+ Warning: the XPath query on node text like 'father[child="text"]' should be
+ re-written 'father/child[.="text"]' instead (which should be XPath-compliant as well).
+ Return 'true' when 'search' was correctly initialized, 'false' in case of memory
+ problem or malformed 'xpath'.
+ */
+int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search);
+
+/*
+ Check whether a 'node' matches 'search' criteria.
  'node->tag_type' should be 'TAG_FATHER' or 'TAG_SELF' only.
- Return 'false' when no match is found or invalid arguments, 'true'
+ If 'search->prev' is not nULL (i.e. has a father search), 'node->father' is also
+ tested, recursively (i.e. grand-father and so on).
+ Return 'false' when 'node' does not match or for invalid arguments, 'true'
  if 'node' is a match.
  */
 int XMLSearch_node_matches(XMLNode* node, XMLSearch* search);
@@ -121,10 +184,14 @@ int XMLSearch_node_matches(XMLNode* node, XMLSearch* search);
  Searching for the next matching node is performed by running the search again on the last
  matching node. So 'search' has to be initialized by 'XMLSearch_init' prior to the first call,
  to memorize the initial 'from' node and know where to stop search.
- 'from' ITSELF IS NOT CHECKED ! Direct call to 'XMLSearch_node_matches(from, search);' should
+ 'from' ITSELF IS NOT CHECKED! Direct call to 'XMLSearch_node_matches(from, search);' should
  be made if necessary.
  If the document has several root nodes, a complete search in the document should be performed
  by manually calling 'XMLSearch_next' on each root node in a for loop.
+ Note that 'search' should be the initial search struct (i.e. 'search->prev' should be NULL). This
+ cannot be checked/corrected by the function itself as it is partly recursive.
+ Return the next matching node according to 'search' criteria, or NULL when no more nodes match
+ or when an error occurred.
  */
 XMLNode* XMLSearch_next(XMLNode* from, XMLSearch* search);
 

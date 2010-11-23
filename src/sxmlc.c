@@ -641,7 +641,6 @@ static int _parse_XML_1string(char* str, XMLNode* xmlnode)
 		}
 
 		/* CDATA */
-		/* TODO: How to handle "]]/>" inside a CDATA ? */
 		if (!strncmp(str, "<![CDATA[", 9)) {
 			if (strncmp(str+len-4, "]]/>", 4)) return TAG_PARTIAL_CDATA; /* There probably is a '>' inside the CDATA */
 			xmlnode->tag = (char*)malloc(len-12); /* 'len' - "<![CDATA[" and "]]/>" + '\0' */

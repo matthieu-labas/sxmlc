@@ -3,6 +3,7 @@
 #include <stdio.h>
 //#include <conio.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include "utils.h"
 #include "sxmlc.h"
 #include "sxmlsearch.h"
@@ -90,7 +91,6 @@ void test_DOM(void)
 {
 	FILE* f = NULL;
 	XMLDoc doc;
-	XMLNode* node;
 
 	XMLDoc_init(&doc);
 
@@ -100,8 +100,11 @@ void test_DOM(void)
 	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", 0, 4);
-	/*for (node = doc.nodes[doc.i_root]; node != NULL; node = XMLNode_next(node))
-		printf("<%s>\n", node->tag);*/
+	/*{
+	XMLNode* node;
+	for (node = doc.nodes[doc.i_root]; node != NULL; node = XMLNode_next(node))
+		printf("<%s>\n", node->tag);
+	}*/
 	if (f != stdout) fclose(f);
 	printf("\nFreeing...\n");
 	XMLDoc_free(&doc);
@@ -159,33 +162,57 @@ void test_SAX(void)
 void test_search(void)
 {
 	XMLDoc doc;
-	XMLSearch search;
+	XMLSearch search[3];
 	XMLNode* node;
+	char* xpath = NULL;
 
 	XMLDoc_init(&doc);
 
-	XMLSearch_init(&search);
-	XMLSearch_search_set_tag(&search, "b2*");
-	XMLSearch_search_add_attribute(&search, "comment", NULL);
-	//XMLSearch_search_add_attribute(&search, "id", "8");
+	XMLSearch_init(&search[0]);
+	XMLSearch_init(&search[1]);
+	XMLSearch_init(&search[2]);
+
+	XMLSearch_search_set_tag(&search[0], "st*");
+	XMLSearch_search_add_attribute(&search[0], "name", "st*sub*", true);
+	XMLSearch_search_add_attribute(&search[0], "valid", "false", false);
+	//XMLSearch_search_set_text(&search[0], "*inside *");
+
+	XMLSearch_search_set_tag(&search[1], "property");
+	XMLSearch_search_add_attribute(&search[1], "name", "t?t?", true);
+
+	XMLSearch_search_set_children_search(&search[0], &search[1]);
 
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc)) {
 		printf("Error while loading\n");
 		return;
 	}
 
-	printf("Start search\n");
-	node = doc.nodes[doc.i_root];
-	while ((node = XMLSearch_next(node, &search)) != NULL) {
+	printf("Start search '%s'\n", XMLSearch_get_XPath_string(&search[0], &xpath, '\''));
+	free(xpath);
+	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
+	while ((node = XMLSearch_next(node, &search[0])) != NULL) {
 		printf("Found match: ");
 		XMLNode_print(node, stdout, NULL, NULL, 0, 0, 0);
 		printf("\n");
 	}
 	printf("End search\n");
 
-	XMLSearch_free(&search);
+	XMLSearch_free(&search[0], false);
 
 	XMLDoc_free(&doc);
+}
+
+void test_xpath(void)
+{
+	XMLSearch search;
+	char* xpath2 = NULL;
+	char xpath[] = "/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']";
+
+	if (XMLSearch_init_from_XPath(xpath, &search))
+		printf("[%s] => [%s]\n", xpath, XMLSearch_get_XPath_string(&search, &xpath2, '\''));
+	else
+		printf("Error\n");
+	XMLSearch_free(&search, true);
 }
 
 void tstre(char* s, char* p)
@@ -198,6 +225,7 @@ void tstre(char* s, char* p)
 
 void test_regexp(void)
 {
+	tstre("abc123", "*");
 	tstre("abc123", "abc123");
 	tstre("abc123", "abc123*");
 	tstre("abc123", "aXc123");
@@ -212,16 +240,47 @@ void test_regexp(void)
 	tstre("ab?123", "a*1?3*");
 	tstre("ab\\123", "ab\\\\123");
 	tstre("ab?123", "ab\\?12*");
+	tstre("st2sub1", "st?sub*");
+}
+
+void print_split(char* str)
+{
+	int i, l0, l1, r0, r1;
+
+	if (split_left_right(str, '=', &l0, &l1, &i, &r0, &r1, true, true)) {
+		printf("[%s]%s - Left[%d;%d]: [", str, (i < 0 ? " (no sep)": ""), l0, l1);
+		for (i = l0; i <= l1; i++) fputc(str[i], stdout);
+		printf("], right[%d;%d]: [", r0, r1);
+		for (i = r0; i <= r1; i++) fputc(str[i], stdout);
+		printf("]\n");
+	}
+	else
+		printf("Malformed [%s]\n", str);
+}
+void test_split(void)
+{
+	print_split("attrib=\"value\"");
+	print_split("attrib = \"value\"");
+	print_split("'attrib' = 'va\\'lue'");
+	print_split("'attri\\'b ' = 'va\\'lue'");
+	print_split(" attrib = 'va'lue'");
+	print_split("\"att\"rib \" = \"val\\\"ue\"");
+	print_split("attrib = \"value\"");
+	print_split("attrib=\" val ue \"");
+	print_split("attrib=");
+	print_split("attrib=''");
+	print_split("attrib");
 }
 
 int main(int argc, char** argv)
 {
-
 	//test_gen();
 	//test_DOM();
 	//test_SAX();
 	test_search();
+	//test_xpath();
 	//test_regexp();
+	//test_split();
 
 	//_getch();
 	return 0;

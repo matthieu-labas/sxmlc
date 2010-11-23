@@ -110,9 +110,12 @@ margin-left: 2%;
 <div class="middle">
 <h2>How to</h2>
 
-<a href="#READ">Read an XML document from a file</a><br/>
-<a href="#WRITE">Create an XML document</a><br/>
-<a href="#SEARCH">Search an XML document</a><br/>
+<ul>
+<li><a href="#READ">Read an XML document from a file</a></li>
+<li><a href="#WRITE">Create an XML document</a></li>
+<li><a href="#SEARCH">Search an XML document</a>
+	<ul><li><a href="#SEARCH">XPath-like queries</a></li></ul></li>
+</ul>
 
 <hr/>
 
@@ -288,7 +291,9 @@ The <code>XMLSearch</code> structure is used to search through an <code>XMLNode<
 </li>
 </ul>
 Match on names and values is made using a regexp-like string. It does not fully comply to usual regexps and so far, only
-'<code>?</code>' (any single character) and '<code>*</code>' (any possibly-empty string) are available.<br/>
+'<code>?</code>' (any single character) and '<code>*</code>' (any possibly-empty string) are available but it is possible
+to use a custom function by calling <code>XMLSearch_set_regexpr_compare</code>. The given function takes the string to test
+and the pattern to match and should return <code>true</code> whenever the string matches the pattern.<br/>
 The '<code>\</code>' character can be used to escape the next one.
 </p>
 
@@ -324,6 +329,48 @@ while ((node = XMLSearch_next(node, &search)) != NULL) {
 
 XMLSearch_free(&search);
 XMLDoc_free(&doc);
+</pre>
+</p>
+
+<a name="XPATH"/>
+<p>
+<h5>XPath</h5>
+XPath-like queries can be used to initialize a search struct. It does not totally comply to
+<a href="http://www.w3schools.com/XPath/default.asp">XPath</a> grammar but can be used as an easier way to create a
+search tree.<br/>
+<ul>
+<li>Search on node tag is performed by giving the tag to match, or '<code>*</code>' for any tag.</li>
+<li>Search on node text is performed by specifying '<code>./="text regexp to search"</code>' between the <code>[]</code>
+after the tag.</li>
+<li>Attributes search is performed by giving the attribute name prefixed by '<code>@</code>' between <code>[]</code>. Additional
+attributes are specified by separating their names/values with a comma '<code>,</code>'.
+	<ul>
+	<li>To test for attribute presence only, just specify the name <code>[@AttributeName]</code></li>
+	<li>
+		To test if an attribute value equals a pattern, use '<code>=</code>' to separate the name and the value
+		<code>[@AttributeName="AttributeValue"]</code>
+	</li>
+	<li>
+		To test if an attribute value does not equal a pattern, use '<code>!=</code>' to separate the name and
+		the value <code>[@AttributeName!="AttributeValue"]</code>
+	</li>
+	</ul>
+</ul>
+Like in XPath, search on children is performed by using '<code>/</code>' as a separator.<br/>
+Call <code>XMLSearch_init_from_XPath</code> to create a search tree from an XPath query.<br/>
+<br/>
+<code>tagFather[@name, @id!='0', .='toto*']/tagChild[.='search *', @attrib='val']</code> will be searching for node
+of tag "<code>tagChild</code>" and text is "<code>search *</code>", having  an attribute named "<code>attrib</code>"
+which value is "<code>val</code>".<br/>
+Additionally, these nodes should have as a father a node of tag "<code>tagFather</code>" with an attribute named
+"<code>name</code>" of any value, another attribute named "<code>id</code>" which value should not be "<code>0</code>"
+and with text starting with "<code>toto</code>".
+<pre>
+&lt;xml&gt;
+	&lt;tagFather id="1" name="Pere"&gt;toto et tata
+		&lt;tagChild attrib="val"&gt;search some text&lt;/tagChild&gt;
+	&lt;/tagFather&gt;
+&lt;xml&gt;
 </pre>
 </p>
 

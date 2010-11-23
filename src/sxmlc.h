@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "2.0.0"
+#define SXMLC_VERSION "3.1.0"
 
 #ifndef false
 #define false 0
@@ -42,7 +42,7 @@
 #define TAG_CDATA	7	/* <![CDATA[ ]]/> - CDATA node */
 #define TAG_PARTIAL_CDATA	8	/* <![CDATA[ > - CDATA containing a '>' which stopped file reading */
 
-/* TODO: Performance improvement with some fixed-sized strings ??? */
+/* TODO: Performance improvement with some fixed-sized strings ??? (e.g. XMLAttribute.name[64], XMLNode.tag[64]) */
 
 typedef struct _XMLAttribute {
 	char* name;
@@ -95,10 +95,12 @@ typedef struct _SAX_Callbacks {
 	 after the 'start_node' callback.
 	 */
 	int (*start_node)(const XMLNode* node, void* user);
+
 	/*
 	 Callback called when a node ends (e.g. '</tag>' or '<tag/>').
 	 */
 	int (*end_node)(const XMLNode* node, void* user);
+
 	/*
 	 Callback called when text has been found in the last node.
 	 */
