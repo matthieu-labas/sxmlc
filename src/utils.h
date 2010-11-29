@@ -19,6 +19,10 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  Read a line from file 'f' into buffer 'line' of size 'sz_line' bytes.
  Returns 0 if an error occured.
@@ -61,17 +65,11 @@
 int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char to, int keep_fromto, char interest, int* interest_count);
 
 /*
- Duplicate 'src' into a separate memory buffer.
- Returns NULL in case of failure.
- */
-char* strcpy_alloc(char* src);
-
-/*
  Concatenates the string pointed at by 'src1' with 'src2' into '*src1' and
  return it ('*src1').
  Return NULL when out of memory.
  */
-char* strcat_alloc(char** src1, char* src2);
+char* strcat_alloc(char** src1, const char* src2);
 
 /*
  Strip spaces at the beginning and end of 'str', modifying 'str'.
@@ -124,5 +122,9 @@ int fprintHTML(FILE* f, char* str);
  Returns 'true' when 'str' matches 'pattern', 'false' otherwise.
  */
 int regstrcmp(char* str, char* pattern);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

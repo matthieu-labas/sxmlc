@@ -4,6 +4,7 @@
 //#include <conio.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <time.h>
 #include "utils.h"
 #include "sxmlc.h"
 #include "sxmlsearch.h"
@@ -17,7 +18,7 @@ void test_gen(void)
 
 	node = XMLNode_alloc(1);
 	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-	XMLDoc_add_node(&doc, node, TAG_PROLOG);
+	XMLDoc_add_node(&doc, node, TAG_INSTR);
 	
 	node = XMLNode_alloc(1);
 	XMLNode_set_tag(node, " Pre-comment ");
@@ -97,7 +98,7 @@ void test_DOM(void)
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
 		printf("Error while loading\n");
 	//f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
-	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", 0, 4);
 	/*{
@@ -110,22 +111,91 @@ void test_DOM(void)
 	XMLDoc_free(&doc);
 }
 
+typedef struct _sxs {
+	int n_nodes;
+	int n_match;
+	XMLSearch search;
+} SXS;
+
+int inc_node(const XMLNode* node, SXS* sxs)
+{
+	sxs->n_nodes++;
+	if (XMLSearch_node_matches(node, &sxs->search)) sxs->n_match++;
+
+	return true;
+}
+
+void test_speed_SAX(void)
+{
+	SAX_Callbacks sax;
+	SXS sxs;
+	clock_t t0;
+
+	sax.start_node = inc_node;
+	sax.end_node = NULL;
+	sax.new_text = NULL;
+	sxs.n_nodes = 0;
+	sxs.n_match = 0;
+	XMLSearch_init(&sxs.search);
+	XMLSearch_search_set_tag(&sxs.search, "incategory");
+	XMLSearch_search_add_attribute(&sxs.search, "category", "category*", true);
+	printf("[SAX] Loading...\n");
+	t0 = clock();
+	if (!XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &sxs))
+		printf("Error while loading\n");
+	printf("[SAX] Loaded %d nodes in %d ms, found %d match\n", sxs.n_nodes, (int)((1000.0f * (clock() - t0)) / CLOCKS_PER_SEC), sxs.n_match);
+	XMLSearch_free(&sxs.search, false);
+}
+
+void test_speed_DOM(void)
+{
+	XMLDoc doc;
+	XMLSearch search;
+	XMLNode* node;
+	int n_match;
+	clock_t t0, t1;
+
+	XMLDoc_init(&doc);
+
+	printf("[DOM] Loading...\n");
+	t0 = clock();
+	if (!XMLDoc_parse_file_DOM("/home/matth/Code/tmp/big.xml", &doc))
+		printf("Error while loading\n");
+	t1 = clock();
+	printf("[DOM] Loaded in %d ms\n", (int)((1000.0f * (t1 - t0)) / CLOCKS_PER_SEC));
+	XMLSearch_init(&search);
+	XMLSearch_search_set_tag(&search, "incategory");
+	XMLSearch_search_add_attribute(&search, "category", "category*", true);
+	n_match = 0;
+	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
+	printf("Searching...\n");
+	t0 = clock();
+	while ((node = XMLSearch_next(node, &search)) != NULL) {
+		n_match++;
+	}
+	printf("[DOM] Found %d matching nodes in %d ms\n", n_match, (int)((1000.0f * (clock() - t0)) / CLOCKS_PER_SEC));
+	XMLSearch_free(&search, false);
+	t0 = clock();
+	XMLDoc_free(&doc);
+	printf("[DOM] Freed in %d ms\n", (int)((1000.0f * (clock() - t0)) / CLOCKS_PER_SEC));
+}
+
 static const char* tag_type_names[] = {
 	"TAG_NONE",
+	"TAG_PARTIAL",
 	"TAG_FATHER",
 	"TAG_SELF",
 	"TAG_END",
 	"TAG_PROLOG",
 	"TAG_COMMENT",
-	"TAG_PARTIAL_COMMENT",
 	"TAG_CDATA",
-	"TAG_PARTIAL_CDATA"
+	"TAG_DOCTYPE"
 };
 
 int start_node(const XMLNode* node, XMLDoc* doc)
 {
 	int i;
-	printf("Start node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
+	printf("Start node %s <%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
 	for (i = 0; i < node->n_attributes; i++)
 		printf("\t%s=\"%s\"\n", node->attributes[i].name, node->attributes[i].value);
 	return true;
@@ -133,7 +203,7 @@ int start_node(const XMLNode* node, XMLDoc* doc)
 
 int end_node(const XMLNode* node, XMLDoc* doc)
 {
-	printf("End node %s <%s>\n", tag_type_names[node->tag_type], node->tag);
+	printf("End node %s <%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
 	return true;
 }
 
@@ -146,17 +216,58 @@ int new_text(const char* text, XMLDoc* doc)
 	return true;
 }
 
+int allin1(XMLEvent event, const XMLNode* node, const char* textL, const char* textR, XMLDoc* doc)
+{
+	switch(event) {
+		case XML_EVENT_START: return start_node(node, doc);
+		case XML_EVENT_END: return end_node(node, doc);
+		case XML_EVENT_TEXT: return new_text(textL, doc);
+		default: return true;
+	}
+}
+
 void test_SAX(void)
 {
 	SAX_Callbacks sax;
 
-	sax.start_node = start_node;
-	sax.end_node = end_node;
-	sax.new_text = new_text;
-	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL)) {
+	sax.start_node = NULL;//start_node;
+	sax.end_node = NULL;//end_node;
+	sax.new_text = NULL;//new_text;
+	sax.all_event = allin1;
+	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL))
 		printf("Error while loading\n");
-		return;
-	}
+}
+
+int depth, max_depth;
+int my_start(const XMLNode* node, struct _DOM_through_SAX* dom)
+{
+	if(++depth > max_depth) max_depth = depth;
+	return DOMXMLDoc_node_start(node, dom);
+}
+int my_end(const XMLNode* node, struct _DOM_through_SAX* dom)
+{
+	depth--;
+	return DOMXMLDoc_node_end(node, dom);
+}
+void test_DOM_from_SAX(void)
+{
+	DOM_through_SAX dom;
+	SAX_Callbacks sax;
+	XMLDoc doc;
+
+	XMLDoc_init(&doc);
+	dom.doc = &doc;
+	dom.current = NULL;
+	sax.start_node = my_start;
+	sax.end_node = my_end;
+	sax.new_text = DOMXMLDoc_node_text;
+	sax.all_event = NULL;
+	depth = max_depth = 0;
+	if (!XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &dom))
+		printf("Failed\n");
+	//XMLDoc_print(&doc, stdout, "\n", "  ", 0, 4);
+	XMLDoc_free(&doc);
+	printf("Max depth: %d\n", max_depth);
 }
 
 void test_search(void)
@@ -274,13 +385,17 @@ void test_split(void)
 
 int main(int argc, char** argv)
 {
+	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
 	//test_gen();
 	//test_DOM();
-	//test_SAX();
-	test_search();
+	test_SAX();
+	//test_DOM_from_SAX();
+	//test_search();
 	//test_xpath();
 	//test_regexp();
 	//test_split();
+	//test_speed_DOM();
+	//test_speed_SAX();
 
 	//_getch();
 	return 0;

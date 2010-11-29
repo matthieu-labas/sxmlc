@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE auteur [
+  <!-- Ici les différentes instructions de la DTD interne -->
+  <!ELEMENT auteur (nom,prenom)>
+  <!ELEMENT nom (#PCDATA)>
+  <!ELEMENT prenom (#PCDATA)>
+]>
+<#[MONTAG-Genre
+CDATA-]>
+<!DOCTYPE élément-racine PUBLIC "-//Propriétaire//Description de la DTD//Langue" "URL">
 <xml>
 	<configuration1>
 		<structure name="st1">

@@ -19,6 +19,10 @@
 #ifndef _SXMLCSEARCH_H_
 #define _SXMLCSEARCH_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  XML search parameters. Can be initialized from an XPath string.
  A pointer to such structure is given to search functions which can modify
@@ -100,7 +104,7 @@ int XMLSearch_free(XMLSearch* search, int free_next);
  only). In this case, the previous tag is freed.
  Return 'true' upon successful completion, 'false' for memory error.
  */
-int XMLSearch_search_set_tag(XMLSearch* search, char* tag);
+int XMLSearch_search_set_tag(XMLSearch* search, const char* tag);
 
 /*
  Add an attribute search criteria.
@@ -110,13 +114,13 @@ int XMLSearch_search_set_tag(XMLSearch* search, char* tag);
  difference (='false).
  Return the index of the new attribute, or '-1' for memory error.
  */
-int XMLSearch_search_add_attribute(XMLSearch* search, char* attr_name, char* attr_value, int value_equal);
+int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, const char* attr_value, int value_equal);
 
 /*
  Search for attribute 'attr_name' in Search attribute list and return its index
  or '-1' if not found.
  */
-int XMLSearch_search_get_attribute_index(XMLSearch* search, char* attr_name);
+int XMLSearch_search_get_attribute_index(const XMLSearch* search, const char* attr_name);
 
 /*
  Removes the search attribute given by its index 'i_attr'.
@@ -129,7 +133,7 @@ int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr);
  only). In this case, the previous text is freed.
  Return 'true' upon successful completion, 'false' for memory error.
  */
-int XMLSearch_search_set_text(XMLSearch* search, char* text);
+int XMLSearch_search_set_text(XMLSearch* search, const char* text);
 
 /*
  Set an additional search on children nodes of a previously matching node.
@@ -154,7 +158,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  A NULL 'search' will return an empty string.
  Return 'false' for a memory problem, 'true' otherwise.
  */
-char* XMLSearch_get_XPath_string(XMLSearch* search, char** xpath, char quote);
+char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quote);
 
 /*
  Initialize a 'search' struct from an XPath-like query. "XPath-like" means that
@@ -175,7 +179,7 @@ int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search);
  Return 'false' when 'node' does not match or for invalid arguments, 'true'
  if 'node' is a match.
  */
-int XMLSearch_node_matches(XMLNode* node, XMLSearch* search);
+int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search);
 
 /*
  Search next matching node, according to search parameters given by 'search'.
@@ -193,6 +197,10 @@ int XMLSearch_node_matches(XMLNode* node, XMLSearch* search);
  Return the next matching node according to 'search' criteria, or NULL when no more nodes match
  or when an error occurred.
  */
-XMLNode* XMLSearch_next(XMLNode* from, XMLSearch* search);
+XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -112,9 +112,12 @@ margin-left: 2%;
 
 <ul>
 <li><a href="#READ">Read an XML document from a file</a></li>
+	<ul><li><a href="#SAX">SAX parser</a></li></ul></li>
+	<ul><li><a href="#DOM">DOM parser</a></li></ul></li>
 <li><a href="#WRITE">Create an XML document</a></li>
 <li><a href="#SEARCH">Search an XML document</a>
 	<ul><li><a href="#SEARCH">XPath-like queries</a></li></ul></li>
+<li><a href="#CUSTOM">Handle new tags</a>
 </ul>
 
 <hr/>
@@ -155,18 +158,22 @@ You can navigate through it after the whole file has been loaded (to add or remo
 The last method uses SAX implementation and calls the callback functions given in <code>sax_callbacks</code>.
 </p>
 
+<a name="SAX"/>
 <h5>SAX parser</h5>
 <p>
-The SAX parser is called with an extra <code>user</code> argument that will be given back to all
+The SAX parser is called with an extra <code>user_data</code> argument that will be given back to all
 callbacks. It can be a pointer to an <code>XMLDoc</code> structure or any other user-defined info.<br/>
-There are only 3 callbacks that can be called when using the SAX parser:
+There are only 3 callbacks that can be called when using the SAX parser (plus an additional one if needed):
 <ul>
 <li>
 <code>start_node</code> is called when a new node has been found (e.g. "<code>&lt;newNode param="val"&gt;</code>")
 </li>
-<li><code>end_node</code> is called when a node is being closed. (e.g. "<code>&lt;/newNode&gt;</code>")<br/>
+<li><code>end_node</code> is called when a node is being closed. (e.g. "<code>&lt;/newNode&gt;</code>")
 </li>
-<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>")<br/>
+<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>")
+</li>
+<li><code>all_event</code> is given for those who prefer to handle all such events in a single function instead of three
+(e.g. to get a static variable for the node)
 </li>
 </ul>
 </p>
@@ -178,7 +185,85 @@ It also has the <code>tag_type</code> attribute set to know if the node is a com
 </p>
 
 <p>
-Each callback should return non-zero to tell the parser to go on with parsing, or return 0 to stop parsing.
+Each callback should return non-zero to tell the parser to go on with parsing, or return 0 to stop parsing.<br/>
+<strong>NB: it is possible to change the callbacks by passing the 'sax_callbacks' as the 'user_data' as well, and changing
+it inside the callback itself!</strong><br/>
+<pre class="code">
+int end(const XMLNode* node, SAX_Callbacks* cb);
+int my_special_end(const XMLNode* node, SAX_Callbacks* cb);
+
+int end(const XMLNode* node, SAX_Callbacks* cb)
+{
+	/* Process end of 'node' */
+}
+
+int start(const XMLNode* node, SAX_Callbacks* cb)
+{
+	/* Do fancy stuff */
+	if (something_relevant)
+		cb->end = my_special_end; /* From now on, 
+}
+
+int my_special_end(const XMLNode* node, SAX_Callbacks* cb)
+{
+	/* Do something special for these special 'node' */
+	if (something_not_relevant_anymore)
+		cb->end = end; /* Go back to normal node end processing */
+}
+
+XMLDoc_parse_file_SAX("path_to_my_file.xml", &sax_callbacks, &sax_callbacks);
+</pre>
+</p>
+
+<a name="DOM"/>
+<h5>DOM parser</h5>
+<p>
+The DOM parser uses internally the SAX implementation with 3 specific callbacks.
+These callbacks are made available so that you can use them to load a whole XML document to memory
+but you would like to run some extra processing on the fly, as the document is being read.<br/>
+In this case, you have to use the SAX parser and define your own callbacks to run your processing
+before calling the "official" DOM callbacks that will create the document DOM structure.<br/>
+To achieve that, you <strong>HAVE TO</strong> use a <code>DOM_through_SAX</code> struct as the user pointer and initialize
+its 'doc' member with your initialized <code>XMLDoc</code> document and call the DOM callbacks with this.<br/>
+Here is an example to compute nesting while the document is being DOM-style loaded.
+ 
+<pre class="code">
+int depth, max_depth;
+
+int my_start(const XMLNode* node, struct _DOM_through_SAX* dom)
+{
+	if(++depth > max_depth) max_depth = depth;
+	return DOMXMLDoc_node_start(node, dom);
+}
+int my_end(const XMLNode* node, struct _DOM_through_SAX* dom)
+{
+	depth--;
+	return DOMXMLDoc_node_end(node, dom);
+}
+void test_DOM_from_SAX(void)
+{
+	DOM_through_SAX dom;
+	SAX_Callbacks sax;
+	XMLDoc doc;
+
+	XMLDoc_init(&doc);
+	dom.doc = &doc;
+	dom.current = NULL;
+	
+	sax.start_node = my_start;
+	sax.end_node = my_end;
+	sax.new_text = DOMXMLDoc_node_text;
+	sax.all_event = NULL;
+	
+	depth = max_depth = 0;
+	
+	XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &dom);
+	
+	printf("Max depth: %d\n", max_depth);
+	
+	XMLDoc_free(&doc);
+}
+</pre>
 </p>
 
 <a name="WRITE"/>
@@ -201,7 +286,7 @@ XMLDoc_set_root(&doc, node);
 
 node = XMLNode_alloc(1);
 XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-XMLDoc_add_node(&doc, node, TAG_PROLOG);
+XMLDoc_add_node(&doc, node, TAG_INSTR);
 
 node = XMLNode_alloc(1);
 XMLNode_set_tag(node, " Pre-comment ");
@@ -307,6 +392,10 @@ Next matching node is found by calling <code>XMLSearch_next</code> using the las
 </p>
 
 <p>
+NB: If you do not need search capabilities, you can remove the sxmlsearch.c from your project, saving 6 Kb! :-)
+</p>
+
+<p>
 <pre class="code">
 XMLDoc doc;
 XMLSearch search;
@@ -370,7 +459,40 @@ and with text starting with "<code>toto</code>".
 	&lt;tagFather id="1" name="Pere"&gt;toto et tata
 		&lt;tagChild attrib="val"&gt;search some text&lt;/tagChild&gt;
 	&lt;/tagFather&gt;
+&lt;/xml&gt;
+</pre>
+</p>
+
+<a name="CUSTOM"/>
+<p>
+<h4>Handle new tags</h4>
+As sxmlc does not handle all W3C XML tags, you can specify your own tags so that they can be interpreted instead
+of aborting with a "Sytax error"! ;-)<br/>
+Such "user tags" are defined through the <code>XML_register_user_tag</code> with 3 information:
+<ul>
+<li>The <code>tag_type</code> which is a number uniquely identifying the type of tag.<br/>
+It <strong>HAS TO</strong> be at least <code>TAG_USER</code> or the tag cannot be registered. However, no check
+is performed for duplicate so you can specify twice the same tag number (but why would you? ;-)).</li>
+<li>The <code>start</code> and <code>end</code> are strings that are to be looked for respectively after '&lt;'
+and before '&gt;'</li>
+</ul>
+When parsing such nodes, the whole text between <code>start</code> and <code>end</code> strings will be stored in
+the '<code>tag</code>' member of an <code>XMLNode</code>. The text itself is kept "as is" but you can remove potential
+escape characters with the <code>str_unescape</code> function.
+</p>
+NB: Internally, that is how comments, processing instructions and CDATA are handled.
+</p>
+
+<p>
+<pre class="code">
+XML_register_user_tag(TAG_USER+1, "<#[MYTAG-", "-]>");
+XML_parse_1string("<#[MYTAG-Hello, World!-]>", &node);
+printf(node.tag); /* Will display "Hello, World!" */
+</pre>
+<pre>
 &lt;xml&gt;
+	&lt;#[MYTAG-Hello, World!-]>
+&lt;/xml&gt;
 </pre>
 </p>
 

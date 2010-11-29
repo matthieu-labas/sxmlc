@@ -113,7 +113,7 @@ int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char 
 		}
 		else {
 			(*line)[n] = c;
-			if (c != to || keep_fromto && to != 0 && c == to) n++; /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
+			if (c != to || (keep_fromto && to != 0 && c == to)) n++; /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
 			if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
 				*sz_line += MEM_INCR_RLA;
 				pt = (char*)realloc(*line, *sz_line);
@@ -144,21 +144,7 @@ int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char 
 
 /* --- */
 
-char* strcpy_alloc(char* src)
-{
-	char* p;
-
-	if (src == NULL) return NULL;
-
-	p = (char*)malloc(strlen(src)+1);
-	if (p == NULL) return NULL;
-
-	strcpy(p, src);
-
-	return p;
-}
-
-char* strcat_alloc(char** src1, char* src2)
+char* strcat_alloc(char** src1, const char* src2)
 {
 	char* cat;
 	int n;
@@ -218,7 +204,6 @@ char* strip_spaces(char* str, char repl_sq, char protect)
 char* str_unescape(char* str)
 {
 	int i, j;
-	char* p;
 
 	if (str == NULL) return NULL;
 
@@ -233,7 +218,7 @@ char* str_unescape(char* str)
 int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes)
 {
 	int n0, n1, is;
-	char quote;
+	char quote = '"';
 
 	if (str == NULL) return false;
 

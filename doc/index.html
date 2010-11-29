@@ -117,16 +117,21 @@ It is not an attempt to re-write the fine 'libxmlc' or 'expat'! :-)<br/>
 
 <p>
 It is also not an XML-validation tool!<br/>
-You don't have to have an XML prolog on the first line or you can have several "root" nodes if you want to,
-which is typically not a valid XML document as per W3C specifications. Therefore, it will probably fail most
-of the <a href="http://www.oasis-open.org/committees/xml-conformance/xml-test-suite.shtml">OASIS tests</a>. ;-)
+<ul>
+<li>You don't have to have an XML prolog on the first line</li>
+<li>You can have several root nodes if you want to</li>
+<li>Tag names can have exotic characters</li>
+<li>You can create your own tag names!</li>
+</ul>
+Therefore, it will probably fail most of the
+<a href="http://www.oasis-open.org/committees/xml-conformance/xml-test-suite.shtml">OASIS tests</a>. ;-)
 </p>
 
 <p>
 It is just intended to give C developers an API for XML handling as simple and flexible as possible,
 being fast and memory-efficient.<br/>
 It can be compiled as a stand-alone library to be included in other applications, possibly written in other languages,
-or be included directly in C projects.
+or be included directly in C projects (add 21 Kb to your executable).
 </p>
 </div>
 
