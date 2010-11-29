@@ -170,7 +170,7 @@ Hence, knowing the tag type eases its display:
 	Tags read after it are siblings of father tag.
 </li>
 <li>
-	<code>TAG_PROLOG</code> (<code>&lt;?text?&gt;</code>) is a tag used for prolog and action nodes.
+	<code>TAG_INSTR</code> (<code>&lt;?text?&gt;</code>) is a tag used for prolog and processing instructions.
 </li>
 <li>
 	<code>TAG_COMMENT</code> (<code>&lt;!--text--&gt;</code>) is a comment node.
@@ -178,10 +178,14 @@ Hence, knowing the tag type eases its display:
 <li>
 	<code>TAG_CDATA</code> (<code>&lt;![CDATA[text]]/&gt;</code>) is a CDATA escaped node.
 </li>
+<li>
+	<code>TAG_DOCTYPE</code> (<code>&lt;!DOCTYPE text]/&gt;</code>) is a DOCTYPE node.
+</li>
 </ul>
 </p>
 <p>
-The <code>user</code> attribute is where you can put any type of data related to the node.
+The <code>user</code> attribute is where you can put any type of data related to the node (e.g. pointer
+to a struct, ...).
 </p>
 
 </div>
