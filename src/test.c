@@ -1,7 +1,9 @@
 #pragma warning(disable : 4996)
 
 #include <stdio.h>
-//#include <conio.h>
+#ifdef WIN32
+#include <conio.h>
+#endif
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
@@ -98,7 +100,7 @@ void test_DOM(void)
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
 		printf("Error while loading\n");
 	//f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
-	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", 0, 4);
 	/*{
@@ -117,8 +119,10 @@ typedef struct _sxs {
 	XMLSearch search;
 } SXS;
 
-int inc_node(const XMLNode* node, SXS* sxs)
+int inc_node(const XMLNode* node, SAX_Data* sd)
 {
+	SXS* sxs = (SXS*)sd->user;
+
 	sxs->n_nodes++;
 	if (XMLSearch_node_matches(node, &sxs->search)) sxs->n_match++;
 
@@ -131,9 +135,8 @@ void test_speed_SAX(void)
 	SXS sxs;
 	clock_t t0;
 
+	SAX_Callbacks_init(&sax);
 	sax.start_node = inc_node;
-	sax.end_node = NULL;
-	sax.new_text = NULL;
 	sxs.n_nodes = 0;
 	sxs.n_match = 0;
 	XMLSearch_init(&sxs.search);
@@ -168,7 +171,7 @@ void test_speed_DOM(void)
 	XMLSearch_search_add_attribute(&search, "category", "category*", true);
 	n_match = 0;
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
-	printf("Searching...\n");
+	printf("[DOM] Searching...\n");
 	t0 = clock();
 	while ((node = XMLSearch_next(node, &search)) != NULL) {
 		n_match++;
@@ -192,7 +195,7 @@ static const char* tag_type_names[] = {
 	"TAG_DOCTYPE"
 };
 
-int start_node(const XMLNode* node, XMLDoc* doc)
+int start_node(const XMLNode* node, SAX_Data* sd)
 {
 	int i;
 	printf("Start node %s <%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
@@ -201,13 +204,13 @@ int start_node(const XMLNode* node, XMLDoc* doc)
 	return true;
 }
 
-int end_node(const XMLNode* node, XMLDoc* doc)
+int end_node(const XMLNode* node, SAX_Data* sd)
 {
 	printf("End node %s <%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
 	return true;
 }
 
-int new_text(const char* text, XMLDoc* doc)
+int new_text(const char* text, SAX_Data* sd)
 {
 	char* p = (char*)text;
 	while(*p && isspace(*p++)) ;
@@ -216,12 +219,15 @@ int new_text(const char* text, XMLDoc* doc)
 	return true;
 }
 
-int allin1(XMLEvent event, const XMLNode* node, const char* textL, const char* textR, XMLDoc* doc)
+int allin1(XMLEvent event, const XMLNode* node, char* text, const int n, SAX_Data* sd)
 {
 	switch(event) {
-		case XML_EVENT_START: return start_node(node, doc);
-		case XML_EVENT_END: return end_node(node, doc);
-		case XML_EVENT_TEXT: return new_text(textL, doc);
+		case XML_EVENT_START_DOC: printf("Document start\n\n"); return true;
+		case XML_EVENT_START_NODE: return start_node(node, sd);
+		case XML_EVENT_END_NODE: return end_node(node, sd);
+		case XML_EVENT_TEXT: return new_text(text, sd);
+		case XML_EVENT_ERROR: printf("%s:%d: ERROR %d\n", sd->name, sd->line_num, n); return true;
+		case XML_EVENT_END_DOC: printf("\nDocument end\n"); return true;
 		default: return true;
 	}
 }
@@ -230,24 +236,38 @@ void test_SAX(void)
 {
 	SAX_Callbacks sax;
 
-	sax.start_node = NULL;//start_node;
-	sax.end_node = NULL;//end_node;
-	sax.new_text = NULL;//new_text;
+	SAX_Callbacks_init(&sax);
+	//sax.start_node = NULL;//start_node;
+	//sax.end_node = NULL;//end_node;
+	//sax.new_text = NULL;//new_text;
 	sax.all_event = allin1;
 	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL))
 		printf("Error while loading\n");
 }
 
+void test_SAX_buffer(void)
+{
+	SAX_Callbacks sax;
+
+	SAX_Callbacks_init(&sax);
+	//sax.start_node = NULL;//start_node;
+	//sax.end_node = NULL;//end_node;
+	//sax.new_text = NULL;//new_text;
+	sax.all_event = allin1;
+	if (!XMLDoc_parse_buffer_SAX("<xml><a>text</a><b name='matth'/></xml>", "Buffer1", &sax, NULL))
+		printf("Error while loading\n");
+}
+
 int depth, max_depth;
-int my_start(const XMLNode* node, struct _DOM_through_SAX* dom)
+int my_start(const XMLNode* node, SAX_Data* sd)
 {
 	if(++depth > max_depth) max_depth = depth;
-	return DOMXMLDoc_node_start(node, dom);
+	return DOMXMLDoc_node_start(node, sd);
 }
-int my_end(const XMLNode* node, struct _DOM_through_SAX* dom)
+int my_end(const XMLNode* node, SAX_Data* sd)
 {
 	depth--;
-	return DOMXMLDoc_node_end(node, dom);
+	return DOMXMLDoc_node_end(node, sd);
 }
 void test_DOM_from_SAX(void)
 {
@@ -258,10 +278,10 @@ void test_DOM_from_SAX(void)
 	XMLDoc_init(&doc);
 	dom.doc = &doc;
 	dom.current = NULL;
+	SAX_Callbacks_init(&sax);
 	sax.start_node = my_start;
 	sax.end_node = my_end;
 	sax.new_text = DOMXMLDoc_node_text;
-	sax.all_event = NULL;
 	depth = max_depth = 0;
 	if (!XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &dom))
 		printf("Failed\n");
@@ -326,7 +346,7 @@ void test_xpath(void)
 	XMLSearch_free(&search, true);
 }
 
-void tstre(char* s, char* p)
+static void tstre(char* s, char* p)
 {
 	if (regstrcmp(s, p))
 		printf("'%s' and '%s' match\n", s, p);
@@ -383,12 +403,36 @@ void test_split(void)
 	print_split("attrib");
 }
 
+void test_NodeXPath(void)
+{
+	XMLNode node, node1;
+	char* buf;
+
+	XMLNode_init(&node);
+	XMLNode_set_tag(&node, "monroot");
+
+	XMLNode_init(&node1);
+	XMLNode_set_tag(&node1, "montag");
+	XMLNode_set_text(&node1, "This <is> \"some\" text & chars");
+	XMLNode_set_attribute(&node1, "name", "first one");
+	XMLNode_set_attribute(&node1, "readonly", "fa<l>se");
+	XMLNode_set_attribute(&node1, "value", "T\"B\"D");
+
+	XMLNode_add_child(&node, &node1);
+
+	buf = NULL;
+	printf(XMLNode_get_XPath(&node1, &buf, true));
+	free(buf);
+}
+
+#if 1
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
 	//test_gen();
 	//test_DOM();
-	test_SAX();
+	//test_SAX();
+	//test_SAX_buffer();
 	//test_DOM_from_SAX();
 	//test_search();
 	//test_xpath();
@@ -396,7 +440,11 @@ int main(int argc, char** argv)
 	//test_split();
 	//test_speed_DOM();
 	//test_speed_SAX();
+	test_NodeXPath();
 
-	//_getch();
+#ifdef WIN32
+	_getch();
+#endif
 	return 0;
 }
+#endif

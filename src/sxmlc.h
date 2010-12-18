@@ -25,7 +25,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "3.2.0"
+#define SXMLC_VERSION "3.3.0"
 
 #ifndef false
 #define false 0
@@ -57,6 +57,9 @@ typedef struct _XMLAttribute {
 	int active;
 } XMLAttribute;
 
+/* Constant to know whether a struct has been initialized (XMLNode or XMLDoc) */
+#define XML_INIT_DONE 0x22051977 /* Happy Birthday ;) */
+
 /*
  An XML node.
  */
@@ -72,6 +75,7 @@ typedef struct _XMLNode {
 	
 	int tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
 	int active;		/* 'true' to tell that node is active and should be displayed by 'XMLDoc_print' */
+	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that node has been initialized properly */
 /* TODO: Add pointer to next sibling ? */
 	
 	void* user;	/* Pointer for user data associated to the node */
@@ -80,13 +84,12 @@ typedef struct _XMLNode {
 /*
  An XML document.
  */
-#define XMLDOC_INIT_DONE 0x22051977
 typedef struct _XMLDoc {
 	char filename[256];
 	XMLNode** nodes;	/* Nodes of the document, including prolog, comments and root nodes */
 	int n_nodes;
 	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
-	int init_value;	/* Initialized to 'XMLDOC_INIT_DONE' to indicate that document has been initialized properly */
+	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
 /* TODO: Add 'root' member as a shortcut to nodes[i_nodes] ? */
 } XMLDoc;
 
@@ -100,57 +103,116 @@ typedef struct _XMLDoc {
  */
 int XML_register_user_tag(int tag_type, char* start, char* end);
 
+#define PARSE_ERR_NONE					0
+#define PARSE_ERR_MEMORY				(-1)
+#define PARSE_ERR_UNEXPECTED_TAG_END	(-2)
+#define PARSE_ERR_SYNTAX				(-3)
+#define PARSE_ERR_TEXT_OUTSIDE_NODE		(-4) /* During DOM loading */
+#define PARSE_ERR_UNEXPECTED_NODE_END	(-5) /* During DOM loading */
+
 /*
  Events that can happen when loading an XML document.
  These will be passed to the 'all_event' callback of the SAX parser.
  */
 typedef enum _XMLEvent {
-	XML_EVENT_START,
-	XML_EVENT_END,
-	XML_EVENT_TEXT
+	XML_EVENT_START_DOC,
+	XML_EVENT_START_NODE,
+	XML_EVENT_END_NODE,
+	XML_EVENT_TEXT,
+	XML_EVENT_ERROR,
+	XML_EVENT_END_DOC
 } XMLEvent;
+
+/*
+ Structure given as an argument for SAX callbacks to retrieve information about
+ parsing status
+ */
+typedef struct _SAX_Data {
+	const char* name;
+	int line_num;
+	void* user;
+} SAX_Data;
 
 /*
  User callbacks used for SAX parsing. Return values of these callbacks should be 0 to stop parsing.
  Members can be set to NULL to disable handling of some events.
- All parameters are pointers to structures that will no longer be available after callback returns. It is recommended that
- the callback uses the information and stores it in its own data structure.
+ All parameters are pointers to structures that will no longer be available after callback returns.
+ It is recommended that the callback uses the information and stores it in its own data structure.
+ WARNING! SAX PARSING DOES NOT CHECK FOR XML INTEGRITY! e.g. a tag end without a matching tag start
+ will not be detected by the parser and should be detected by the callbacks instead.
  */
 typedef struct _SAX_Callbacks {
+	/*
+	 Callback called when parsing starts, before parsing the first node.
+	 */
+	int (*start_doc)(SAX_Data* sd);
+
 	/*
 	 Callback called when a new node starts (e.g. '<tag>' or '<tag/>').
 	 If any, attributes can be read from 'node->attributes'.
 	 N.B. '<tag/>' will trigger an immediate call to the 'end_node' callback
 	 after the 'start_node' callback.
 	 */
-	int (*start_node)(const XMLNode* node, void* user);
+	int (*start_node)(const XMLNode* node, SAX_Data* sd);
 
 	/*
 	 Callback called when a node ends (e.g. '</tag>' or '<tag/>').
 	 */
-	int (*end_node)(const XMLNode* node, void* user);
+	int (*end_node)(const XMLNode* node, SAX_Data* sd);
 
 	/*
 	 Callback called when text has been found in the last node.
 	 */
-	int (*new_text)(const char* text, void* user);
+	int (*new_text)(char* text, SAX_Data* sd);
+
+	/*
+	 Callback called when parsing is finished.
+	 No other callbacks will be called after it.
+	 */
+	int (*end_doc)(SAX_Data* sd);
+
+	/*
+	 Callback called when an error occurs during parsing.
+	 'error_num' is the error number and 'line_number' is the line number in the stream
+	 being read (file or buffer).
+	 */
+	int (*on_error)(int error_num, int line_number, SAX_Data* sd);
 
 	/*
 	 Callback called when text has been found in the last node.
 	 'event' is the type of event for which the callback was called:
-	 	 XML_EVENT_START:
+	 	 XML_EVENT_START_DOC:
+	 	 	 'node' is NULL.
+	 	 	 'text' is the file name if a file is being parsed, NULL if a buffer is being parsed.
+	 	 	 'n' is 0.
+	 	 XML_EVENT_START_NODE:
 	 	 	 'node' is the node starting, with tag and all attributes initialized.
-	 	 	 'textL' and 'textR' are NULL.
-	 	 XML_EVENT_END:
+	 	 	 'text' is NULL.
+	 	 	 'n' is the number of lines parsed.
+	 	 XML_EVENT_END_NODE:
 	 	 	 'node' is the node ending, with tag, attributes and text initialized.
-	 	 	 'textL' and 'textR' are NULL.
+	 	 	 'text' is NULL.
+	 	 	 'n' is the number of lines parsed.
 	 	 XML_EVENT_TEXT:
 	 	 	 'node' is NULL.
-	 	 	 'textL' is the text to be added to last node started and not finished.
-	 	 	 'textR' is NULL.
+	 	 	 'text' is the text to be added to last node started and not finished.
+	 	 	 'n' is the number of lines parsed.
+	 	 XML_EVENT_ERROR:
+	 	 	 Everything is NULL.
+	 	 	 'err' is one of the 'PARSE_ERR_*'.
+	 	 XML_EVENT_END_DOC:
+	 	 	 'node' is NULL.
+	 	 	 'text' is the file name if a file is being parsed, NULL if a buffer is being parsed.
+	 	 	 'n' is the number of lines parsed.
 	 */
-	int (*all_event)(XMLEvent event, const XMLNode* node, const char* textL, const char* textR, void* user);
+	int (*all_event)(XMLEvent event, const XMLNode* node, char* text, const int n, SAX_Data* sd);
 } SAX_Callbacks;
+
+/*
+ Helper function to initialize all 'sax' members to NULL.
+ Return 'false' is 'sax' is NULL.
+ */
+int SAX_Callbacks_init(SAX_Callbacks* sax);
 
 /*
  Set of SAX callbacks used by 'XMLDoc_parse_file_DOM'.
@@ -158,18 +220,22 @@ typedef struct _SAX_Callbacks {
  with user-defined code at some point (e.g. counting nodes, running search, ...).
  In this case, the 'XMLDoc_parse_file_SAX' has to be called instead of the 'XMLDoc_parse_file_DOM',
  providing either these callbacks directly, or a functions calling these callbacks.
- To do that, you should initialize the 'doc' member of a 'DOM_through_SAX' struct and call the
- 'XMLDoc_parse_file_SAX' giving this struct as a the user pointer.
+ To do that, you should initialize the 'doc' member of the 'DOM_through_SAX' struct and call the
+ 'XMLDoc_parse_file_SAX' giving this struct as a the 'user' data pointer.
  */
 
 typedef struct _DOM_through_SAX {
 	XMLDoc* doc;		/* Document to fill up */
-	XMLNode* current;	/* For internal use */
+	XMLNode* current;	/* For internal use (current father node) */
+	int error;			/* For internal use (parse status) */
 } DOM_through_SAX;
 
-int DOMXMLDoc_node_start(const XMLNode* node, DOM_through_SAX* dom);
-int DOMXMLDoc_node_end(const XMLNode* node, DOM_through_SAX* dom);
-int DOMXMLDoc_node_text(const char* text, DOM_through_SAX* dom);
+int DOMXMLDoc_doc_start(SAX_Data* dom);
+int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* dom);
+int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
+int DOMXMLDoc_node_text(char* text, SAX_Data* dom);
+int DOMXMLDoc_parse_error(int error_num, int line_number, SAX_Data* sd);
+int DOMXMLDoc_doc_end(SAX_Data* dom);
 
 /* --- XMLNode methods --- */
 
@@ -260,7 +326,7 @@ int XMLNode_set_text(XMLNode* node, const char* text);
  Add a child to a node.
  Return 'false' for memory problem, 'true' otherwise.
  */
-int XMLNode_add_child(XMLNode* node, const XMLNode* child);
+int XMLNode_add_child(XMLNode* node, XMLNode* child);
 
 /*
  Search for 'tag' in direct children of 'node', starting from index 'isearch'
@@ -358,6 +424,7 @@ void XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* c
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
 int XMLDoc_parse_file_DOM(const char* filename, XMLDoc* doc);
+int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc);
 
 /*
  Parse an XML document from a given 'filename', calling SAX callbacks given in the 'sax' structure.
@@ -365,6 +432,7 @@ int XMLDoc_parse_file_DOM(const char* filename, XMLDoc* doc);
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
 int XMLDoc_parse_file_SAX(const char* filename, const SAX_Callbacks* sax, void* user);
+int XMLDoc_parse_buffer_SAX(const char* buffer, const char* name, const SAX_Callbacks* sax, void* user);
 
 /*
  Parse an XML file using the DOM implementation (it is a direct call to 'XMLDoc_parse_file_DOM' function).

@@ -8,7 +8,7 @@
 <#[MONTAG-Genre
 CDATA-]>
 <!DOCTYPE élément-racine PUBLIC "-//Propriétaire//Description de la DTD//Langue" "URL">
-<xml>
+<xml></q>
 	<configuration1>
 		<structure name="st1">
 			<structure name="st1sub1" valid="true">

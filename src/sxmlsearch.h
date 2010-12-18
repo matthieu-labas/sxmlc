@@ -199,6 +199,14 @@ int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search);
  */
 XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search);
 
+/*
+ Get 'node' XPath-like equivalent: 'tag[.="text", @attribute="value", ...]', potentially
+ including father nodes XPathes.
+ The computed XPath is stored in a dynamically-allocated string.
+ Return the XPath, or NULL if 'node' is invalid or on memory error.
+ */
+char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents);
+
 #ifdef __cplusplus
 }
 #endif

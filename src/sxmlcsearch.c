@@ -198,42 +198,48 @@ char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quo
 
 	for (s = search; s != NULL; s = s->next) {
 		if (s != search) /* No "/" prefix for the first criteria */
-			if (strcat_alloc(xpath, "/") == NULL) return NULL;
-		if (strcat_alloc(xpath, s->tag == NULL || s->tag[0] == 0 ? "*": s->tag) == NULL) return NULL;
+			if (strcat_alloc(xpath, "/") == NULL) goto err;
+		if (strcat_alloc(xpath, s->tag == NULL || s->tag[0] == 0 ? "*": s->tag) == NULL) goto err;
 
 		if (s->n_attributes > 0 || (s->text != NULL && s->text[0] != 0))
-			if (strcat_alloc(xpath, "[") == NULL) return NULL;
+			if (strcat_alloc(xpath, "[") == NULL) goto err;
 
 		fill = false; /* '[' has not been filled with text yet, no ", " separator should be added */
 		if (s->text != NULL && s->text[0] != 0) {
-			if (strcat_alloc(xpath, ".=") == NULL) return NULL;
-			if (strcat_alloc(xpath, squote) == NULL) return NULL;
-			if (strcat_alloc(xpath, s->text) == NULL) return NULL;
-			if (strcat_alloc(xpath, squote) == NULL) return NULL;
+			if (strcat_alloc(xpath, ".=") == NULL) goto err;
+			if (strcat_alloc(xpath, squote) == NULL) goto err;
+			if (strcat_alloc(xpath, s->text) == NULL) goto err;
+			if (strcat_alloc(xpath, squote) == NULL) goto err;
 			fill = true;
 		}
 
 		for (i = 0; i < s->n_attributes; i++) {
 			if (fill) {
-				if (strcat_alloc(xpath, ", ") == NULL) return NULL;
+				if (strcat_alloc(xpath, ", ") == NULL) goto err;
 			}
 			else
 				fill = true; /* filling is being performed */
-			if (strcat_alloc(xpath, "@") == NULL) return NULL;
-			if (strcat_alloc(xpath, s->attributes[i].name) == NULL) return NULL;
+			if (strcat_alloc(xpath, "@") == NULL) goto err;
+			if (strcat_alloc(xpath, s->attributes[i].name) == NULL) goto err;
 			if (s->attributes[i].value == NULL) continue;
 
-			if (strcat_alloc(xpath, s->attributes[i].active ? "=" : "!=") == NULL) return NULL;
-			if (strcat_alloc(xpath, squote) == NULL) return NULL;
-			if (strcat_alloc(xpath, s->attributes[i].value) == NULL) return NULL;
-			if (strcat_alloc(xpath, squote) == NULL) return NULL;
+			if (strcat_alloc(xpath, s->attributes[i].active ? "=" : "!=") == NULL) goto err;
+			if (strcat_alloc(xpath, squote) == NULL) goto err;
+			if (strcat_alloc(xpath, s->attributes[i].value) == NULL) goto err;
+			if (strcat_alloc(xpath, squote) == NULL) goto err;
 		}
 		if (s->text != NULL && (s->text[0] != 0 || s->n_attributes > 0)) {
-			if (strcat_alloc(xpath, "]") == NULL) return NULL;
+			if (strcat_alloc(xpath, "]") == NULL) goto err;
 		}
 	}
 
 	return *xpath;
+
+err:
+	free(*xpath);
+	*xpath = NULL;
+
+	return NULL;
 }
 
 /*
@@ -436,6 +442,93 @@ XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search)
 		/* Run the search on 'node' children */
 		return XMLSearch_next(node, search->next);
 	}
+
+	return NULL;
+}
+
+static char* _get_XPath(const XMLNode* node, char** xpath)
+{
+	int i, n, brackets;
+
+	brackets = 0;
+	n = strlen(node->tag);
+	if (node->text != NULL) {
+		n += strlen_html(node->text) + 4; /* 4 = '.=""' */
+		brackets = 2; /* Text has to be displayed => add '[]' */
+	}
+	for (i = 0; i < node->n_attributes; i++) {
+		if (!node->attributes[i].active) continue;
+		brackets = 2; /* At least one attribute has to be displayed => add '[]' */
+		n += strlen_html(node->attributes[i].name) + strlen_html(node->attributes[i].value) + 6; /* 6 = ', @=""' */
+	}
+	n += brackets;
+	*xpath = (char*)malloc(n+1);
+
+	if (*xpath == NULL) return NULL;
+
+	strcpy(*xpath, node->tag);
+	if (node->text != NULL) {
+		strcat(*xpath, "[.=\"");
+		str2html(node->text, *xpath+strlen(*xpath));
+		strcat(*xpath, "\"");
+		n = 1; /* Indicates '[' has been put */
+	}
+	else
+		n = 0;
+
+	for (i = 0; i < node->n_attributes; i++) {
+		if (!node->attributes[i].active) continue;
+
+		if (n == 0) {
+			strcat(*xpath, "[");
+			n = 1;
+		}
+		else
+			strcat(*xpath, ", ");
+		sprintf(*xpath+strlen(*xpath), "@%s=\"", node->attributes[i].name);
+		str2html(node->attributes[i].value, *xpath+strlen(*xpath));
+		strcat(*xpath, "\"");
+	}
+	if (n > 0) strcat(*xpath, "]");
+
+	return *xpath;
+}
+
+char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents)
+{
+	char* xp = NULL;
+	char* xparent;
+	XMLNode* parent;
+
+	if (node == NULL || node->init_value != XML_INIT_DONE || xpath == NULL) return NULL;
+
+	if (!incl_parents) {
+		if (_get_XPath(node, &xp) == NULL) {
+			*xpath = NULL;
+			return NULL;
+		}
+		return *xpath = xp;
+	}
+
+	/* Go up to root node */
+	parent = node;
+	do {
+		xparent = NULL;
+		if (_get_XPath(parent, &xparent) == NULL) goto xp_err;
+		if (xp != NULL) {
+			strcat_alloc(&xparent, "/");
+			if (strcat_alloc(&xparent, xp) == NULL) goto xp_err;
+		}
+		xp = xparent;
+		parent = parent->father;
+	} while (parent != NULL);
+	if ((*xpath = strdup("/")) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
+
+	return *xpath;
+
+xp_err:
+	if (xp != NULL) free(xp);
+	*xpath = NULL;
 
 	return NULL;
 }

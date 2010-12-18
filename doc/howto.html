@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<meta name="description" content="SourceForge presents the sxmlc project. sxmlc is an open source application. SourceForge provides the world's largest selection of Open Source Software. Simple XML parser written in C. "Simple" means that it does not implement all XML specifications, only the most widely used ones. It is not an attempt to re-write the fine 'libxmlc'! :)" />
+<meta name="description" content="SourceForge presents the sxmlc project. sxmlc is an open source application. SourceForge provides the world's largest selection of Open Source Software. Simple XML parser written in C. \"Simple\" means that it does not implement all XML specifications, only the most widely used ones. It is not an attempt to re-write the fine 'libxmlc'! :)" />
 <meta name="keywords" content="Open Source, Software, Development, Developers, Projects, SourceForge, All POSIX (Linux/BSD/UNIX-like OSes), 32-bit MS Windows (NT/2000/XP), C, XML, Developers, GNU Library or Lesser General Public License (LGPL), sxmlc" />
 <title>SXMLC - Simple XML C parser - HOW TO</title>
 <style type="text/css">
@@ -112,11 +112,17 @@ margin-left: 2%;
 
 <ul>
 <li><a href="#READ">Read an XML document from a file</a></li>
-	<ul><li><a href="#SAX">SAX parser</a></li></ul></li>
-	<ul><li><a href="#DOM">DOM parser</a></li></ul></li>
+	<ul>
+		<li><a href="#SAX">SAX parser</a></li>
+		<li><a href="#DOM">DOM parser</a></li>
+	</ul>
+</li>
 <li><a href="#WRITE">Create an XML document</a></li>
 <li><a href="#SEARCH">Search an XML document</a>
-	<ul><li><a href="#SEARCH">XPath-like queries</a></li></ul></li>
+	<ul>
+		<li><a href="#XPATH">XPath-like queries</a></li>
+	</ul>
+</li>
 <li><a href="#CUSTOM">Handle new tags</a>
 </ul>
 
@@ -125,7 +131,7 @@ margin-left: 2%;
 <h3>Handle XML documents</h3>
 <p>
 An XML document is described by the <code>XMLDoc</code> struct and is handled through all <code>XMLDoc_*</code> methods.<br/>
-All calls to these methods are supposed made on an already-initialized document:
+All calls to these methods are supposed made on an already-initialized document:<br/>
 Create and initialize an <code>XMLDoc</code> object:
 <table><tr>
 <td width="40%">
@@ -163,19 +169,20 @@ The last method uses SAX implementation and calls the callback functions given i
 <p>
 The SAX parser is called with an extra <code>user_data</code> argument that will be given back to all
 callbacks. It can be a pointer to an <code>XMLDoc</code> structure or any other user-defined info.<br/>
-There are only 3 callbacks that can be called when using the SAX parser (plus an additional one if needed):
+There are only 6 callbacks that can be called when using the SAX parser (plus an additional one if needed):
 <ul>
-<li>
-<code>start_node</code> is called when a new node has been found (e.g. "<code>&lt;newNode param="val"&gt;</code>")
-</li>
-<li><code>end_node</code> is called when a node is being closed. (e.g. "<code>&lt;/newNode&gt;</code>")
-</li>
-<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>")
-</li>
+<li><code>start_doc</code> is called when document parsing starts, before parsing the first node.</li>
+<li><code>start_node</code> is called when a new node has been found (e.g. "<code>&lt;newNode param="val"&gt;</code>")</li>
+<li><code>end_node</code> is called when a node is being closed. (e.g. "<code>&lt;/newNode&gt;</code>")</li>
+<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>")</li>
+<li><code>end_doc</code> is called when document parsing ends. No other callbacks will be called after.</li>
+<li><code>on_error</code> is called when an error occurs during parsing. Parsing stops after.</li>
 <li><code>all_event</code> is given for those who prefer to handle all such events in a single function instead of three
 (e.g. to get a static variable for the node)
 </li>
 </ul>
+Each callback receive a <code>SAX_Data</code> argument where it is possible to know the name of the file/stream being
+parsed and the line number in the stream. This also where the <code>user_data</code> is found back.
 </p>
 
 <p>
@@ -232,7 +239,7 @@ int depth, max_depth;
 
 int my_start(const XMLNode* node, struct _DOM_through_SAX* dom)
 {
-	if(++depth > max_depth) max_depth = depth;
+	if(++depth &gt; max_depth) max_depth = depth;
 	return DOMXMLDoc_node_start(node, dom);
 }
 int my_end(const XMLNode* node, struct _DOM_through_SAX* dom)
@@ -250,6 +257,7 @@ void test_DOM_from_SAX(void)
 	dom.doc = &doc;
 	dom.current = NULL;
 	
+	SAX_Callbacks_init(&sax);
 	sax.start_node = my_start;
 	sax.end_node = my_end;
 	sax.new_text = DOMXMLDoc_node_text;
@@ -264,6 +272,11 @@ void test_DOM_from_SAX(void)
 	XMLDoc_free(&doc);
 }
 </pre>
+</p>
+
+<p>
+It is also possible to parse a character buffer instead of a file, using the <code>XMLDoc_parse_buffer_*</code> instead
+of <code>XMLDoc_parse_file_*</code> functions.
 </p>
 
 <a name="WRITE"/>
@@ -411,9 +424,9 @@ XMLSearch_search_add_attribute(&search, "value", "a*");
 
 node = doc.nodes[doc.i_root];
 if (XMLSearch_node_matches(node, &search))
-	printf("Found match: <%s>\n", node->tag);
+	printf("Found match: &lt;%s&gt;\n", node-&gt;tag);
 while ((node = XMLSearch_next(node, &search)) != NULL) {
-	printf("Found match: <%s>\n", node->tag);
+	printf("Found match: &lt;%s&gt;\n", node-&gt;tag);
 }
 
 XMLSearch_free(&search);
@@ -485,13 +498,13 @@ NB: Internally, that is how comments, processing instructions and CDATA are hand
 
 <p>
 <pre class="code">
-XML_register_user_tag(TAG_USER+1, "<#[MYTAG-", "-]>");
-XML_parse_1string("<#[MYTAG-Hello, World!-]>", &node);
+XML_register_user_tag(TAG_USER+1, "&lt;#[MYTAG-", "-]&gt;");
+XML_parse_1string("&lt;#[MYTAG-Hello, World!-]&gt;", &node);
 printf(node.tag); /* Will display "Hello, World!" */
 </pre>
 <pre>
 &lt;xml&gt;
-	&lt;#[MYTAG-Hello, World!-]>
+	&lt;#[MYTAG-Hello, World!-]&gt;
 &lt;/xml&gt;
 </pre>
 </p>

@@ -24,8 +24,8 @@
 #include <ctype.h>
 #include "utils.h"
 
-/* Dictionnary of special characters and their HTML equivalent */
-struct _html_special_dict {
+/* Dictionary of special characters and their HTML equivalent */
+static struct _html_special_dict {
 	char chr;		/* Original character */
 	char* html;		/* Equivalent HTML string */
 	int html_len;	/* 'strlen(html)' */
@@ -37,47 +37,36 @@ struct _html_special_dict {
 	{ 0, NULL, 0 }, /* Terminator */
 };
 
-#if 0
-int read_line(FILE* f, char* line, int sz_line)
+int _bgetc(DataSourceBuffer* ds)
 {
-	char c;
-	int n = 0;
+	if (ds == NULL || ds->buf[ds->cur_pos] == 0) return EOF;
 	
-	if (f == NULL || line == NULL || sz_line <= 0) return 0;
-	
-	while (1) {
-		c = fgetc(f);
-		switch (c) {
-			case EOF:
-				line[n] = 0;
-				return feof(f) ? 1 : 0;
-				
-			case '\n':
-				line[n] = 0;
-				return 1;
-				
-			default:
-				line[n++] = c;
-				line[n] = 0;
-				if (n >= sz_line) return 2;
-		}
-	}
+	return ds->buf[ds->cur_pos++];
 }
-#endif
 
-int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char to, int keep_fromto, char interest, int* interest_count)
+int _beob(DataSourceBuffer* ds)
+{
+
+	if (ds == NULL || ds->buf[ds->cur_pos] == 0) return true;
+
+	return false;
+}
+
+int read_line_alloc(void* in, DataSourceType in_type, char** line, int* sz_line, int i0, char from, char to, int keep_fromto, char interest, int* interest_count)
 {
 	int init_sz = 0;
 	char c, *pt;
 	int n, ret;
+	int (*m_getc)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_bgetc : (int(*)(void*))fgetc);
+	int (*m_eos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
 	
-	if (f == NULL || line == NULL) return 0;
+	if (in == NULL || line == NULL) return 0;
 	
 	if (to == 0) to = '\n';
 	/* Search for character 'from' */
 	if (interest_count != NULL) *interest_count = 0;
 	while (1) {
-		c = fgetc(f);
+		c = m_getc((FILE*)in);
 		if (interest_count != NULL && c == interest) (*interest_count)++;
 		/* Reaching EOF before 'to' char is not an error but should trigger 'line' alloc and init to '' */
 		/* If 'from' is '\0', we stop here */
@@ -97,18 +86,18 @@ int read_line_alloc(FILE* f, char** line, int* sz_line, int i0, char from, char 
 	n = i0;
 	if (c == EOF) { /* EOF reached before 'to' char => return the empty string */
 		(*line)[n] = 0;
-		return feof(f) ? n : 0; /* Error if not EOF */
+		return m_eos((FILE*)in) ? n : 0; /* Error if not EOF */
 	}
 	if (c != from || keep_fromto)
 		(*line)[n++] = c;
 	(*line)[n] = 0;
 	ret = 0;
 	while (1) {
-		c = fgetc(f);
+		c = m_getc((FILE*)in);
 		if (interest_count != NULL && c == interest) (*interest_count)++;
 		if (c == EOF) { /* EOF or error */
 			(*line)[n] = 0;
-			ret = feof(f) ? n : 0;
+			ret = m_eos((FILE*)in) ? n : 0;
 			break;
 		}
 		else {
@@ -285,33 +274,81 @@ int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0,
 
 /* --- */
 
-char* html2str(char* str)
+char* html2str(char* html, char* str)
 {
-	char *p1, *p2;
+	char *ps, *pd;
 	int i;
+
+	if (html == NULL) return NULL;
+
+	if (str == NULL) str = html;
 	
 	/* Look for '&' and matches it to any of the recognized HTML pattern. */
 	/* If found, replaces the '&' by the corresponding char. */
 	/* 'p2' is the char to analyze, 'p1' is where to insert it */
-	for (p1 = p2 = str; *p2; p1++, p2++) {
-		if (*p2 != '&') {
-			if (p1 != p2) *p1 = *p2;
+	for (pd = str, ps = html; *ps; ps++, pd++) {
+		if (*ps != '&') {
+			if (pd != ps) *pd = *ps;
 			continue;
 		}
 		
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
-			if (strncmp(p2, HTML_SPECIAL_DICT[i].html, HTML_SPECIAL_DICT[i].html_len)) continue;
+			if (strncmp(ps, HTML_SPECIAL_DICT[i].html, HTML_SPECIAL_DICT[i].html_len)) continue;
 			
-			*p1 = HTML_SPECIAL_DICT[i].chr;
-			p2 += HTML_SPECIAL_DICT[i].html_len-1;
+			*pd = HTML_SPECIAL_DICT[i].chr;
+			ps += HTML_SPECIAL_DICT[i].html_len-1;
 			break;
 		}
 		/* If no string was found, simply copy the character */
-		if (HTML_SPECIAL_DICT[i].chr == 0 && p1 != p2) *p1 = *p2;
+		if (HTML_SPECIAL_DICT[i].chr == 0 && pd != ps) *pd = *ps;
 	}
-	*p1 = 0;
+	*pd = 0;
 	
 	return str;
+}
+
+char* str2html(char* str, char* html)
+{
+	char *ps, *pd;
+	int i;
+
+	if (str == NULL || html == NULL) return NULL;
+
+	if (html == str) return NULL; /* Not handled yet */
+
+	for (ps = str, pd = html; *ps; ps++, pd++) {
+		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
+			if (*ps == HTML_SPECIAL_DICT[i].chr) {
+				strcpy(pd, HTML_SPECIAL_DICT[i].html);
+				pd += HTML_SPECIAL_DICT[i].html_len - 1;
+				break;
+			}
+		}
+		if (HTML_SPECIAL_DICT[i].chr == 0 && pd != ps) *pd = *ps;
+	}
+	*pd = 0;
+
+	return str;
+}
+
+int strlen_html(char* str)
+{
+	int i, j, n;
+	
+	if (str == NULL) return 0;
+
+	n = 0;
+	for (i = 0; str[i]; i++) {
+		for (j = 0; HTML_SPECIAL_DICT[j].chr; j++) {
+			if (str[i] == HTML_SPECIAL_DICT[j].chr) {
+				n += HTML_SPECIAL_DICT[j].html_len;
+				break;
+			}
+		}
+		if (HTML_SPECIAL_DICT[j].chr == 0) n++;
+	}
+
+	return n;
 }
 
 int fprintHTML(FILE* f, char* str)
