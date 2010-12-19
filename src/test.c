@@ -18,48 +18,49 @@ void test_gen(void)
 	
 	XMLDoc_init(&doc);
 
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
 	XMLDoc_add_node(&doc, node, TAG_INSTR);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, " Pre-comment ");
 	XMLDoc_add_node(&doc, node, TAG_COMMENT);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "\nAnother one\nMulti-line...\n");
 	XMLDoc_add_node(&doc, node, TAG_COMMENT);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "properties");
 	XMLDoc_add_node(&doc, node, TAG_FATHER); // Becomes root node
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_comment(node, "Hello World!");
 	XMLDoc_add_child_root(&doc, node);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "data");
+	XMLNode_set_attribute(node, "type", "code");
 	XMLNode_set_text(node, "a >= b && b <= c");
 	XMLDoc_add_child_root(&doc, node);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "structure1");
 	XMLNode_set_attribute(node, "name", "spatioconf");
 	XMLDoc_add_child_root(&doc, node);
 	
-	node1 = XMLNode_alloc(1);
+	node1 = XMLNode_alloc();
 	XMLNode_set_tag(node1, "structure2");
 	XMLNode_set_attribute(node1, "name", "files");
 	XMLNode_add_child(node, node1);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "property3");
 	XMLNode_set_attribute(node, "name", "aaa");
 	XMLNode_set_attribute(node, "value", "<truc>");
 	XMLNode_add_child(node1, node);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "property4");
 	XMLNode_set_attribute(node, "name", "bbb");
 	XMLNode_set_attribute(node, "readonly", "true");
@@ -68,25 +69,26 @@ void test_gen(void)
 	XMLNode_add_child(node1, node);
 	node->attributes[1].active = false;
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "structure5");
 	XMLNode_set_attribute(node, "name", "conf2");
 	XMLDoc_add_child_root(&doc, node);
 	node->active = false;
 	
-	node1 = XMLNode_alloc(1);
+	node1 = XMLNode_alloc();
 	XMLNode_set_tag(node1, "property6");
 	XMLNode_set_attribute(node1, "name", "ddd");
 	XMLNode_set_attribute(node1, "readonly", "false");
 	XMLNode_set_attribute(node1, "value", "machin2");
 	XMLNode_add_child(node, node1);
 	
-	node = XMLNode_alloc(1);
+	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "property7");
 	XMLNode_set_attribute(node, "name", "eee");
 	XMLNode_set_attribute(node, "value", "machin3");
 	XMLDoc_add_child_root(&doc, node);
-	XMLDoc_print(&doc, stdout, "\n", "    ", 0, 4);
+	XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
+
 	XMLDoc_free(&doc);
 }
 
@@ -102,7 +104,7 @@ void test_DOM(void)
 	//f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
 	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 	if (f == NULL) f = stdout;
-	XMLDoc_print(&doc, f, "\n", "\t", 0, 4);
+	XMLDoc_print(&doc, f, "\n", "\t", false, 0, 4);
 	/*{
 	XMLNode* node;
 	for (node = doc.nodes[doc.i_root]; node != NULL; node = XMLNode_next(node))
@@ -323,7 +325,7 @@ void test_search(void)
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
 	while ((node = XMLSearch_next(node, &search[0])) != NULL) {
 		printf("Found match: ");
-		XMLNode_print(node, stdout, NULL, NULL, 0, 0, 0);
+		XMLNode_print(node, stdout, NULL, NULL, false, 0, 0, 0);
 		printf("\n");
 	}
 	printf("End search\n");
@@ -429,7 +431,7 @@ void test_NodeXPath(void)
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
-	//test_gen();
+	test_gen();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -440,7 +442,7 @@ int main(int argc, char** argv)
 	//test_split();
 	//test_speed_DOM();
 	//test_speed_SAX();
-	test_NodeXPath();
+	//test_NodeXPath();
 
 #ifdef WIN32
 	_getch();

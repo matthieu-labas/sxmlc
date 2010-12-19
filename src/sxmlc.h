@@ -25,7 +25,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "3.3.0"
+#define SXMLC_VERSION "3.3.1"
 
 #ifndef false
 #define false 0
@@ -260,7 +260,12 @@ int XML_parse_1string(char* str, XMLNode* xmlnode);
  'n' is the number of contiguous elements to allocate (to create and array).
  Return 'NULL' if not enough memory or the pointer to the elements otherwise.
  */
-XMLNode* XMLNode_alloc(int n);
+XMLNode* XMLNode_allocN(int n);
+
+/*
+ Shortcut to allocate one node only.
+ */
+#define XMLNode_alloc() XMLNode_allocN(1)
 
 /*
  Initialize an already-allocated XMLNode.
@@ -386,6 +391,12 @@ int XMLDoc_set_root(XMLDoc* doc, int i_root);
 int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
 
 /*
+ Remove a node from 'doc' root nodes, base on its index.
+ Return 'true' if node was removed or 'false' if 'doc' or 'i_node' is invalid.
+ */
+int XMLDoc_remove_node(XMLDoc* doc, int i_node);
+
+/*
  Shortcut macro to retrieve root node from a document.
  Equivalent to
  doc->nodes[doc->i_root]
@@ -403,6 +414,9 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
  Prints the node and its children to a file (that can be stdout).
  - 'tag_sep' is the string to use to separate nodes from each other (usually "\n").
  - 'child_sep' is the additional string to put for each child level (usually "\t").
+ - 'keep_text_new_line' indicates that text should not be printed if it is composed of
+   spaces, tabs or new lines only (e.g. when XML document spans on several lines due to
+   pretty-printing).
  - 'sz_line' is the maximum number of characters that can be put on a single line. The
    node remainder will be output to extra lines.
  - 'nb_char_tab' is how many characters should be counted for a single '\t' when counting
@@ -410,14 +424,14 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
  - 'depth' is an internal parameter that is used to determine recursively how deep we are in
    the tree. It should be initialized to 0 at first call.
  */
-void XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int sz_line, int nb_char_tab, int depth);
+void XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth);
 
 /*
  Prints the XML document using 'XMLNode_print':
  - print the pre-root nodes (if any)
  - print the root node (if any)
  */
-void XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int sz_line, int nb_char_tab);
+void XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
 /*
  Creates a new XML document from a given 'filename' and loads it to 'doc'.

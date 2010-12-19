@@ -12,6 +12,10 @@
 #include "utils.h"
 #include "sxmlc.h"
 
+#if defined(WIN32) && !defined(strcasecmp)
+#define strcasecmp _strcmpi
+#endif
+
 #define N_LIST_INTRIC 8
 typedef struct _HTMLContext {
 	int in_body;
@@ -41,7 +45,7 @@ int html_strip(XMLEvent evt, const XMLNode* node, char* text, int n, HTMLContext
 			else if (!strcasecmp(node->tag, "ul") || !strcasecmp(node->tag, "ol")) { /* (Un)ordered list */
 				if (ctx->i_list < N_LIST_INTRIC-1) {
 					ctx->i_list++;
-					ctx->in_list_type[ctx->i_list] = (node->tag[0] == 'u' ? 1 : 2);
+					ctx->in_list_type[ctx->i_list] = (node->tag[0] == 'u' || node->tag[0] == 'U' ? 1 : 2);
 					ctx->next_list_item[ctx->i_list] = 1;
 				}
 			}
@@ -61,7 +65,7 @@ int html_strip(XMLEvent evt, const XMLNode* node, char* text, int n, HTMLContext
 						break;
 				}
 			}
-			else if ((node->tag[0] == 'h' || node->tag[0] == 'h') && isdigit(node->tag[1])) printf("\n\n"); /* Header */
+			else if ((node->tag[0] == 'h' || node->tag[0] == 'H') && isdigit(node->tag[1])) printf("\n\n"); /* Header */
 			break;
 
 		case XML_EVENT_END_NODE:

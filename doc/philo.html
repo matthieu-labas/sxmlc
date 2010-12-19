@@ -119,13 +119,13 @@ as values to get a default behavior.
 <p>
 For example, the <code>read_line_alloc</code> takes many parameters:
 <pre class="code">
-int read_line_alloc(FILE* f, char** line,
+int read_line_alloc(void* in, DataSourceType in_type, char** line,
 			int* sz_line, int i0, char from, char to, int keep_fromto,
 			char interest, int* interest_count);
 </pre>
-The only <em>really</em> mandatory parameters are obviously <code>f</code> and <code>line</code>.
+The only <em>really</em> mandatory parameters are obviously <code>in</code> and <code>line</code>.
 All others can be set to <code>NULL</code>, <code>0</code> or <code>'\0'</code>:<br/>
-Calling <code><strong>read_line_alloc(f, &line, NULL, 0, 0, 0, 0, 0, NULL);</strong></code> will
+Calling <code><strong>read_line_alloc(f, DATA_SOURCE_FILE, &line, NULL, 0, 0, 0, 0, 0, NULL);</strong></code> will
 read bytes from <code>f</code> into <code>line</code> starting from current position in <code>f</code> until
 a newline character (or end-of-file) has been reached. <code>line</code> will be allocated but its size will
 not be returned (only the number of characters read). No special character will be counted during file reading.
