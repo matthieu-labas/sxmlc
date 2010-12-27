@@ -1092,7 +1092,7 @@ int DOMXMLDoc_node_text(char* text, SAX_Data* sd)
 	return true;
 }
 
-int DOMXMLDoc_parse_error(int error_num, int line_number, SAX_Data* sd)
+int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd)
 {
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
 

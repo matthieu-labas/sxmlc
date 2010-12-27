@@ -107,10 +107,14 @@ void test_DOM(void)
 
 	XMLDoc_init(&doc);
 
+#if defined(WIN32) || defined(WIN64)
+	if (!XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\sxmlc\\data\\test.xml", &doc))
+#else
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
+#endif
 		printf("Error while loading\n");
 #if defined(WIN32) || defined(WIN64)
-	f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
+	f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif

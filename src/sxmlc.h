@@ -259,7 +259,7 @@ int DOMXMLDoc_doc_start(SAX_Data* dom);
 int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_node_text(char* text, SAX_Data* dom);
-int DOMXMLDoc_parse_error(int error_num, int line_number, SAX_Data* sd);
+int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd);
 int DOMXMLDoc_doc_end(SAX_Data* dom);
 
 /* --- XMLNode methods --- */
