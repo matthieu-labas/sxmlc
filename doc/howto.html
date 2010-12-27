@@ -225,7 +225,7 @@ XMLDoc_parse_file_SAX("path_to_my_file.xml", &sax_callbacks, &sax_callbacks);
 <a name="DOM"/>
 <h5>DOM parser</h5>
 <p>
-The DOM parser uses internally the SAX implementation with 3 specific callbacks.
+The DOM parser uses internally the SAX implementation with 6 specific callbacks.
 These callbacks are made available so that you can use them to load a whole XML document to memory
 but you would like to run some extra processing on the fly, as the document is being read.<br/>
 In this case, you have to use the SAX parser and define your own callbacks to run your processing

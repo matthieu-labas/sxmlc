@@ -23,6 +23,8 @@
 extern "C" {
 #endif
 
+#include "sxmlc.h"
+
 /*
  XML search parameters. Can be initialized from an XPath string.
  A pointer to such structure is given to search functions which can modify
@@ -67,6 +69,9 @@ typedef struct _XMLSearch {
 	 Internal use only. Must be initialized to '-1' prior to first search.
 	 */
 	XMLNode* stop_at;
+
+	/* Keep 'init_value' as the last member */
+	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
 } XMLSearch;
 
 typedef int (*REGEXPR_COMPARE)(char* str, char* pattern);
@@ -124,6 +129,7 @@ int XMLSearch_search_get_attribute_index(const XMLSearch* search, const char* at
 
 /*
  Removes the search attribute given by its index 'i_attr'.
+ Return the number of attributes left.
  */
 int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr);
 
@@ -146,6 +152,7 @@ int XMLSearch_search_set_text(XMLSearch* search, const char* text);
  'search->tag = "ChildTag"'.
  If 'children_search' is NULL, next search is removed. Freeing previous search is to be
  performed by its owner.
+ In any case, if 'search' next search is not NULL, it is freed.
  Return 'true' when association has been made, 'false' when an error occurred.
  */
 int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_search);

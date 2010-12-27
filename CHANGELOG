@@ -1,0 +1,42 @@
+*** v3.4.0
+	- Modifications to get splint talk just a little bit less! ;) (functions now return values, etc.)
+	- #defines are replaced by enums.
+	- User-defined tags can be released and accessed.
+	- Added an 'examples' folder.
+	- Added AUTHOR and CHANGELOG files.
+	- Changed method 'XMLNode_set_comment' into more generic 'XMLNode_set_type'.
+
+*** v3.3.1
+	- Added 'XMLDoc_remove_node' that didn't exist!
+	- Added an option to 'XML*_print' to prevent printing "pretty-print" separators.
+	- 'XMLDoc_print' no longer prints a new line as the first line (a.k.a "UGLY HACK").
+
+*** v3.3.0
+	- Corrected problem on child nodes association.
+	- Added parser for buffer, not only files (changed prototype of "read_line_alloc").
+	- Added SAX callbacks for document start and end.
+	- Added an error handler for SAX.
+	- Changed the parameter on SAX callbacks to get access to line number and data source name.
+	- Tests are made on proper initialization of XMLDoc and XMLNode structures.
+	- Added generation of XPath description for a node.
+	- New file "htmlstrip.c" as an example on how to use sxmlc to parse an HTML document.
+
+*** v3.2.0
+	- Include DOCTYPE tag.
+	- Unified DOM parse to use SAX callbacks.
+	- Added an "all-in-one" callback for SAX parser.
+	- Added support of user-defined tags.
+	- Added 'extern "C" {' to .h files.
+	- Added "const" specifier in function arguments when possible.
+	- Changed values from 'TAG_*' constants.
+	- Corrected XMLNode_copy to copy the 'active' attribute as well.
+	- Use standard function "strdup" instead of own "strcpy_alloc".
+	- Added a check for uninitialized XMLDoc.
+	- Made the 'XML_parse_1string' function available to call (non static) .
+	- Node text, attributes name and value are unescaped.
+
+*** v3.1.0
+	- Handling of XPath-like queries.
+	- Added new utility functions (major one being the split).
+	- Regexp function can be overloaded.
+	- Attribute value handles test for difference, not only equality.

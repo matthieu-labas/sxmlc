@@ -9,10 +9,10 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include "utils.h"
-#include "sxmlc.h"
+#include "../utils.h"
+#include "../sxmlc.h"
 
-#if defined(WIN32) && !defined(strcasecmp)
+#if (defined(WIN32) || defined(WIN64)) && !defined(strcasecmp)
 #define strcasecmp _strcmpi
 #endif
 
@@ -25,9 +25,10 @@ typedef struct _HTMLContext {
 	int in_pre;
 } HTMLContext;
 
-int html_strip(XMLEvent evt, const XMLNode* node, char* text, int n, HTMLContext* ctx)
+int html_strip(XMLEvent evt, const XMLNode* node, char* text, const int n, SAX_Data* sd)
 {
 	int i;
+	HTMLContext* ctx = (HTMLContext*)sd->user;
 
 	switch(evt) {
 		case XML_EVENT_START_NODE:
@@ -113,14 +114,18 @@ int usage(char* progname)
 #if 0
 int main(int argc, char** argv)
 {
-	SAX_Callbacks sax = { NULL, NULL, NULL, NULL, NULL, NULL, html_strip };
+	SAX_Callbacks sax;
 	HTMLContext ctx;
+	char* p;
 
 	//if (argc <= 1) return usage(argv[0]);
+	// p = argv[1];
 
-	argv[1] = "/home/matth/Code/workspace/sxmlc/doc/howto.html";
+	p = "/home/matth/Code/workspace/sxmlc/doc/howto.html";
 	memset(&ctx, 0, sizeof(ctx));
-	XMLDoc_parse_file_SAX(argv[1], &sax, &ctx);
+	SAX_Callbacks_init(&sax);
+	sax.all_event = html_strip;
+	XMLDoc_parse_file_SAX(p, &sax, &ctx);
 
 	return 1;
 }

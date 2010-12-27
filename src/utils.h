@@ -35,6 +35,10 @@ extern "C" {
 #define true 1
 #endif
 
+#ifndef CEOF
+#define CEOF ((char)EOF)
+#endif
+
 /*
  Buffer data source used by 'read_line_alloc' when required.
  'buf' should be 0-terminated.

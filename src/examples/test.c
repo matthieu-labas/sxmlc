@@ -1,15 +1,18 @@
+#if defined(WIN32) || defined(WIN64)
 #pragma warning(disable : 4996)
+#include <conio.h>
+#endif
 
 #include <stdio.h>
-#ifdef WIN32
-#include <conio.h>
+#ifdef linux
+#include <curses.h>
 #endif
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
-#include "utils.h"
-#include "sxmlc.h"
-#include "sxmlsearch.h"
+#include "../utils.h"
+#include "../sxmlc.h"
+#include "../sxmlsearch.h"
 
 void test_gen(void)
 {
@@ -20,22 +23,27 @@ void test_gen(void)
 
 	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-	XMLDoc_add_node(&doc, node, TAG_INSTR);
+	XMLNode_set_type(node, TAG_INSTR);
+	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
 	XMLNode_set_tag(node, " Pre-comment ");
-	XMLDoc_add_node(&doc, node, TAG_COMMENT);
+	XMLNode_set_type(node, TAG_COMMENT);
+	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "\nAnother one\nMulti-line...\n");
-	XMLDoc_add_node(&doc, node, TAG_COMMENT);
+	XMLNode_set_type(node, TAG_COMMENT);
+	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
 	XMLNode_set_tag(node, "properties");
-	XMLDoc_add_node(&doc, node, TAG_FATHER); // Becomes root node
+	XMLNode_set_type(node, TAG_FATHER);
+	XMLDoc_add_node(&doc, node); // Becomes root node
 	
 	node = XMLNode_alloc();
-	XMLNode_set_comment(node, "Hello World!");
+	XMLNode_set_type(node, TAG_FATHER);
+	XMLNode_set_tag(node, "Hello World!");
 	XMLDoc_add_child_root(&doc, node);
 	
 	node = XMLNode_alloc();
@@ -101,8 +109,11 @@ void test_DOM(void)
 
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
 		printf("Error while loading\n");
-	//f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
-	//f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+#if defined(WIN32) || defined(WIN64)
+	f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "w+t");
+#else
+	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+#endif
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", false, 0, 4);
 	/*{
@@ -320,7 +331,7 @@ void test_search(void)
 		return;
 	}
 
-	printf("Start search '%s'\n", XMLSearch_get_XPath_string(&search[0], &xpath, '\''));
+	printf("Start search '%s'\n", XMLSearch_get_XPath_string(&search[0], &xpath, '\"'));
 	free(xpath);
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
 	while ((node = XMLSearch_next(node, &search[0])) != NULL) {
@@ -342,7 +353,7 @@ void test_xpath(void)
 	char xpath[] = "/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']";
 
 	if (XMLSearch_init_from_XPath(xpath, &search))
-		printf("[%s] => [%s]\n", xpath, XMLSearch_get_XPath_string(&search, &xpath2, '\''));
+		printf("%s\n %s\n", xpath, XMLSearch_get_XPath_string(&search, &xpath2, '\''));
 	else
 		printf("Error\n");
 	XMLSearch_free(&search, true);
@@ -444,8 +455,10 @@ int main(int argc, char** argv)
 	//test_speed_SAX();
 	//test_NodeXPath();
 
-#ifdef WIN32
+#if defined(WIN32) || defined(WIN64)
 	_getch();
+#elif defined(linux)
+	//getch();
 #endif
 	return 0;
 }

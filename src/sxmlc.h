@@ -25,7 +25,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "3.3.1"
+#define SXMLC_VERSION "3.4.0"
 
 #ifndef false
 #define false 0
@@ -36,18 +36,20 @@ extern "C" {
 #endif
 
 /* Node types */
-#define TAG_ERROR	(-1)
-#define TAG_NONE	0
-#define TAG_PARTIAL	1	/* Tag containing a legal '>' which stopped file reading */
-#define TAG_FATHER	2	/* <tag> - Next nodes will be children of this one. */
-#define TAG_SELF	3	/* <tag/> - Standalone node. */
-#define TAG_END		4	/* </tag> - End of father node. */
-#define TAG_INSTR	5	/* <?prolog?> - Processing instructions, or prolog node. */
-#define TAG_COMMENT	6	/* <!--comment--> */
-#define TAG_CDATA	7	/* <![CDATA[ ]]/> - CDATA node */
-#define TAG_DOCTYPE	8	/* <!DOCTYPE [ ]> - DOCTYPE node */
+typedef enum _TagType {
+	TAG_ERROR = -1,
+	TAG_NONE,
+	TAG_PARTIAL,	/* Tag containing a legal '>' which stopped file reading */
+	TAG_FATHER,		/* <tag> - Next nodes will be children of this one. */
+	TAG_SELF,		/* <tag/> - Standalone node. */
+	TAG_INSTR,		/* <?prolog?> - Processing instructions, or prolog node. */
+	TAG_COMMENT,	/* <!--comment--> */
+	TAG_CDATA,		/* <![CDATA[ ]]/> - CDATA node */
+	TAG_DOCTYPE,	/* <!DOCTYPE [ ]> - DOCTYPE node */
+	TAG_END,		/* </tag> - End of father node. */
 
-#define TAG_USER	100	/* User-defined tag start */
+	TAG_USER = 100	/* User-defined tag start */
+} TagType;
 
 /* TODO: Performance improvement with some fixed-sized strings ??? (e.g. XMLAttribute.name[64], XMLNode.tag[64]) */
 
@@ -58,7 +60,7 @@ typedef struct _XMLAttribute {
 } XMLAttribute;
 
 /* Constant to know whether a struct has been initialized (XMLNode or XMLDoc) */
-#define XML_INIT_DONE 0x22051977 /* Happy Birthday ;) */
+#define XML_INIT_DONE 0x19770522 /* Happy Birthday ;) */
 
 /*
  An XML node.
@@ -73,12 +75,14 @@ typedef struct _XMLNode {
 	struct _XMLNode** children;
 	int n_children;
 	
-	int tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
+	TagType tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
 	int active;		/* 'true' to tell that node is active and should be displayed by 'XMLDoc_print' */
-	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that node has been initialized properly */
 /* TODO: Add pointer to next sibling ? */
 	
 	void* user;	/* Pointer for user data associated to the node */
+
+	/* Keep 'init_value' as the last member */
+	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that node has been initialized properly */
 } XMLNode;
 
 /*
@@ -89,8 +93,10 @@ typedef struct _XMLDoc {
 	XMLNode** nodes;	/* Nodes of the document, including prolog, comments and root nodes */
 	int n_nodes;
 	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
-	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
 /* TODO: Add 'root' member as a shortcut to nodes[i_nodes] ? */
+
+	/* Keep 'init_value' as the last member */
+	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
 } XMLDoc;
 
 /*
@@ -98,17 +104,36 @@ typedef struct _XMLDoc {
  The 'tag_type' is user-given and has to be less than or equal to 'TAG_USER'. It will be
  returned as the 'tag_type' member of the XMLNode struct. Note that no test is performed
  to check for an already-existing tag_type.
- Return 'false' if the 'tag_type' is invalid or the new tag could not be registered (e.g. when
- 'start' does not start with '<' or 'end' does not end with '>').
+ Return tag index in user tags table when successful, or '-1' if the 'tag_type' is invalid or
+ the new tag could not be registered (e.g. when 'start' does not start with '<' or 'end' does not end with '>').
  */
 int XML_register_user_tag(int tag_type, char* start, char* end);
 
-#define PARSE_ERR_NONE					0
-#define PARSE_ERR_MEMORY				(-1)
-#define PARSE_ERR_UNEXPECTED_TAG_END	(-2)
-#define PARSE_ERR_SYNTAX				(-3)
-#define PARSE_ERR_TEXT_OUTSIDE_NODE		(-4) /* During DOM loading */
-#define PARSE_ERR_UNEXPECTED_NODE_END	(-5) /* During DOM loading */
+/*
+ Remove a registered user tag.
+ Return the new number of registered user tags or '-1' if 'i_tag' is invalid.
+ */
+int XML_unregister_user_tag(int i_tag);
+
+/*
+ Return the number of registered tags.
+ */
+int XML_get_nb_registered_user_tags(void);
+
+/*
+ Return the index of first occurrence of 'tag_type' in registered user tags, or '-1' if not found.
+ */
+int XML_get_registered_user_tag(TagType tag_type);
+
+
+typedef enum _ParseError {
+	PARSE_ERR_NONE = 0,
+	PARSE_ERR_MEMORY = -1,
+	PARSE_ERR_UNEXPECTED_TAG_END = -2,
+	PARSE_ERR_SYNTAX = -3,
+	PARSE_ERR_TEXT_OUTSIDE_NODE = -4, /* During DOM loading */
+	PARSE_ERR_UNEXPECTED_NODE_END = -5 /* During DOM loading */
+} ParseError;
 
 /*
  Events that can happen when loading an XML document.
@@ -176,7 +201,7 @@ typedef struct _SAX_Callbacks {
 	 'error_num' is the error number and 'line_number' is the line number in the stream
 	 being read (file or buffer).
 	 */
-	int (*on_error)(int error_num, int line_number, SAX_Data* sd);
+	int (*on_error)(ParseError error_num, int line_number, SAX_Data* sd);
 
 	/*
 	 Callback called when text has been found in the last node.
@@ -227,7 +252,7 @@ int SAX_Callbacks_init(SAX_Callbacks* sax);
 typedef struct _DOM_through_SAX {
 	XMLDoc* doc;		/* Document to fill up */
 	XMLNode* current;	/* For internal use (current father node) */
-	int error;			/* For internal use (parse status) */
+	ParseError error;	/* For internal use (parse status) */
 } DOM_through_SAX;
 
 int DOMXMLDoc_doc_start(SAX_Data* dom);
@@ -253,7 +278,7 @@ int XML_parse_attribute(const char* str, XMLAttribute* xmlattr);
  Fills the 'xmlnode' structure with the tag name and its attributes.
  Returns 0 if an error occurred (malformed 'str' or memory). 'TAG_*' when string is recognized.
  */
-int XML_parse_1string(char* str, XMLNode* xmlnode);
+TagType XML_parse_1string(char* str, XMLNode* xmlnode);
 
 /*
  Allocate and initialize XML nodes.
@@ -270,12 +295,12 @@ XMLNode* XMLNode_allocN(int n);
 /*
  Initialize an already-allocated XMLNode.
  */
-void XMLNode_init(XMLNode* node);
+int XMLNode_init(XMLNode* node);
 
 /*
  Free a node and all its children.
  */
-void XMLNode_free(XMLNode* node);
+int XMLNode_free(XMLNode* node);
 
 /*
  Free XMLNode 'dst' and copy 'src' to 'dst', along with its children if specified.
@@ -288,7 +313,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children);
  Set 'active' to 'true' to activate 'node' and all its children, and enable its use
  in other functions (e.g. 'XMLDoc_print', 'XMLNode_search_child').
  */
-void XMLNode_set_active(XMLNode* node, int active);
+int XMLNode_set_active(XMLNode* node, int active);
 
 /*
  Set 'node' tag.
@@ -297,10 +322,11 @@ void XMLNode_set_active(XMLNode* node, int active);
 int XMLNode_set_tag(XMLNode* node, const char* tag);
 
 /*
- Initialize 'node' as a comment node.
- Equivalent to 'XMLNode_set_tag(node, comment); node->tag_type = TAG_COMMENT;'.
+ Set the node type among one of the valid ones (TAG_FATHER, TAG_SELF, TAG_INSTR,
+ TAG_COMMENT, TAG_CDATA, TAG_DOCTYPE or any user-registered tag.
+ Return 'false' when the node or the 'tag_type' is invalid.
  */
-int XMLNode_set_comment(XMLNode* node, const char* comment);
+int XMLNode_set_type(XMLNode* node, const TagType tag_type);
 
 /*
  Add an attribute to 'node' or update an existing one.
@@ -369,7 +395,7 @@ XMLNode* XMLNode_next(const XMLNode* node);
 /*
  Initializes an already-allocated XML document.
  */
-void XMLDoc_init(XMLDoc* doc);
+int XMLDoc_init(XMLDoc* doc);
 
 /*
  Free an XML document.
@@ -388,7 +414,7 @@ int XMLDoc_set_root(XMLDoc* doc, int i_root);
  If its type is TAG_FATHER, it also sets the document root type.
  Return the node index, or -1 if bad arguments or memory error.
  */
-int XMLDoc_add_node(XMLDoc* doc, XMLNode* node, int tag_type);
+int XMLDoc_add_node(XMLDoc* doc, XMLNode* node);
 
 /*
  Remove a node from 'doc' root nodes, base on its index.
@@ -424,14 +450,14 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node);
  - 'depth' is an internal parameter that is used to determine recursively how deep we are in
    the tree. It should be initialized to 0 at first call.
  */
-void XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth);
+int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth);
 
 /*
  Prints the XML document using 'XMLNode_print':
  - print the pre-root nodes (if any)
  - print the root node (if any)
  */
-void XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+int XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
 /*
  Creates a new XML document from a given 'filename' and loads it to 'doc'.
