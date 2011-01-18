@@ -95,7 +95,7 @@ CDATA-]>
 		<b2>
 			<b2a comment="">
 				<b2a1/>
-				<![CDATA[IMG_TYPE114BC4E2C8998DF0A8]]/>
+				<![CDATA[IMG_TYPE114BC4E2C8998DF0A8]]>
 				<b2a2/>
 				<b2a3/>
 			</b2a>
@@ -122,5 +122,5 @@ CDATA-]>
 	<![CDATA[
 	#define COMMENT '>'
 	printf("Commentaire: <tag> %c", COMMENT);
-	]]/>
+	]]>
 </xml>
