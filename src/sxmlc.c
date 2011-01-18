@@ -55,7 +55,7 @@ typedef struct _SpecialTag {
 static _TAG _spec[] = {
 		{ TAG_INSTR, "<?", 2, "?>", 2 },
 		{ TAG_COMMENT, "<!--", 4, "-->", 3 },
-		{ TAG_CDATA, "<![CDATA[", 9, "]]/>", 4 }
+		{ TAG_CDATA, "<![CDATA[", 9, "]]>", 3 }
 };
 static int NB_SPECIAL_TAGS = (int)(sizeof(_spec) / sizeof(_TAG)); /* Auto computation of number of special tags */
 
@@ -78,7 +78,7 @@ int XML_register_user_tag(TagType tag_type, char* start, char* end)
 
 	i = _user_tags.n_tags;
 	n = i + 1;
-	p = (_TAG*)realloc(_user_tags.tags, n * sizeof(_TAG));
+	p = (_TAG*)__realloc(_user_tags.tags, n * sizeof(_TAG));
 	if (p == NULL) return false;
 
 	p[i].tag_type = tag_type;
@@ -96,7 +96,7 @@ int XML_unregister_user_tag(int i_tag)
 {
 	if (i_tag < 0 || i_tag > _user_tags.n_tags) return -1;
 
-	_user_tags.tags = (_TAG*)realloc(_user_tags.tags, (_user_tags.n_tags--) * sizeof(_TAG));
+	_user_tags.tags = (_TAG*)__realloc(_user_tags.tags, (_user_tags.n_tags--) * sizeof(_TAG));
 
 	return _user_tags.n_tags;
 }
@@ -119,18 +119,18 @@ int XML_get_registered_user_tag(TagType tag_type)
 /* --- XMLNode methods --- */
 
 /*
- Add 'node' to given '*array' of '*len_array' elements.
- '*len_array' is the number of elements in '*array' after its reallocation.
- Return false for memory error.
+ Add 'node' to given '*children_array' of '*len_array' elements.
+ '*len_array' is overwritten with the number of elements in '*children_array' after its reallocation.
+ Return the index of the newly added 'node' in '*children_array', or '-1' for memory error.
  */
-static int _add_node(XMLNode*** array, int* len_array, const XMLNode* node)
+static int _add_node(XMLNode*** children_array, int* len_array, XMLNode* node)
 {
-	XMLNode** pt = (XMLNode**)realloc(*array, (*len_array+1) * sizeof(XMLNode*));
+	XMLNode** pt = (XMLNode**)__realloc(*children_array, (*len_array+1) * sizeof(XMLNode*));
 	
 	if (pt == NULL) return -1;
 	
-	pt[*len_array] = (XMLNode*)node;
-	*array = pt;
+	pt[*len_array] = node;
+	*children_array = pt;
 	
 	return (*len_array)++;
 }
@@ -166,13 +166,32 @@ XMLNode* XMLNode_allocN(int n)
 	
 	if (n <= 0) return NULL;
 	
-	p = (XMLNode*)malloc(n * sizeof(XMLNode));
+	p = (XMLNode*)__malloc(n * sizeof(XMLNode));
 	if (p == NULL) return NULL;
 
 	for (i = 0; i < n; i++)
 		(void)XMLNode_init(&p[i]);
 	
 	return p;
+}
+
+XMLNode* XMLNode_dup(const XMLNode* node, int copy_children)
+{
+	XMLNode* n;
+
+	if (node == NULL) return NULL;
+
+	n = (XMLNode*)__malloc(sizeof(XMLNode));
+	if (n == NULL) return NULL;
+
+	XMLNode_init(n);
+	if (!XMLNode_copy(n, node, copy_children)) {
+		XMLNode_free(n);
+
+		return NULL;
+	}
+
+	return n;
 }
 
 int XMLNode_free(XMLNode* node)
@@ -182,20 +201,20 @@ int XMLNode_free(XMLNode* node)
 	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
 	
 	if (node->tag != NULL) {
-		free(node->tag);
+		__free(node->tag);
 		node->tag = NULL;
 	}
 	if (node->text != NULL) {
-		free(node->text);
+		__free(node->text);
 		node->text = NULL;
 	}
 
 	if (node->attributes != NULL) {
 		for (i = 0; i < node->n_attributes; i++) {
-			if (node->attributes[i].name != NULL) free(node->attributes[i].name);
-			if (node->attributes[i].value != NULL) free(node->attributes[i].value);
+			if (node->attributes[i].name != NULL) __free(node->attributes[i].name);
+			if (node->attributes[i].value != NULL) __free(node->attributes[i].value);
 		}
-		free(node->attributes);
+		__free(node->attributes);
 		node->attributes = NULL;
 	}
 	node->n_attributes = 0;
@@ -204,8 +223,9 @@ int XMLNode_free(XMLNode* node)
 		for (i = 0; i < node->n_children; i++)
 			if (node->children[i] != NULL) {
 				(void)XMLNode_free(node->children[i]);
+				__free(node->children[i]);
 			}
-		free(node->children);
+		__free(node->children);
 		node->children = NULL;
 	}
 	node->n_children = 0;
@@ -228,26 +248,24 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 	
 	/* Tag */
 	if (src->tag != NULL) {
-		dst->tag = (char*)malloc(strlen(src->tag)+1);
+		dst->tag = __strdup(src->tag);
 		if (dst->tag == NULL) goto copy_err;
-		strcpy(dst->tag, src->tag);
 	}
 
 	/* Text */
 	if (dst->text != NULL) {
-		dst->text = (char*)malloc(strlen(src->text)+1);
+		dst->text = __strdup(src->text);
 		if (dst->text == NULL) goto copy_err;
-		strcpy(dst->text, src->text);
 	}
 
 	/* Attributes */
 	if (src->n_attributes > 0) {
-		dst->attributes = (XMLAttribute*)malloc(src->n_attributes * sizeof(XMLAttribute));
+		dst->attributes = (XMLAttribute*)__malloc(src->n_attributes * sizeof(XMLAttribute));
 		if (dst->attributes== NULL) goto copy_err;
 		dst->n_attributes = src->n_attributes;
 		for (i = 0; i < src->n_attributes; i++) {
-			dst->attributes[i].name = strdup(src->attributes[i].name);
-			dst->attributes[i].value = strdup(src->attributes[i].value);
+			dst->attributes[i].name = __strdup(src->attributes[i].name);
+			dst->attributes[i].value = __strdup(src->attributes[i].value);
 			if (dst->attributes[i].name == NULL || dst->attributes[i].value == NULL) goto copy_err;
 			dst->attributes[i].active = src->attributes[i].active;
 		}
@@ -260,7 +278,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 	
 	/* Copy children if required */
 	if (copy_children) {
-		dst->children = (XMLNode**)malloc(src->n_children * sizeof(XMLNode*));
+		dst->children = (XMLNode**)__malloc(src->n_children * sizeof(XMLNode*));
 		if (dst->children == NULL) goto copy_err;
 		dst->n_children = src->n_children;
 		for (i = 0; i < src->n_children; i++) {
@@ -289,8 +307,8 @@ int XMLNode_set_tag(XMLNode* node, const char* tag)
 {
 	if (node == NULL || tag == NULL || node->init_value != XML_INIT_DONE) return false;
 	
-	if (node->tag != NULL) free(node->tag);
-	node->tag = strdup(tag);
+	if (node->tag != NULL) __free(node->tag);
+	node->tag = __strdup(tag);
 	if (node->tag == NULL) return false;
 	
 	return true;
@@ -323,24 +341,24 @@ int XMLNode_set_attribute(XMLNode* node, const char* attr_name, const char* attr
 	i = XMLNode_search_attribute(node, attr_name, 0);
 	if (i >= 0) {
 		pt = node->attributes;
-		if (pt[i].value != NULL) free(pt[i].value);
-		pt[i].value = strdup(attr_value);
+		if (pt[i].value != NULL) __free(pt[i].value);
+		pt[i].value = __strdup(attr_value);
 		if (pt[i].value == NULL) return -1;
 	}
 	else {
 		i = node->n_attributes;
-		pt = (XMLAttribute*)realloc(node->attributes, (i+1) * sizeof(XMLAttribute));
+		pt = (XMLAttribute*)__realloc(node->attributes, (i+1) * sizeof(XMLAttribute));
 		if (pt == NULL) return 0;
 
-		pt[i].name = strdup(attr_name);
-		pt[i].value = strdup(attr_value);
+		pt[i].name = __strdup(attr_name);
+		pt[i].value = __strdup(attr_value);
 		if (pt[i].name != NULL && pt[i].value != NULL) {
 			pt[i].active = true;
 			node->attributes = pt;
 			node->n_attributes = i + 1;
 		}
 		else {
-			node->attributes = (XMLAttribute*)realloc(pt, i * sizeof(XMLAttribute)); /* Frees memory, cannot fail hopefully! */
+			node->attributes = (XMLAttribute*)__realloc(pt, i * sizeof(XMLAttribute)); /* Frees memory, cannot fail hopefully! */
 			return -1;
 		}
 	}
@@ -365,11 +383,11 @@ int XMLNode_remove_attribute(XMLNode* node, int i_attr)
 	if (node == NULL || node->init_value != XML_INIT_DONE || i_attr < 0 || i_attr >= node->n_attributes) return -1;
 	
 	/* Free attribute fields first */
-	if (node->attributes[i_attr].name != NULL) free(node->attributes[i_attr].name);
-	if (node->attributes[i_attr].value != NULL) free(node->attributes[i_attr].value);
+	if (node->attributes[i_attr].name != NULL) __free(node->attributes[i_attr].name);
+	if (node->attributes[i_attr].value != NULL) __free(node->attributes[i_attr].value);
 	
 	memmove(&node->attributes[i_attr], &node->attributes[i_attr+1], (node->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
-	node->attributes = (XMLAttribute*)realloc(node->attributes, --(node->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
+	node->attributes = (XMLAttribute*)__realloc(node->attributes, --(node->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
 	
 	return node->n_attributes;
 }
@@ -378,9 +396,9 @@ int XMLNode_set_text(XMLNode* node, const char* text)
 {
 	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
 
-	if (text == NULL) { /* We want to remove it => free node text */
+	if (text == NULL) { /* We want to remove it => __free node text */
 		if (node->text != NULL) {
-			free(node->text);
+			__free(node->text);
 			node->text = NULL;
 		}
 
@@ -389,11 +407,11 @@ int XMLNode_set_text(XMLNode* node, const char* text)
 
 	/* No text is defined yet => allocate it */
 	if (node->text == NULL) {
-		node->text = (char*)malloc(strlen(text)+1);
+		node->text = (char*)__malloc(strlen(text)+1);
 		if (node->text == NULL) return false;
 	}
 	else {
-		char* p = (char*)realloc(node->text, strlen(text)+1);
+		char* p = (char*)__realloc(node->text, strlen(text)+1);
 		if (p == NULL) return false;
 		node->text = p;
 	}
@@ -416,27 +434,55 @@ int XMLNode_add_child(XMLNode* node, XMLNode* child)
 		return true;
 }
 
-int XMLNode_search_child(const XMLNode* node, const char* tag, int isearch)
+int XMLNode_get_children_count(const XMLNode* node)
+{
+	int i, n;
+
+	if (node == NULL || node->init_value != XML_INIT_DONE) return -1;
+
+	for (i = n = 0; i < node->n_children; i++)
+		if (node->children[i]->active) n++;
+	
+	return n;
+}
+
+XMLNode* XMLNode_get_child(const XMLNode* node, int i_child)
 {
 	int i;
 	
-	if (node == NULL || node->init_value != XML_INIT_DONE || tag == NULL || tag[0] == '\0' || isearch < 0 || isearch > node->n_children) return -1;
+	if (node == NULL || node->init_value != XML_INIT_DONE || i_child < 0 || i_child > node->n_children) return NULL;
 	
-	for (i = isearch; i < node->n_children; i++)
-		if (node->children[i]->active && !strcmp(node->children[i]->tag, tag)) return i;
+	for (i = 0; i < node->n_children; i++) {
+		if (!node->children[i]->active)
+			i_child++;
+		else if (i == i_child)
+			return node->children[i];
+	}
 	
-	return -1;
+	return NULL;
 }
 
-int XMLNode_remove_child(XMLNode* node, int i_child)
+int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 {
+	int i;
+
 	if (node == NULL || node->init_value != XML_INIT_DONE || i_child < 0 || i_child >= node->n_children) return -1;
 	
+	/* Lookup 'i_child'th active child */
+	for (i = 0; i < node->n_children; i++) {
+		if (!node->children[i]->active)
+			i_child++;
+		else if (i == i_child)
+			break;
+	}
+	if (i >= node->n_children) return -1; /* Children is not found */
+
 	/* Free node first */
 	(void)XMLNode_free(node->children[i_child]);
+	if (free_child) __free(node->children[i_child]);
 	
 	memmove(&node->children[i_child], &node->children[i_child+1], (node->n_children - i_child - 1) * sizeof(XMLNode*));
-	node->children = (XMLNode**)realloc(node->children, --(node->n_children) * sizeof(XMLNode*)); /* Frees memory */
+	node->children = (XMLNode**)__realloc(node->children, --(node->n_children) * sizeof(XMLNode*)); /* Frees memory */
 	if (node->n_children == 0) node->tag_type = TAG_SELF;
 	
 	return node->n_children;
@@ -514,6 +560,7 @@ int XMLDoc_init(XMLDoc* doc)
 
 	if (doc->init_value == XML_INIT_DONE) XMLDoc_free(doc);
 
+	doc->filename[0] = '\0';
 	doc->nodes = NULL;
 	doc->n_nodes = 0;
 	doc->i_root = -1;
@@ -528,11 +575,14 @@ int XMLDoc_free(XMLDoc* doc)
 	
 	if (doc == NULL || doc->init_value != XML_INIT_DONE) return false;
 
-	for (i = 0; i < doc->n_nodes; i++)
+	for (i = 0; i < doc->n_nodes; i++) {
 		(void)XMLNode_free(doc->nodes[i]);
-	free(doc->nodes);
-	doc->init_value = 0; /* Something not XML_INIT_DONE, otherwise we'll go into 'XMLDoc_free' again */
-	(void)XMLDoc_init(doc);
+		__free(doc->nodes[i]);
+	}
+	__free(doc->nodes);
+	doc->nodes = NULL;
+	doc->n_nodes = 0;
+	doc->i_root = -1;
 
 	return true;
 }
@@ -552,20 +602,21 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node)
 	
 	if (_add_node(&doc->nodes, &doc->n_nodes, node) < 0) return -1;
 
-	if (node->tag_type == TAG_FATHER) doc->i_root = doc->n_nodes - 1;
+	if (node->tag_type == TAG_FATHER) doc->i_root = doc->n_nodes - 1; /* Main root node is the last father node */
 
 	return doc->n_nodes;
 }
 
-int XMLDoc_remove_node(XMLDoc* doc, int i_node)
+int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node)
 {
 	if (doc == NULL || doc->init_value != XML_INIT_DONE || i_node < 0 || i_node > doc->n_nodes) return false;
 
 	/* Free node first */
 	(void)XMLNode_free(doc->nodes[i_node]);
+	if (free_node) __free(doc->nodes[i_node]);
 	
 	memmove(&doc->nodes[i_node], &doc->nodes[i_node+1], (doc->n_nodes - i_node - 1) * sizeof(XMLNode*));
-	doc->nodes = (XMLNode**)realloc(doc->nodes, --(doc->n_nodes) * sizeof(XMLNode*)); /* Frees memory */
+	doc->nodes = (XMLNode**)__realloc(doc->nodes, --(doc->n_nodes) * sizeof(XMLNode*)); /* Frees memory */
 
 	return true;
 }
@@ -665,9 +716,9 @@ int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char*
 		fprintf(f, " %s=", node->attributes[i].name);
 		
 		/* Attribute value */
-		(void)fputc('"', f);
+		(void)fputc(XML_DEFAULT_QUOTE, f);
 		cur_sz_line += fprintHTML(f, node->attributes[i].value) + 2;
-		(void)fputc('"', f);
+		(void)fputc(XML_DEFAULT_QUOTE, f);
 	}
 	
 	/* End the tag if there are no children and no text */
@@ -727,6 +778,7 @@ int XML_parse_attribute(const char* str, XMLAttribute* xmlattr)
 	const char *p;
 	int i, n0, n1, remQ = 0;
 	int ret = 1;
+	char quote;
 	
 	if (str == NULL || xmlattr == NULL) return 0;
 	
@@ -736,15 +788,18 @@ int XML_parse_attribute(const char* str, XMLAttribute* xmlattr)
 	for (n1 = n0; str[n1] && isspace(str[n1]); n1++) ; /* Search for something not a space */
 	if (str[n1] != '=') return 0; /* '=' not found: malformed string */
 	for (n1++; str[n1] && isspace(str[n1]); n1++) ; /* Search for something not a space */
-	if (str[n1] == '"') remQ = 1; /* Remove quotes */
+	if (isquote(str[n1])) { /* Remove quotes */
+		quote = str[n1];
+		remQ = 1;
+	}
 	
-	xmlattr->name = (char*)malloc(n0+1);
-	xmlattr->value = (char*)malloc(strlen(str) - n1 - remQ);
+	xmlattr->name = (char*)__malloc(n0+1);
+	xmlattr->value = (char*)__malloc(strlen(str) - n1 - remQ);
 	xmlattr->active = true;
 	if (xmlattr->name != NULL && xmlattr->value != NULL) {
 		/* Copy name */
-		for (i = 0; i < n0; i++) xmlattr->name[i] = str[i];
-		xmlattr->name[i] = '\0';
+		strncpy(xmlattr->name, str, n0);
+		xmlattr->name[n0] = '\0';
 		(void)str_unescape(xmlattr->name);
 		/* Copy value (p starts after the quote (if any) and stops at the end of 'str'
 		  (skipping the quote if any, hence the '*(p+remQ)') */
@@ -752,13 +807,13 @@ int XML_parse_attribute(const char* str, XMLAttribute* xmlattr)
 			xmlattr->value[i] = *p;
 		xmlattr->value[i] = '\0';
 		(void)html2str(str_unescape(xmlattr->value), NULL); /* Convert HTML escape sequences */
-		if (remQ && *p != '"') ret = 2; /* Quote at the beginning but not at the end */
+		if (remQ && *p != quote) ret = 2; /* Quote at the beginning but not at the end */
 	}
 	else ret = 0;
 	
 	if (ret == 0) {
-		if (xmlattr->name != NULL) free(xmlattr->name);
-		if (xmlattr->value != NULL) free(xmlattr->value);
+		if (xmlattr->name != NULL) __free(xmlattr->name);
+		if (xmlattr->value != NULL) __free(xmlattr->value);
 	}
 	
 	return ret;
@@ -770,7 +825,7 @@ static TagType _parse_special_tag(const char* str, int len, _TAG* tag, XMLNode* 
 
 	if (strncmp(str + len - tag->len_end, tag->end, tag->len_end)) return TAG_PARTIAL; /* There probably is a '>' inside the tag */
 
-	node->tag = (char*)malloc(len - tag->len_start - tag->len_end + 1);
+	node->tag = (char*)__malloc(len - tag->len_start - tag->len_end + 1);
 	if (node->tag == NULL) return TAG_NONE;
 	strncpy(node->tag, str + tag->len_start, len - tag->len_start - tag->len_end);
 	node->tag[len - tag->len_start - tag->len_end] = 0;
@@ -790,18 +845,17 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 	XMLAttribute* pt;
 	int n, nn, len, tag_end = 0;
 	
-	if (str == NULL || xmlnode == NULL) return 0;
+	if (str == NULL || xmlnode == NULL) return TAG_ERROR;
 	len = strlen(str);
 	
 	/* Check for malformed string */
-	if (str[0] != '<' || str[len-1] != '>') return 0;
+	if (str[0] != '<' || str[len-1] != '>') return TAG_ERROR;
 
 	for (nn = 0; nn < NB_SPECIAL_TAGS; nn++) {
-		n = _parse_special_tag(str, len, &_spec[nn], xmlnode);
+		n = (int)_parse_special_tag(str, len, &_spec[nn], xmlnode);
 		switch (n) {
-			case TAG_ERROR:	return TAG_NONE;	/* Error => exit */
 			case TAG_NONE:	break;				/* Nothing found => do nothing */
-			default:		return n;			/* Tag found => return it */
+			default:		return (TagType)n;	/* Tag found => return it */
 		}
 	}
 
@@ -815,8 +869,8 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 				if (strncmp(str+len-2, "]>", 2)) return TAG_PARTIAL; /* There probably is a '>' inside the DOCTYPE */
 				nn = 1;
 			}
-			xmlnode->tag = (char*)malloc(len-9-nn); /* 'len' - "<!DOCTYPE" and ">" + '\0' */
-			if (xmlnode->tag == NULL) return 0;
+			xmlnode->tag = (char*)__malloc(len-9-nn); /* 'len' - "<!DOCTYPE" and ">" + '\0' */
+			if (xmlnode->tag == NULL) return TAG_ERROR;
 			strncpy(xmlnode->tag, str+9, len-10-nn);
 			xmlnode->tag[len-10-nn] = '\0';
 			xmlnode->tag_type = TAG_DOCTYPE;
@@ -831,7 +885,7 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 		switch (n) {
 			case TAG_ERROR:	return TAG_NONE;	/* Error => exit */
 			case TAG_NONE:	break;				/* Nothing found => do nothing */
-			default:		return n;			/* Tag found => return it */
+			default:		return (TagType)n;	/* Tag found => return it */
 		}
 	}
 
@@ -839,8 +893,8 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 	
 	/* tag starts at index 1 (or 2 if tag end) and ends at the first space or '/>' */
 	for (n = 1 + tag_end; str[n] && str[n] != '>' && str[n] != '/' && !isspace(str[n]); n++) ;
-	xmlnode->tag = (char*)malloc(n - tag_end);
-	if (xmlnode->tag == NULL) return 0;
+	xmlnode->tag = (char*)__malloc(n - tag_end);
+	if (xmlnode->tag == NULL) return TAG_ERROR;
 	strncpy(xmlnode->tag, str+1+tag_end, n-1-tag_end);
 	xmlnode->tag[n-1-tag_end] = '\0';
 	if (tag_end) {
@@ -866,15 +920,14 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 		/* New attribute found */
 		p = strchr(str+n, '=');
 		if (p == NULL) goto parse_err;
-		pt = (XMLAttribute*)realloc(xmlnode->attributes, ++(xmlnode->n_attributes) * sizeof(XMLAttribute));
-		if (pt == NULL) {
-			xmlnode->n_attributes--; /* Reallocation failed */
-			goto parse_err;
-		}
+		pt = (XMLAttribute*)__realloc(xmlnode->attributes, (xmlnode->n_attributes + 1) * sizeof(XMLAttribute));
+		if (pt == NULL) goto parse_err;
+		
+		xmlnode->n_attributes++;
 		xmlnode->attributes = pt;
 		while (*p && isspace(*++p)) ; /* Skip spaces */
-		if (*p == '"') { /* Attribute value starts with a '"', look for next one, ignoring protected ones with '\"' */
-			for (nn = p-str+1; str[nn] && str[nn] != '"'; nn++) {
+		if (isquote(*p)) { /* Attribute value starts with a quote, look for next one, ignoring protected ones with '\' */
+			for (nn = p-str+1; str[nn] && str[nn] != *p; nn++) {
 				if (str[nn] == '\\') nn++;
 			}
 			nn++;
@@ -883,7 +936,7 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 			for (nn = p-str+1; str[nn] && !isspace(str[nn]) && str[nn] != '/' && str[nn] != '>'; nn++) ; /* Go to the end of the attribute value */
 		}
 		
-		/* Here 'str[nn]' is either a '"' or a space */
+		/* Here 'str[nn]' is '>' */
 		/* the attribute definition ('attrName="attr val"') is between 'str[n]' and 'str[nn]' */
 		c = str[nn]; /* Backup character */
 		str[nn] = '\0'; /* End string to call 'parse_XML_attribute' */
@@ -897,18 +950,20 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode)
 	
 parse_err:
 	(void)XMLNode_free(xmlnode);
-	return 0;
+
+	return TAG_ERROR;
 }
 
-static int _parse_data_SAX(void* in, const DataSourceType in_type, char* in_name, const SAX_Callbacks* sax, SAX_Data* sd)
+static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Callbacks* sax, SAX_Data* sd)
 {
 	char *line, *txt_end, *p;
 	XMLNode node;
-	int ret, exit, sz, n0, ncr, tag_type;
+	int ret, exit, sz, n0, ncr;
+	TagType tag_type;
 	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
 
 	if (sax->start_doc != NULL && !sax->start_doc(sd)) return true;
-	if (sax->all_event != NULL && !sax->all_event(XML_EVENT_START_DOC, NULL, in_name, 0, sd)) return true;
+	if (sax->all_event != NULL && !sax->all_event(XML_EVENT_START_DOC, NULL, (char*)sd->name, 0, sd)) return true;
 
 	ret = true;
 	exit = false;
@@ -920,74 +975,104 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, char* in_name
 		for (p = line; *p && isspace(*p); p++) ; /* Checks if text is only spaces */
 		if (*p == '\0') break;
 		sd->line_num += ncr;
-/*printf("%4d: %s\n", nline, line);*/
 
 		/* Get text for 'father' (i.e. what is before '<') */
 		while ((txt_end = strchr(line, '<')) == NULL) { /* '<' was not found, indicating a probable '>' inside text (should have been escaped with '&gt;' but we'll handle that ;) */
 			n0 = read_line_alloc(in, in_type, &line, &sz, n0, 0, '>', true, '\n', &ncr); /* Go on reading the file from current position until next '>' */
 			sd->line_num += ncr;
 			if (!n0) {
+				if (sax->on_error == NULL && sax->all_event == NULL)
+					fprintf(stderr, "%s:%d: MEMORY ERROR.\n", sd->name, sd->line_num);
+				else {
+					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd)) break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (char*)sd->name, PARSE_ERR_SYNTAX, sd)) break;
+				}
 				ret = false;
 				break; /* 'txt_end' is still NULL here so we'll display the syntax error below */
 			}
 		}
 		if (txt_end == NULL) { /* Missing tag start */
-			fprintf(stderr, "%s:%d: ERROR: Unexpected end character '>', without matching '<'!\n", in_name, sd->line_num);
-			if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_UNEXPECTED_TAG_END, sd->line_num, sd)) break;
-			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, in_name, PARSE_ERR_UNEXPECTED_TAG_END, sd)) break;
+			if (sax->on_error == NULL && sax->all_event == NULL)
+				fprintf(stderr, "%s:%d: ERROR: Unexpected end character '>', without matching '<'!\n", sd->name, sd->line_num);
+			else {
+				if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_UNEXPECTED_TAG_END, sd->line_num, sd)) break;
+				if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (char*)sd->name, PARSE_ERR_UNEXPECTED_TAG_END, sd)) break;
+			}
 			ret = false;
 			break;
 		}
 		/* First part of 'line' (before '<') is to be added to 'father->text' */
-		*txt_end = '\0'; /* Makes 'line' be the text for 'father' */
+		*txt_end = '\0'; /* Have 'line' be the text for 'father' */
 		if (*line != '\0' && (sax->new_text != NULL || sax->all_event != NULL)) {
 			if (sax->new_text != NULL && !sax->new_text(str_unescape(line), sd)) break;
 			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_TEXT, NULL, line, sd->line_num, sd)) break;
 		}
 		*txt_end = '<'; /* Restores tag start */
-		tag_type = XML_parse_1string(txt_end, &node);
-		if (tag_type == 0) {
-			p = strchr(txt_end, '\n');
-			if (p != NULL) *p = '\0';
-			fprintf(stderr, "%s:%d: SYNTAX ERROR (%s%s).\n", in_name, sd->line_num, txt_end, p == NULL ? "" : "...");
-			if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_SYNTAX, sd->line_num, sd)) break;
-			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, in_name, PARSE_ERR_SYNTAX, sd)) break;
-			ret = false;
-			break;
-		}
-		else if (tag_type == TAG_END && (sax->end_node != NULL || sax->all_event != NULL)) {
-			if (sax->end_node != NULL && !sax->end_node(&node, sd)) break;
-			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)) break;
-		}
-		else { /* Add 'node' to 'father' children */
-			/* If the line looks like a comment (or CDATA) but is not properly finished, loop until we find the end. */
-			while (tag_type == TAG_PARTIAL) {
-				n0 = read_line_alloc(in, in_type, &line, &sz, n0, '\0', '>', true, '\n', &ncr); /* Go on reading the file from current position until next '>' */
-				sd->line_num += ncr;
-				if (!n0) {
-					fprintf(stderr, "%s:%d: MEMORY ERROR.\n", in_name, sd->line_num);
+
+		switch (tag_type = XML_parse_1string(txt_end, &node)) {
+			case TAG_ERROR: /* Memory error */
+				if (sax->on_error == NULL && sax->all_event == NULL)
+					fprintf(stderr, "%s:%d: MEMORY ERROR.\n", sd->name, sd->line_num);
+				else {
 					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd)) break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, in_name, PARSE_ERR_SYNTAX, sd)) break;
-					ret = false;
-					break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (char*)sd->name, PARSE_ERR_SYNTAX, sd)) break;
 				}
-				tag_type = XML_parse_1string(txt_end, &node);
-			}
-			if (ret == false) break;
-			if (sax->start_node != NULL && !sax->start_node(&node, sd)) break;
-			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_START_NODE, &node, NULL, sd->line_num, sd)) break;
-			if (node.tag_type != TAG_FATHER && (sax->end_node != NULL || sax->all_event != NULL)) {
-				if (sax->end_node != NULL && !sax->end_node(&node, sd)) break;
-				if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)) break;
-			}
+				ret = false;
+				break;
+		
+			case TAG_NONE:
+				p = strchr(txt_end, '\n');
+				if (p != NULL) *p = '\0';
+				if (sax->on_error == NULL && sax->all_event == NULL)
+					fprintf(stderr, "%s:%d: SYNTAX ERROR (%s%s).\n", sd->name, sd->line_num, txt_end, p == NULL ? "" : "...");
+				else {
+					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_SYNTAX, sd->line_num, sd)) break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (char*)sd->name, PARSE_ERR_SYNTAX, sd)) break;
+				}
+				ret = false;
+				break;
+
+			case TAG_END:
+				if (sax->end_node != NULL || sax->all_event != NULL) {
+					if (sax->end_node != NULL && !sax->end_node(&node, sd)) break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)) break;
+				}
+				break;
+
+			default: /* Add 'node' to 'father' children */
+				/* If the line looks like a comment (or CDATA) but is not properly finished, loop until we find the end. */
+				while (tag_type == TAG_PARTIAL) {
+					n0 = read_line_alloc(in, in_type, &line, &sz, n0, '\0', '>', true, '\n', &ncr); /* Go on reading the file from current position until next '>' */
+					sd->line_num += ncr;
+					if (!n0) {
+						if (sax->on_error == NULL && sax->all_event == NULL)
+							fprintf(stderr, "%s:%d: MEMORY ERROR.\n", sd->name, sd->line_num);
+						else {
+							if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd)) break;
+							if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (char*)sd->name, PARSE_ERR_SYNTAX, sd)) break;
+						}
+						ret = false;
+						break;
+					}
+					txt_end = strchr(line, '<'); /* In case 'line' has been moved by the '__realloc' in 'read_line_alloc' */
+					tag_type = XML_parse_1string(txt_end, &node);
+				}
+				if (ret == false) break;
+				if (sax->start_node != NULL && !sax->start_node(&node, sd)) break;
+				if (sax->all_event != NULL && !sax->all_event(XML_EVENT_START_NODE, &node, NULL, sd->line_num, sd)) break;
+				if (node.tag_type != TAG_FATHER && (sax->end_node != NULL || sax->all_event != NULL)) {
+					if (sax->end_node != NULL && !sax->end_node(&node, sd)) break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)) break;
+				}
+			break;
 		}
 		if (exit == true || ret == false || meos(in)) break;
 	}
-	free(line);
+	__free(line);
 	(void)XMLNode_free(&node);
 
 	if (sax->end_doc != NULL && !sax->end_doc(sd)) return ret;
-	if (sax->all_event != NULL) (void)sax->all_event(XML_EVENT_END_DOC, NULL, in_name, sd->line_num, sd);
+	if (sax->all_event != NULL) (void)sax->all_event(XML_EVENT_END_DOC, NULL, (char*)sd->name, sd->line_num, sd);
 
 	return ret;
 }
@@ -1013,48 +1098,55 @@ int DOMXMLDoc_doc_start(SAX_Data* sd)
 
 	dom->current = NULL;
 	dom->error = PARSE_ERR_NONE;
+	dom->line_error = 0;
 
 	return true;
 }
 
 int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* sd)
 {
-	XMLNode* new_node = XMLNode_alloc();
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
+	XMLNode* new_node;
+	int i;
 
-	if (new_node == NULL || !XMLNode_copy(new_node, node, false)) return false;
-
+	if ((new_node = XMLNode_dup(node, false)) == NULL) goto node_start_err;
+	
 	if (dom->current == NULL) {
-		int i = _add_node(&dom->doc->nodes, &dom->doc->n_nodes, new_node);
+		if ((i = _add_node(&dom->doc->nodes, &dom->doc->n_nodes, new_node)) < 0) goto node_start_err;
 
-		if (i < 0) {
-			(void)XMLNode_free(new_node);
-			return false;
-		}
 		if (dom->doc->i_root < 0 && node->tag_type == TAG_FATHER) dom->doc->i_root = i;
 	}
 	else {
-		if (_add_node(&dom->current->children, &dom->current->n_children, new_node) < 0) {
-			(void)XMLNode_free(new_node);
-			return false;
-		}
+		if (_add_node(&dom->current->children, &dom->current->n_children, new_node) < 0) goto node_start_err;
 	}
 
 	new_node->father = dom->current;
 	dom->current = new_node;
 
 	return true;
+
+node_start_err:
+	dom->error = PARSE_ERR_MEMORY;
+	dom->line_error = sd->line_num;
+	(void)XMLNode_free(new_node);
+	__free(new_node);
+
+	return false;
 }
 
 int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* sd)
 {
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
 
-	if (dom->current == NULL) return false;
+	if (dom->current == NULL || strcmp(dom->current->tag, node->tag)) {
+		fprintf(stderr, "%s:%d: ERROR - End tag </%s> was unexpected", sd->name, sd->line_num, node->tag);
+		if (dom->current != NULL)
+			fprintf(stderr, " (</%s> was expected)\n", dom->current->tag);
+		else
+			fprintf(stderr, " (no node to end)\n");
 
-	if (strcmp(dom->current->tag, node->tag)) {
-		fprintf(stderr, "%s:%d: ERROR - End tag </%s> was unexpected (</%s> was expected)\n", sd->name, sd->line_num, node->tag, dom->current->tag);
 		dom->error = PARSE_ERR_UNEXPECTED_NODE_END;
+		dom->line_error = sd->line_num;
 
 		return false;
 	}
@@ -1066,7 +1158,7 @@ int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* sd)
 
 int DOMXMLDoc_node_text(char* text, SAX_Data* sd)
 {
-	char* p = (char*)text;
+	char* p = text;
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
 
 #if 0 /* Keep text, even if it is only spaces */
@@ -1079,12 +1171,14 @@ int DOMXMLDoc_node_text(char* text, SAX_Data* sd)
 		while(*p && isspace(*p++)) ;
 		if (*p == '\0') return true; /* Only spaces */
 		dom->error = PARSE_ERR_TEXT_OUTSIDE_NODE;
+		dom->line_error = sd->line_num;
 
 		return false; /* There is some "real" text => raise an error */
 	}
 
-	if ((dom->current->text = strdup(text)) == NULL) {
+	if ((dom->current->text = __strdup(text)) == NULL) {
 		dom->error = PARSE_ERR_MEMORY;
+		dom->line_error = sd->line_num;
 
 		return false;
 	}
@@ -1096,8 +1190,10 @@ int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd)
 {
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
 
-	fprintf(stderr, "%s:%d: Error %d\n", sd->name, line_number, error_num);
 	dom->error = error_num;
+	dom->line_error = line_number;
+
+	/* Complete error message will be displayed in 'DOMXMLDoc_doc_end' callback */
 
 	return false; /* Stop on error */
 }
@@ -1117,7 +1213,7 @@ int DOMXMLDoc_doc_end(SAX_Data* sd)
 			case PARSE_ERR_UNEXPECTED_NODE_END:	msg = "UNEXPECTED_NODE_END"; break;
 			default:							msg = "UNKNOWN"; break;
 		}
-		fprintf(stderr, "%s:%d: An error was found (%s), loading aborted...\n", sd->name, sd->line_num, msg);
+		fprintf(stderr, "%s:%d: An error was found (%s), loading aborted...\n", sd->name, dom->line_error, msg);
 		dom->current = NULL;
 		(void)XMLDoc_free(dom->doc);
 	}
@@ -1138,7 +1234,7 @@ int XMLDoc_parse_file_SAX(const char* filename, const SAX_Callbacks* sax, void* 
 
 	sd.name = (char*)filename;
 	sd.user = user;
-	ret = _parse_data_SAX((void*)f, DATA_SOURCE_FILE, (char*)filename, sax, &sd);
+	ret = _parse_data_SAX((void*)f, DATA_SOURCE_FILE, sax, &sd);
 	(void)fclose(f);
 
 	return ret;
@@ -1153,7 +1249,7 @@ int XMLDoc_parse_buffer_SAX(const char* buffer, const char* name, const SAX_Call
 
 	sd.name = name;
 	sd.user = user;
-	return _parse_data_SAX((void*)&dsb, DATA_SOURCE_BUFFER, "", sax, &sd);
+	return _parse_data_SAX((void*)&dsb, DATA_SOURCE_BUFFER, sax, &sd);
 }
 
 int XMLDoc_parse_file_DOM(const char* filename, XMLDoc* doc)
@@ -1197,16 +1293,10 @@ int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc)
 	sax.end_node = DOMXMLDoc_node_end;
 	sax.new_text = DOMXMLDoc_node_text;
 	sax.on_error = DOMXMLDoc_parse_error;
-	sax.end_doc = DOMXMLDoc_doc_start;
+	sax.end_doc = DOMXMLDoc_doc_end;
 	sax.all_event = NULL;
 
-	if (!XMLDoc_parse_buffer_SAX(buffer, name, &sax, &dom)) {
-		(void)XMLDoc_free(doc);
-
-		return false;
-	}
-
-	return true;
+	return XMLDoc_parse_buffer_SAX(buffer, name, &sax, &dom) ? true : XMLDoc_free(doc);
 }
 
 int XMLDoc_parse_file(const char* filename, XMLDoc* doc)

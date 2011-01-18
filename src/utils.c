@@ -26,6 +26,32 @@
 #include <ctype.h>
 #include "utils.h"
 
+#ifdef DBG_MEM
+void* __malloc(size_t sz)
+{
+	void* p = malloc(sz);
+	printf("0x%x: MALLOC (%d)\n", p, sz);
+	return p;
+}
+void* __realloc(void* mem, size_t sz)
+{
+	void* p = realloc(mem, sz);
+	printf("0x%x: REALLOC 0x%x (%d)\n", p, mem, sz);
+	return p;
+}
+void __free(void* mem)
+{
+	printf("0x%x: FREE\n", mem);
+	free(mem);
+}
+char* __strdup(const char* s)
+{
+	char* p = strdup(s);
+	printf("0x%x: STRDUP (%d)\n", p, strlen(s));
+	return p;
+}
+#endif
+
 /* Dictionary of special characters and their HTML equivalent */
 static struct _html_special_dict {
 	char chr;		/* Original character */
@@ -79,7 +105,7 @@ int read_line_alloc(void* in, DataSourceType in_type, char** line, int* sz_line,
 	
 	if (*line == NULL || *sz_line == 0) {
 		if (*sz_line == 0) *sz_line = MEM_INCR_RLA;
-		*line = (char*)malloc(*sz_line);
+		*line = (char*)__malloc(*sz_line);
 		if (*line == NULL) return 0;
 	}
 	if (i0 < 0) i0 = 0;
@@ -107,7 +133,7 @@ int read_line_alloc(void* in, DataSourceType in_type, char** line, int* sz_line,
 			if (c != to || (keep_fromto && to != '\0' && c == to)) n++; /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
 			if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
 				*sz_line += MEM_INCR_RLA;
-				pt = (char*)realloc(*line, *sz_line);
+				pt = (char*)__realloc(*line, *sz_line);
 				if (pt == NULL) {
 					ret = 0;
 					break;
@@ -125,7 +151,7 @@ int read_line_alloc(void* in, DataSourceType in_type, char** line, int* sz_line,
 	
 #if 0 /* Automatic buffer resize is deactivated */
 	/* Resize line to the exact size */
-	pt = (char*)realloc(*line, n+1);
+	pt = (char*)__realloc(*line, n+1);
 	if (pt != NULL)
 		*line = pt;
 #endif
@@ -146,7 +172,7 @@ char* strcat_alloc(char** src1, const char* src2)
 	if (src2 == NULL || *src2 == '\0') return *src1;
 
 	n = (*src1 == NULL ? 0 : strlen(*src1)) + strlen(src2) + 1;
-	cat = (char*)realloc(*src1, n);
+	cat = (char*)__realloc(*src1, n);
 	if (cat == NULL) return NULL;
 	if (*src1 == NULL) *cat = '\0';
 	*src1 = cat;
@@ -209,7 +235,7 @@ char* str_unescape(char* str)
 int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes)
 {
 	int n0, n1, is;
-	char quote = '"';
+	char quote;
 
 	if (str == NULL) return false;
 
@@ -221,7 +247,7 @@ int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0,
 
 	if (ignore_spaces) {
 		for (n0 = 0; str[n0] && isspace(str[n0]); n0++) ; /* Skip head spaces, n0 points to first non-space */
-		if (ignore_quotes && (str[n0] == '"' || str[n0] == '\'')) { /* If quote is found, look for next one */
+		if (ignore_quotes && isquote(str[n0])) { /* If quote is found, look for next one */
 			quote = str[n0++];
 			for (n1 = n0; str[n1] && str[n1] != quote; n1++) {
 				if (str[n1] == '\\' && str[++n1] == '\0') break; /* Escape character (can be the last) */
@@ -257,7 +283,7 @@ int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0,
 	n0 = is + 1;
 	if (ignore_spaces) {
 		for (; str[n0] && isspace(str[n0]); n0++) ;
-		if (ignore_quotes && (str[n0] == '"' || str[n0] == '\'')) quote = str[n0];
+		if (ignore_quotes && isquote(str[n0])) quote = str[n0];
 	}
 
 	for (n1 = ++n0; str[n1]; n1++) {

@@ -10,9 +10,24 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include "../utils.h"
 #include "../sxmlc.h"
 #include "../sxmlsearch.h"
+
+void test_gen1(void)
+{
+	XMLNode *node;
+	XMLDoc doc;
+	
+	XMLDoc_init(&doc);
+
+	node = XMLNode_alloc();
+	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
+	XMLNode_set_type(node, TAG_INSTR);
+	XMLDoc_add_node(&doc, node);
+	XMLDoc_free(&doc);
+}
 
 void test_gen(void)
 {
@@ -95,7 +110,7 @@ void test_gen(void)
 	XMLNode_set_attribute(node, "name", "eee");
 	XMLNode_set_attribute(node, "value", "machin3");
 	XMLDoc_add_child_root(&doc, node);
-	XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
+	//XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
 
 	XMLDoc_free(&doc);
 }
@@ -120,13 +135,7 @@ void test_DOM(void)
 #endif
 	if (f == NULL) f = stdout;
 	XMLDoc_print(&doc, f, "\n", "\t", false, 0, 4);
-	/*{
-	XMLNode* node;
-	for (node = doc.nodes[doc.i_root]; node != NULL; node = XMLNode_next(node))
-		printf("<%s>\n", node->tag);
-	}*/
 	if (f != stdout) fclose(f);
-	printf("\nFreeing...\n");
 	XMLDoc_free(&doc);
 }
 
@@ -254,11 +263,15 @@ void test_SAX(void)
 	SAX_Callbacks sax;
 
 	SAX_Callbacks_init(&sax);
-	//sax.start_node = NULL;//start_node;
-	//sax.end_node = NULL;//end_node;
-	//sax.new_text = NULL;//new_text;
+	//sax.start_node = start_node;
+	//sax.end_node = end_node;
+	//sax.new_text = new_text;
 	sax.all_event = allin1;
+#if defined(WIN32) || defined(WIN64)
+	if (!XMLDoc_parse_file_SAX("G:\\Code\\workspace\\sxmlc\\data\\test.xml", &sax, NULL))
+#else
 	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL))
+#endif
 		printf("Error while loading\n");
 }
 
@@ -307,6 +320,124 @@ void test_DOM_from_SAX(void)
 	printf("Max depth: %d\n", max_depth);
 }
 
+#define N 100000
+
+void test_mem(void)
+{
+	static XMLDoc doc[N];
+	int i, len;
+	char* p;
+	FILE* f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", "rt");
+
+	fseek(f, 0, SEEK_END);
+	len = ftell(f);
+	p = (char*)malloc(len+1);
+	fseek(f, 0, SEEK_SET);
+	fread(p, 1, len, f);
+	fclose(f);
+	p[len] = 0;
+	printf("Reading %d files:\n", N);
+	_getch();
+	for (i = 0; i < N; i++) {
+		XMLDoc_init(&doc[i]);
+		//XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\XML Benchmark\\Data\\big.xml", &doc[i]);
+		//XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", &doc[i]);
+		XMLDoc_parse_buffer_DOM(p, "simple", &doc[i]);
+		if (i % 10 == 0) printf(".");
+	}
+	free(p);
+	printf("\nFreeing %d files:\n", N);
+	_getch();
+	for (i = 0; i < N; i++) {
+		XMLDoc_free(&doc[i]);
+		if (i % 10 == 0) printf(".");
+	}
+	printf("\nDone!\n", N);
+}
+
+int DS(SAX_Data* sd)
+{
+	return true;
+}
+int NS(const XMLNode* node, SAX_Data* sd)
+{
+	XMLDoc* doc = (XMLDoc*)sd->user;
+	XMLDoc_add_node(doc, XMLNode_dup(node));
+	if (doc->n_nodes >= 10000) {
+		XMLDoc_free(doc);
+		XMLDoc_init(doc);
+	}
+	return true;
+}
+int NE(const XMLNode* node, SAX_Data* sd)
+{
+	return true;
+}
+int NT(char* text, SAX_Data* sd)
+{
+	return true;
+}
+int DE(SAX_Data* sd)
+{
+	return true;
+}
+int ER(ParseError err_num, int line_num, SAX_Data* sd)
+{
+	return true;
+}
+
+void test_mem2(void)
+{
+	SAX_Callbacks sax;
+	int i;
+	XMLDoc doc;
+	char* p = strdup("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>");
+
+	SAX_Callbacks_init(&sax);
+	XMLDoc_init(&doc);
+	sax.start_doc = DS;
+	sax.start_node = NS;
+	sax.end_node = NE;
+	sax.new_text = NT;
+	sax.end_doc = DE;
+	sax.on_error = ER;
+
+	printf("Reading %d files:\n", N);
+	_getch();
+	for (i = 0; i < N; i++) {
+		XMLDoc_parse_buffer_SAX(p, "simple", &sax, &doc);
+		if (i % 1000 == 0) printf(".");
+	}
+	free(p);
+	printf("\nFreeing...\n", N);
+	_getch();
+	XMLDoc_free(&doc);
+	printf("\nDone!\n", N);
+}
+
+void test_mem3(void)
+{
+	static XMLNode nodes[N];
+	char* p = strdup("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>");
+	int i;
+
+	printf("Reading %d nodes:\n", N);
+	_getch();
+	for (i = 0; i < N; i++) {
+		XMLNode_init(&nodes[i]);
+		XML_parse_1string(p, &nodes[i]);
+		if (i % 1000 == 0) printf(".");
+	}
+	free(p);
+	printf("\nFreeing...\n", N);
+	_getch();
+	for (i = 0; i < N; i++) {
+		XMLNode_free(&nodes[i]);
+		if (i % 1000 == 0) printf(".");
+	}
+	printf("\nDone!\n", N);
+}
+
 void test_search(void)
 {
 	XMLDoc doc;
@@ -330,7 +461,11 @@ void test_search(void)
 
 	XMLSearch_search_set_children_search(&search[0], &search[1]);
 
+#if defined(WIN32) || defined(WIN64)
+	if (!XMLDoc_parse_file_DOM("G:\\Code\\workspace\\sxmlc\\data\\test.xml", &doc)) {
+#else
 	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc)) {
+#endif
 		printf("Error while loading\n");
 		return;
 	}
@@ -445,8 +580,8 @@ void test_NodeXPath(void)
 #if 1
 int main(int argc, char** argv)
 {
-	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
-	test_gen();
+	//XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
+	//test_gen();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -458,6 +593,7 @@ int main(int argc, char** argv)
 	//test_speed_DOM();
 	//test_speed_SAX();
 	//test_NodeXPath();
+	test_mem2();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

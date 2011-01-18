@@ -1,3 +1,15 @@
+*** v3.5.0
+	- Corrected memory leak in 'XMLDoc_free' when children nodes pointers were not freed
+	- Corrected CDATA tag end (!)
+	- Added macros to ease memory debugging (define DBG_MEM constant)
+	- Added parameters to 'XMLNode_remove_child' and 'XMLDoc_remove_node' to allow for freeing child/node pointer itself
+	- Function 'XML_parse_1string' returns 'TAG_ERROR' on error, instead of 'TAG_NONE'
+	- Check is made on tag name consistency in "DOM node end callback"
+	- Function 'DOMXMLDoc_doc_end' is used as "DOM node end callback" (!)
+	- New functions 'XMLNode_get_children_count', 'XMLNode_dup' (allocate and copy)
+	- Added XML_DEFAULT_QUOTE to tell which quote " or ' should be used when printing a node
+	- New macro 'isquote'
+
 *** v3.4.0
 	- Modifications to get splint talk just a little bit less! ;) (functions now return values, etc.)
 	- #defines are replaced by enums.

@@ -23,6 +23,20 @@
 extern "C" {
 #endif
 
+//#define DBG_MEM
+
+#ifdef DBG_MEM
+void* __malloc(size_t sz);
+void* __realloc(void* mem, size_t sz);
+void __free(void* mem);
+char* __strdup(const char* s);
+#else
+#define __malloc malloc
+#define __realloc realloc
+#define __free free
+#define __strdup strdup
+#endif
+
 #ifndef MEM_INCR_RLA
 #define MEM_INCR_RLA 256 /* Initial buffer size and increment for memory reallocations */
 #endif
@@ -38,6 +52,8 @@ extern "C" {
 #ifndef CEOF
 #define CEOF ((char)EOF)
 #endif
+
+#define isquote(c) (((c) == '"') || ((c) == '\''))
 
 /*
  Buffer data source used by 'read_line_alloc' when required.

@@ -64,16 +64,16 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 	if (search == NULL || search->init_value != XML_INIT_DONE) return false;
 
 	if (search->tag != NULL) {
-		free(search->tag);
+		__free(search->tag);
 		search->tag = NULL;
 	}
 
 	if (search->n_attributes > 0 && search->attributes != NULL) {
 		for (i = 0; i < search->n_attributes; i++) {
-			if (search->attributes[i].name != NULL) free(search->attributes[i].name);
-			if (search->attributes[i].value != NULL) free(search->attributes[i].value);
+			if (search->attributes[i].name != NULL) __free(search->attributes[i].name);
+			if (search->attributes[i].value != NULL) __free(search->attributes[i].value);
 		}
-		free(search->attributes);
+		__free(search->attributes);
 		search->n_attributes = 0;
 		search->attributes = NULL;
 	}
@@ -92,9 +92,9 @@ int XMLSearch_search_set_tag(XMLSearch* search, const char* tag)
 {
 	if (search == NULL) return false;
 
-	if (tag == NULL && search->tag != NULL) free(search->tag);
+	if (tag == NULL && search->tag != NULL) __free(search->tag);
 
-	search->tag = strdup(tag);
+	search->tag = __strdup(tag);
 
 	return true;
 }
@@ -103,9 +103,9 @@ int XMLSearch_search_set_text(XMLSearch* search, const char* text)
 {
 	if (search == NULL) return false;
 
-	if (text == NULL && search->text != NULL) free(search->text);
+	if (text == NULL && search->text != NULL) __free(search->text);
 
-	search->text = strdup(text);
+	search->text = __strdup(text);
 
 	return true;
 }
@@ -120,22 +120,22 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, con
 	if (attr_name == NULL || attr_name[0] == '\0') return -1;
 
 	n = search->n_attributes + 1;
-	p = (XMLAttribute*)realloc(search->attributes, n * sizeof(XMLAttribute));
+	p = (XMLAttribute*)__realloc(search->attributes, n * sizeof(XMLAttribute));
 	if (p == NULL) return -1;
 
 	i = search->n_attributes;
 	p[i].active = value_equal;
-	p[i].name = strdup(attr_name);
+	p[i].name = __strdup(attr_name);
 	if (p[i].name == NULL) {
-		search->attributes = realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
+		search->attributes = __realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
 		return -1;
 	}
 
 	if (attr_value != NULL) {
-		p[i].value = strdup(attr_value);
+		p[i].value = __strdup(attr_value);
 		if (p[i].value == NULL) {
-			free(p[i].name);
-			search->attributes = realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
+			__free(p[i].name);
+			search->attributes = __realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
 			return -1;
 		}
 	}
@@ -164,11 +164,11 @@ int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr)
 	if (search == NULL || i_attr < 0 || i_attr >= search->n_attributes) return -1;
 
 	/* Free attribute fields first */
-	if (search->attributes[i_attr].name != NULL) free(search->attributes[i_attr].name);
-	if (search->attributes[i_attr].value != NULL) free(search->attributes[i_attr].value);
+	if (search->attributes[i_attr].name != NULL) __free(search->attributes[i_attr].name);
+	if (search->attributes[i_attr].value != NULL) __free(search->attributes[i_attr].value);
 
 	memmove(&search->attributes[i_attr], &search->attributes[i_attr+1], (search->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
-	search->attributes = (XMLAttribute*)realloc(search->attributes, --(search->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
+	search->attributes = (XMLAttribute*)__realloc(search->attributes, --(search->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
 
 	return search->n_attributes;
 }
@@ -188,20 +188,20 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
 char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quote)
 {
 	const XMLSearch* s;
-	char squote[] = "\"";
+	char squote[] = "'";
 	int i, fill;
 
 	if (xpath == NULL) return NULL;
 
 	/* NULL 'search' is an empty string */
 	if (search == NULL) {
-		*xpath = strdup("");
+		*xpath = __strdup("");
 		if (*xpath == NULL) return NULL;
 
 		return *xpath;
 	}
 
-	if (quote != '\0') squote[0] = quote;
+	squote[0] = (quote == '\0' ? XML_DEFAULT_QUOTE : quote);
 
 	for (s = search; s != NULL; s = s->next) {
 		if (s != search) /* No "/" prefix for the first criteria */
@@ -243,7 +243,7 @@ char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quo
 	return *xpath;
 
 err:
-	free(*xpath);
+	__free(*xpath);
 	*xpath = NULL;
 
 	return NULL;
@@ -331,7 +331,7 @@ int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search)
 	tag = xpath;
 	while (*tag) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
-			search2 = (XMLSearch*)malloc(sizeof(XMLSearch));
+			search2 = (XMLSearch*)__malloc(sizeof(XMLSearch));
 			if (search2 == NULL) {
 				(void)XMLSearch_free(search, true);
 				return false;
@@ -467,7 +467,7 @@ static char* _get_XPath(const XMLNode* node, char** xpath)
 		n += strlen_html(node->attributes[i].name) + strlen_html(node->attributes[i].value) + 6; /* 6 = ', @=""' */
 	}
 	n += brackets;
-	*xpath = (char*)malloc(n+1);
+	*xpath = (char*)__malloc(n+1);
 
 	if (*xpath == NULL) return NULL;
 
@@ -527,12 +527,12 @@ char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents)
 		xp = xparent;
 		parent = parent->father;
 	} while (parent != NULL);
-	if ((*xpath = strdup("/")) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
+	if ((*xpath = __strdup("/")) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
 
 	return *xpath;
 
 xp_err:
-	if (xp != NULL) free(xp);
+	if (xp != NULL) __free(xp);
 	*xpath = NULL;
 
 	return NULL;

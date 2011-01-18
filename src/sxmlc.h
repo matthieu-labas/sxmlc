@@ -25,7 +25,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "3.4.0"
+#define SXMLC_VERSION "3.5.0"
 
 #ifndef false
 #define false 0
@@ -38,7 +38,7 @@ extern "C" {
 /* Node types */
 typedef enum _TagType {
 	TAG_ERROR = -1,
-	TAG_NONE,
+	TAG_NONE = 0,
 	TAG_PARTIAL,	/* Tag containing a legal '>' which stopped file reading */
 	TAG_FATHER,		/* <tag> - Next nodes will be children of this one. */
 	TAG_SELF,		/* <tag/> - Standalone node. */
@@ -77,7 +77,8 @@ typedef struct _XMLNode {
 	
 	TagType tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
 	int active;		/* 'true' to tell that node is active and should be displayed by 'XMLDoc_print' */
-/* TODO: Add pointer to next sibling ? */
+
+/* TODO: Add pointer to next sibling? */
 	
 	void* user;	/* Pointer for user data associated to the node */
 
@@ -253,6 +254,7 @@ typedef struct _DOM_through_SAX {
 	XMLDoc* doc;		/* Document to fill up */
 	XMLNode* current;	/* For internal use (current father node) */
 	ParseError error;	/* For internal use (parse status) */
+	int line_error;		/* For internal use (line number when error occurred) */
 } DOM_through_SAX;
 
 int DOMXMLDoc_doc_start(SAX_Data* dom);
@@ -283,7 +285,7 @@ TagType XML_parse_1string(char* str, XMLNode* xmlnode);
 /*
  Allocate and initialize XML nodes.
  'n' is the number of contiguous elements to allocate (to create and array).
- Return 'NULL' if not enough memory or the pointer to the elements otherwise.
+ Return 'NULL' if not enough memory, or the pointer to the elements otherwise.
  */
 XMLNode* XMLNode_allocN(int n);
 
@@ -307,6 +309,12 @@ int XMLNode_free(XMLNode* node);
  If 'src' is NULL, 'dst' is freed and initialized.
  */
 int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children);
+
+/*
+ Allocate a node and copy 'node' into it.
+ Return 'NULL' if not enough memory, or a pointer to the new node otherwise.
+ */
+XMLNode* XMLNode_dup(const XMLNode* node, int copy_children);
 
 /*
  Set the active/inactive state of 'node'.
@@ -360,16 +368,23 @@ int XMLNode_set_text(XMLNode* node, const char* text);
 int XMLNode_add_child(XMLNode* node, XMLNode* child);
 
 /*
- Search for 'tag' in direct children of 'node', starting from index 'isearch'
- and return its index, or -1 if not found or error.
+ Return the number of active children nodes of 'node', or '-1' if 'node' is invalid.
  */
-int XMLNode_search_child(const XMLNode* node, const char* tag, int isearch);
+int XMLNode_get_children_count(const XMLNode* node);
 
 /*
- Remove child index 'ichild'.
+ Return a reference to the 'i_child'th active node.
+ */
+XMLNode* XMLNode_get_child(const XMLNode* node, int i_child);
+
+/*
+ Remove the 'i_child'th active child of 'node'.
+ If 'free_child' is 'true', free the child node itself. This parameter is usually 'true'
+ but should be 'false' when child nodes are pointers to local or global variables instead of
+ user-allocated memory.
  Return the new number of children or -1 on invalid arguments.
  */
-int XMLNode_remove_child(XMLNode* node, int ichild);
+int XMLNode_remove_child(XMLNode* node, int i_child, int free_child);
 
 /*
  Return 'true' if 'node1' is the same as 'node2' (i.e. same tag, same active attributes).
@@ -418,9 +433,12 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node);
 
 /*
  Remove a node from 'doc' root nodes, base on its index.
+ If 'free_node' is 'true', free the node itself. This parameter is usually 'true'
+ but should be 'false' when the node is a pointer to local or global variable instead of
+ user-allocated memory.
  Return 'true' if node was removed or 'false' if 'doc' or 'i_node' is invalid.
  */
-int XMLDoc_remove_node(XMLDoc* doc, int i_node);
+int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
 
 /*
  Shortcut macro to retrieve root node from a document.
@@ -435,6 +453,15 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node);
  XMLDoc_add_child_root(XMLDoc* doc, XMLNode* child);
  */
 #define XMLDoc_add_child_root(doc, child) XMLNode_add_child((doc)->nodes[(doc)->i_root], (child))
+
+/*
+ Default quote to use to print attribute value.
+ User can redefine it with its own character by adding a #define XML_DEFAULT_QUOTE before including
+ this file.
+ */
+#ifndef XML_DEFAULT_QUOTE
+#define XML_DEFAULT_QUOTE '"'
+#endif
 
 /*
  Prints the node and its children to a file (that can be stdout).

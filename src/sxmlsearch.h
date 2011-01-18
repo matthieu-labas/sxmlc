@@ -161,7 +161,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  Compute an XPath-equivalent string of the 'search' criteria.
  'xpath' is a pointer to a string that will be allocated by the function and should
  be freed after use.
- 'quote' is the quote character to be used (e.g. '"' or '\''). If null, '"' will be used.
+ 'quote' is the quote character to be used (e.g. '"' or '\''). If '\0', XML_DEFAULT_QUOTE will be used.
  A NULL 'search' will return an empty string.
  Return 'false' for a memory problem, 'true' otherwise.
  */
