@@ -25,7 +25,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#define SXMLC_VERSION "3.5.0"
+#define SXMLC_VERSION "3.5.1"
 
 #ifndef false
 #define false 0
@@ -44,7 +44,7 @@ typedef enum _TagType {
 	TAG_SELF,		/* <tag/> - Standalone node. */
 	TAG_INSTR,		/* <?prolog?> - Processing instructions, or prolog node. */
 	TAG_COMMENT,	/* <!--comment--> */
-	TAG_CDATA,		/* <![CDATA[ ]]/> - CDATA node */
+	TAG_CDATA,		/* <![CDATA[ ]]> - CDATA node */
 	TAG_DOCTYPE,	/* <!DOCTYPE [ ]> - DOCTYPE node */
 	TAG_END,		/* </tag> - End of father node. */
 
@@ -78,8 +78,6 @@ typedef struct _XMLNode {
 	TagType tag_type;	/* Node type ('TAG_FATHER', 'TAG_SELF' or 'TAG_END') */
 	int active;		/* 'true' to tell that node is active and should be displayed by 'XMLDoc_print' */
 
-/* TODO: Add pointer to next sibling? */
-	
 	void* user;	/* Pointer for user data associated to the node */
 
 	/* Keep 'init_value' as the last member */
@@ -94,7 +92,6 @@ typedef struct _XMLDoc {
 	XMLNode** nodes;	/* Nodes of the document, including prolog, comments and root nodes */
 	int n_nodes;
 	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
-/* TODO: Add 'root' member as a shortcut to nodes[i_nodes] ? */
 
 	/* Keep 'init_value' as the last member */
 	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
@@ -225,7 +222,7 @@ typedef struct _SAX_Callbacks {
 	 	 	 'n' is the number of lines parsed.
 	 	 XML_EVENT_ERROR:
 	 	 	 Everything is NULL.
-	 	 	 'err' is one of the 'PARSE_ERR_*'.
+	 	 	 'n' is one of the 'PARSE_ERR_*'.
 	 	 XML_EVENT_END_DOC:
 	 	 	 'node' is NULL.
 	 	 	 'text' is the file name if a file is being parsed, NULL if a buffer is being parsed.
@@ -259,8 +256,8 @@ typedef struct _DOM_through_SAX {
 
 int DOMXMLDoc_doc_start(SAX_Data* dom);
 int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* dom);
-int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_node_text(char* text, SAX_Data* dom);
+int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd);
 int DOMXMLDoc_doc_end(SAX_Data* dom);
 
@@ -312,6 +309,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children);
 
 /*
  Allocate a node and copy 'node' into it.
+ If 'copy_children' is 'true', all children of 'node' will be copied to the new node.
  Return 'NULL' if not enough memory, or a pointer to the new node otherwise.
  */
 XMLNode* XMLNode_dup(const XMLNode* node, int copy_children);
@@ -331,7 +329,7 @@ int XMLNode_set_tag(XMLNode* node, const char* tag);
 
 /*
  Set the node type among one of the valid ones (TAG_FATHER, TAG_SELF, TAG_INSTR,
- TAG_COMMENT, TAG_CDATA, TAG_DOCTYPE or any user-registered tag.
+ TAG_COMMENT, TAG_CDATA, TAG_DOCTYPE) or any user-registered tag.
  Return 'false' when the node or the 'tag_type' is invalid.
  */
 int XMLNode_set_type(XMLNode* node, const TagType tag_type);
@@ -344,7 +342,7 @@ int XMLNode_set_type(XMLNode* node, const TagType tag_type);
 int XMLNode_set_attribute(XMLNode* node, const char* attr_name, const char* attr_value);
 
 /*
- Search for the attribute 'attr_name' in 'node', starting from index 'isearch'
+ Search for the active attribute 'attr_name' in 'node', starting from index 'isearch'
  and returns its index, or -1 if not found or error.
  */
 int XMLNode_search_attribute(const XMLNode* node, const char* attr_name, int isearch);
@@ -398,7 +396,7 @@ int XMLNode_equal(const XMLNode* node1, const XMLNode* node2);
 XMLNode* XMLNode_next_sibling(const XMLNode* node);
 
 /*
- Shortcut macro to return the next node in XML order i.e. first child or next sibling, or NULL
+ Return the next node in XML order i.e. first child or next sibling, or NULL
  if 'node' is invalid or the end of its root node is reached.
  */
 XMLNode* XMLNode_next(const XMLNode* node);
@@ -426,7 +424,7 @@ int XMLDoc_set_root(XMLDoc* doc, int i_root);
 
 /*
  Add a node to the document, specifying the type.
- If its type is TAG_FATHER, it also sets the document root type.
+ If its type is TAG_FATHER, it also sets the document root node if previously undefined.
  Return the node index, or -1 if bad arguments or memory error.
  */
 int XMLDoc_add_node(XMLDoc* doc, XMLNode* node);
@@ -445,7 +443,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
  Equivalent to
  doc->nodes[doc->i_root]
  */
-#define XMLDoc_root(doc) (doc)->nodes[(doc)->i_root]
+#define XMLDoc_root(doc) ((doc)->nodes[(doc)->i_root])
 
 /*
  Shortcut macro to add a node to 'doc' root node.
@@ -467,7 +465,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
  Prints the node and its children to a file (that can be stdout).
  - 'tag_sep' is the string to use to separate nodes from each other (usually "\n").
  - 'child_sep' is the additional string to put for each child level (usually "\t").
- - 'keep_text_new_line' indicates that text should not be printed if it is composed of
+ - 'keep_text_spaces' indicates that text should not be printed if it is composed of
    spaces, tabs or new lines only (e.g. when XML document spans on several lines due to
    pretty-printing).
  - 'sz_line' is the maximum number of characters that can be put on a single line. The
@@ -480,17 +478,21 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
 int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth);
 
 /*
- Prints the XML document using 'XMLNode_print':
- - print the pre-root nodes (if any)
- - print the root node (if any)
+ Prints the XML document using 'XMLNode_print' on all document root nodes.
  */
 int XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
 /*
- Creates a new XML document from a given 'filename' and loads it to 'doc'.
+ Create a new XML document from a given 'filename' and load it to 'doc'.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
 int XMLDoc_parse_file_DOM(const char* filename, XMLDoc* doc);
+
+/*
+ Create a new XML document from a memory buffer 'buffer' that can be given a name 'name', and load
+ it into 'doc'.
+ Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
+ */
 int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc);
 
 /*
@@ -499,12 +501,19 @@ int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc);
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
 int XMLDoc_parse_file_SAX(const char* filename, const SAX_Callbacks* sax, void* user);
+
+/*
+ Parse an XML document from a memory buffer 'buffer' that can be given a name 'name',
+ calling SAX callbacks given in the 'sax' structure.
+ 'user' is a user-given pointer that will be given back to all callbacks.
+ Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
+ */
 int XMLDoc_parse_buffer_SAX(const char* buffer, const char* name, const SAX_Callbacks* sax, void* user);
 
 /*
- Parse an XML file using the DOM implementation (it is a direct call to 'XMLDoc_parse_file_DOM' function).
+ Parse an XML file using the DOM implementation.
  */
-int XMLDoc_parse_file(const char* filename, XMLDoc* doc);
+#define XMLDoc_parse_file XMLDOC_parse_file_DOM
 
 #ifdef __cplusplus
 }

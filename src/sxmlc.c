@@ -639,11 +639,11 @@ static int _print_formatting(FILE* f, const char* tag_sep, const char* child_sep
 {
 	int i;
 	
-	if (tag_sep) {
+	if (tag_sep != NULL) {
 		fprintf(f, tag_sep);
 		cur_sz_line = _count_new_char_line(tag_sep, nb_char_tab, cur_sz_line);
 	}
-	if (child_sep) {
+	if (child_sep != NULL) {
 		for (i = 0; i < depth; i++) {
 			fprintf(f, child_sep);
 			cur_sz_line = _count_new_char_line(child_sep, nb_char_tab, cur_sz_line);
@@ -1297,9 +1297,4 @@ int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc)
 	sax.all_event = NULL;
 
 	return XMLDoc_parse_buffer_SAX(buffer, name, &sax, &dom) ? true : XMLDoc_free(doc);
-}
-
-int XMLDoc_parse_file(const char* filename, XMLDoc* doc)
-{
-	return XMLDoc_parse_file_DOM(filename, doc);
 }
