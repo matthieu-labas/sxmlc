@@ -15,20 +15,6 @@
 #include "../sxmlc.h"
 #include "../sxmlsearch.h"
 
-void test_gen1(void)
-{
-	XMLNode *node;
-	XMLDoc doc;
-	
-	XMLDoc_init(&doc);
-
-	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-	XMLNode_set_type(node, TAG_INSTR);
-	XMLDoc_add_node(&doc, node);
-	XMLDoc_free(&doc);
-}
-
 void test_gen(void)
 {
 	XMLNode *node, *node1;
@@ -57,7 +43,7 @@ void test_gen(void)
 	XMLDoc_add_node(&doc, node); // Becomes root node
 	
 	node = XMLNode_alloc();
-	XMLNode_set_type(node, TAG_FATHER);
+	XMLNode_set_type(node, TAG_COMMENT);
 	XMLNode_set_tag(node, "Hello World!");
 	XMLDoc_add_child_root(&doc, node);
 	
@@ -110,7 +96,8 @@ void test_gen(void)
 	XMLNode_set_attribute(node, "name", "eee");
 	XMLNode_set_attribute(node, "value", "machin3");
 	XMLDoc_add_child_root(&doc, node);
-	//XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
+
+	XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
 
 	XMLDoc_free(&doc);
 }
@@ -362,7 +349,7 @@ int DS(SAX_Data* sd)
 int NS(const XMLNode* node, SAX_Data* sd)
 {
 	XMLDoc* doc = (XMLDoc*)sd->user;
-	XMLDoc_add_node(doc, XMLNode_dup(node));
+	XMLDoc_add_node(doc, XMLNode_dup(node, false));
 	if (doc->n_nodes >= 10000) {
 		XMLDoc_free(doc);
 		XMLDoc_init(doc);
@@ -475,7 +462,7 @@ void test_search(void)
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
 	while ((node = XMLSearch_next(node, &search[0])) != NULL) {
 		printf("Found match: ");
-		XMLNode_print(node, stdout, NULL, NULL, false, 0, 0, 0);
+		XMLNode_print(node, stdout, NULL, NULL, false, 0, 0);
 		printf("\n");
 	}
 	printf("End search\n");
@@ -580,8 +567,8 @@ void test_NodeXPath(void)
 #if 1
 int main(int argc, char** argv)
 {
-	//XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
-	//test_gen();
+	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
+	test_gen();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -593,7 +580,7 @@ int main(int argc, char** argv)
 	//test_speed_DOM();
 	//test_speed_SAX();
 	//test_NodeXPath();
-	test_mem2();
+	//test_mem2();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

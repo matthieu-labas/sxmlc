@@ -33,6 +33,12 @@ void* __malloc(size_t sz)
 	printf("0x%x: MALLOC (%d)\n", p, sz);
 	return p;
 }
+void* __calloc(size_t count, size_t sz)
+{
+	void* p = calloc(count, sz);
+	printf("0x%x: CALLOC (%d, %d)\n", p, count, sz);
+	return p;
+}
 void* __realloc(void* mem, size_t sz)
 {
 	void* p = realloc(mem, sz);

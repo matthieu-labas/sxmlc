@@ -462,7 +462,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
 #endif
 
 /*
- Prints the node and its children to a file (that can be stdout).
+ Print the node and its children to a file (that can be stdout).
  - 'tag_sep' is the string to use to separate nodes from each other (usually "\n").
  - 'child_sep' is the additional string to put for each child level (usually "\t").
  - 'keep_text_spaces' indicates that text should not be printed if it is composed of
@@ -470,12 +470,19 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
    pretty-printing).
  - 'sz_line' is the maximum number of characters that can be put on a single line. The
    node remainder will be output to extra lines.
- - 'nb_char_tab' is how many characters should be counted for a single '\t' when counting
-   characters in the line. It usually is 8 or 4, but at least 1.
+ - 'nb_char_tab' is how many characters should be counted for a tab when counting characters
+   in the line. It usually is 8 or 4, but at least 1.
  - 'depth' is an internal parameter that is used to determine recursively how deep we are in
    the tree. It should be initialized to 0 at first call.
+ Return 'false' on invalid arguments (NULL 'node' or 'f'), 'true' otherwise.
  */
-int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth);
+int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+
+/*
+ Print the node "header": <tagname attribname="attibval" ...[/]>, spanning it on several lines if needed.
+ Return 'false' on invalid arguments (NULL 'node' or 'f'), 'true' otherwise.
+ */
+int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_tab);
 
 /*
  Prints the XML document using 'XMLNode_print' on all document root nodes.

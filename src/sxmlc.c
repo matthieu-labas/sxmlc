@@ -635,16 +635,14 @@ static int _count_new_char_line(const char* str, int nb_char_tab, int cur_sz_lin
 	
 	return cur_sz_line;
 }
-static int _print_formatting(FILE* f, const char* tag_sep, const char* child_sep, int nb_char_tab, int depth, int cur_sz_line)
+static int _print_formatting(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int nb_char_tab, int cur_sz_line)
 {
-	int i;
-	
 	if (tag_sep != NULL) {
 		fprintf(f, tag_sep);
 		cur_sz_line = _count_new_char_line(tag_sep, nb_char_tab, cur_sz_line);
 	}
 	if (child_sep != NULL) {
-		for (i = 0; i < depth; i++) {
+		for (node = node->father; node != NULL; node = node->father) {
 			fprintf(f, child_sep);
 			cur_sz_line = _count_new_char_line(child_sep, nb_char_tab, cur_sz_line);
 		}
@@ -653,37 +651,28 @@ static int _print_formatting(FILE* f, const char* tag_sep, const char* child_sep
 	return cur_sz_line;
 }
 
-int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab, int depth)
+static int _XMLNode_print_header(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int sz_line, int cur_sz_line, int nb_char_tab)
 {
-	static int cur_sz_line = 0; /* How many characters are on the current line */
 	int i;
 	char* p;
-	
-	if (node == NULL || f == NULL || !node->active) return false;
-	
-	if (nb_char_tab <= 0) nb_char_tab = 1;
-	
-	/* Print formatting */
-	if (depth < 0) /* UGLY HACK: 'depth' forced negative on very first line so we don't print an extra 'tag_sep' (usually "\n") */
-		depth = 0;
-	else
-		cur_sz_line = _print_formatting(f, tag_sep, child_sep, nb_char_tab, depth, cur_sz_line);
+
+	if (node == NULL || f == NULL || !node->active || node->tag == NULL || node->tag[0] == '\0') return false;
 	
 	/* Special handling of DOCTYPE */
 	if (node->tag_type == TAG_DOCTYPE) {
 		/* Search for an unescaped '[' in the DOCTYPE definition, in which case the end delimiter should be ']>' instead of '>' */
 		for (p = strchr(node->tag, '['); p != NULL && *(p-1) == '\\'; p = strchr(p+1, '[')) ;
 		fprintf(f, "<!DOCTYPE%s%s>", node->tag, p != NULL ? "]" : "");
-		/*cur_sz_line += strlen(node->tag) + 10 + (p != NULL ? 1 : 0);*/
-		return true;
+		cur_sz_line += strlen(node->tag) + 10 + (p != NULL ? 1 : 0);
+		return cur_sz_line;
 	}
 
 	/* Check for special tags first */
 	for (i = 0; i < NB_SPECIAL_TAGS; i++) {
 		if (node->tag_type == _spec[i].tag_type) {
 			fprintf(f, "%s%s%s", _spec[i].start, node->tag, _spec[i].end);
-			/*cur_sz_line += strlen(_spec[i].start) + strlen(node->tag) + strlen(_spec[i].end) + 2;*/
-			return true;
+			cur_sz_line += strlen(_spec[i].start) + strlen(node->tag) + strlen(_spec[i].end) + 2;
+			return cur_sz_line;
 		}
 	}
 
@@ -691,8 +680,8 @@ int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char*
 	for (i = 0; i < _user_tags.n_tags; i++) {
 		if (node->tag_type == _user_tags.tags[i].tag_type) {
 			fprintf(f, "%s%s%s", _user_tags.tags[i].start, node->tag, _user_tags.tags[i].end);
-			/*cur_sz_line += strlen(_user_tags.tags[i].start) + strlen(node->tag) + strlen(_user_tags.tags[i].end) + 2;*/
-			return true;
+			cur_sz_line += strlen(_user_tags.tags[i].start) + strlen(node->tag) + strlen(_user_tags.tags[i].end) + 2;
+			return cur_sz_line;
 		}
 	}
 	
@@ -705,7 +694,7 @@ int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char*
 		if (!node->attributes[i].active) continue;
 		cur_sz_line += strlen(node->attributes[i].name) + strlen(node->attributes[i].value) + 3;
 		if (sz_line > 0 && cur_sz_line > sz_line) {
-			cur_sz_line = _print_formatting(f, tag_sep, child_sep, nb_char_tab, depth, cur_sz_line);
+			cur_sz_line = _print_formatting(node, f, tag_sep, child_sep, nb_char_tab, cur_sz_line);
 			/* Add extra separator, as if new line was a child of the previous one */
 			if (child_sep) {
 				fprintf(f, child_sep);
@@ -724,13 +713,38 @@ int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char*
 	/* End the tag if there are no children and no text */
 	if (node->n_children == 0 && (node->text == NULL || node->text[0] == '\0')) {
 		fprintf(f, "/>");
-		/*cur_sz_line += 2;*/
-		return true;
+		cur_sz_line += 2;
 	}
 	else {
 		(void)fputc('>', f);
 		cur_sz_line++;
 	}
+
+	return cur_sz_line;
+}
+
+int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_tab)
+{
+	return _XMLNode_print_header(node, f, NULL, NULL, sz_line, 0, nb_char_tab) < 0 ? false : true;
+}
+
+static int _XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int cur_sz_line, int nb_char_tab, int depth)
+{
+	int i;
+	char* p;
+	
+	if (node == NULL || f == NULL || !node->active || node->tag == NULL || node->tag[0] == '\0') return -1;
+	
+	if (nb_char_tab <= 0) nb_char_tab = 1;
+	
+	/* Print formatting */
+	if (depth < 0) /* UGLY HACK: 'depth' forced negative on very first line so we don't print an extra 'tag_sep' (usually "\n") */
+		depth = 0;
+	else
+		cur_sz_line = _print_formatting(node, f, tag_sep, child_sep, nb_char_tab, cur_sz_line);
+	
+	_XMLNode_print_header(node, f, tag_sep, child_sep, sz_line, cur_sz_line, nb_char_tab);
+
 	if (node->text != NULL && node->text[0]) {
 		/* Text has to be printed: check if it is only spaces */
 		if (!keep_text_spaces) {
@@ -740,33 +754,39 @@ int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char*
 			p = node->text; /* '*p' won't be '\0' */
 		if (*p) cur_sz_line += fprintHTML(f, node->text);
 	}
+	else if (node->n_children <= 0) return true; /* Everything has already been printed */
 	
 	/* Recursively print children */
 	for (i = 0; i < node->n_children; i++)
-		(void)XMLNode_print(node->children[i], f, tag_sep, child_sep, keep_text_spaces, sz_line, nb_char_tab, depth+1);
+		(void)_XMLNode_print(node->children[i], f, tag_sep, child_sep, keep_text_spaces, sz_line, cur_sz_line, nb_char_tab, depth+1);
 	
 	/* Print tag end after children */
 		/* Print formatting */
 	if (node->n_children > 0)
-		cur_sz_line = _print_formatting(f, tag_sep, child_sep, nb_char_tab, depth, cur_sz_line);
+		cur_sz_line = _print_formatting(node, f, tag_sep, child_sep, nb_char_tab, cur_sz_line);
 	fprintf(f, "</%s>", node->tag);
-	/*cur_sz_line += strlen(node->tag) + 3;*/
+	cur_sz_line += strlen(node->tag) + 3;
 
-	return true;
+	return cur_sz_line;
+}
+
+int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab)
+{
+	return _XMLNode_print(node, f, tag_sep, child_sep, keep_text_spaces, sz_line, 0, nb_char_tab, 0);
 }
 
 int XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab)
 {
-	int i, depth;
+	int i, depth, cur_sz_line;
 	
 	if (doc == NULL || f == NULL || doc->init_value != XML_INIT_DONE) return false;
 	
 	depth = -1; /* UGLY HACK: 'depth' forced negative on very first line so we don't print an extra 'tag_sep' (usually "\n") */
-	for (i = 0; i < doc->n_nodes; i++) {
-		(void)XMLNode_print(doc->nodes[i], f, tag_sep, child_sep, keep_text_spaces, sz_line, nb_char_tab, depth);
+	for (i = 0, cur_sz_line = 0; i < doc->n_nodes; i++) {
+		cur_sz_line = _XMLNode_print(doc->nodes[i], f, tag_sep, child_sep, keep_text_spaces, sz_line, cur_sz_line, nb_char_tab, depth);
 		depth = 0;
 	}
-	/* TODO: Find something more graceful than 'depth=-1', even though everyone knows I'll probably never will ;) */
+	/* TODO: Find something more graceful than 'depth=-1', even though everyone knows I probably never will ;) */
 
 	return true;
 }

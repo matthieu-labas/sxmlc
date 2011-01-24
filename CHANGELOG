@@ -1,3 +1,10 @@
+*** v3.5.1
+	- Minor corrections in comments.
+	- 'XMLDoc_parse_file' is now a macro.
+	- 'XMLNode_print' takes less parameters (no more 'depth') and can be used in thread (no more static variables). Sub-functions were added.
+	- New function 'XMLNode_print_header' which print only the "header" part (i.e. no text or children).
+	- Correction in HowTo
+
 *** v3.5.0
 	- Corrected memory leak in 'XMLDoc_free' when children nodes pointers were not freed
 	- Corrected CDATA tag end (!)

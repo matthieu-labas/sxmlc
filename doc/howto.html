@@ -293,24 +293,29 @@ XMLNode* node;
 
 XMLDoc_init(&doc);
 
-node = XMLNode_alloc(1);
-XMLNode_set_tag(node, "properties");
-XMLDoc_set_root(&doc, node);
-
-node = XMLNode_alloc(1);
+node = XMLNode_alloc();
 XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-XMLDoc_add_node(&doc, node, TAG_INSTR);
+XMLNode_set_type(node, TAG_INSTR);
+XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc(1);
+node = XMLNode_alloc();
 XMLNode_set_tag(node, " Pre-comment ");
-XMLDoc_add_node(&doc, node, TAG_COMMENT);
+XMLNode_set_type(node, TAG_COMMENT);
+XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc(1);
+node = XMLNode_alloc();
 XMLNode_set_tag(node, "\nAnother one\nMulti-line...\n");
-XMLDoc_add_node(&doc, node, TAG_COMMENT);
+XMLNode_set_type(node, TAG_COMMENT);
+XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc(1);
-XMLNode_set_comment(node, "Hello World!");
+node = XMLNode_alloc();
+XMLNode_set_tag(node, "properties");
+XMLNode_set_type(node, TAG_FATHER);
+XMLDoc_add_node(&doc, node); // Becomes root node
+
+node = XMLNode_alloc();
+XMLNode_set_type(node, TAG_COMMENT);
+XMLNode_set_tag(node, "Hello World!");
 XMLDoc_add_child_root(&doc, node);
 
 node = XMLNode_alloc(1);

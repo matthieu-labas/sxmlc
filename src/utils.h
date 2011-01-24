@@ -27,11 +27,13 @@ extern "C" {
 
 #ifdef DBG_MEM
 void* __malloc(size_t sz);
+void* __calloc(size_t count, size_t sz);
 void* __realloc(void* mem, size_t sz);
 void __free(void* mem);
 char* __strdup(const char* s);
 #else
 #define __malloc malloc
+#define __calloc calloc
 #define __realloc realloc
 #define __free free
 #define __strdup strdup
