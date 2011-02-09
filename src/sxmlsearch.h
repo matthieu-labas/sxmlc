@@ -23,6 +23,7 @@
 extern "C" {
 #endif
 
+#include "utils.h"
 #include "sxmlc.h"
 
 /*
@@ -35,7 +36,7 @@ typedef struct _XMLSearch {
 	 Search for nodes which tag match this 'tag' field.
 	 If NULL or an empty string, all nodes will be matching.
 	 */
-	char* tag;
+	SXML_CHAR* tag;
 
 	/*
 	 Search for nodes which attributes match all the ones described.
@@ -56,7 +57,7 @@ typedef struct _XMLSearch {
 	 Search for nodes which text match this 'text' field.
 	 If NULL or an empty string, all nodes will be matching.
 	 */
-	char* text;
+	SXML_CHAR* text;
 
 	/*
 	 Next search to perform on children of a node matching current struct.
@@ -74,12 +75,12 @@ typedef struct _XMLSearch {
 	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */
 } XMLSearch;
 
-typedef int (*REGEXPR_COMPARE)(char* str, char* pattern);
+typedef int (*REGEXPR_COMPARE)(SXML_CHAR* str, SXML_CHAR* pattern);
 
 /*
  Set a new comparison function to evaluate whether a string matches a given pattern.
  The default one is the "regstrcmp" which handles limited regular expressions.
- 'fct' prototype is 'int fct(char* str, char* pattern)' where 'str' is the string to
+ 'fct' prototype is 'int fct(SXML_CHAR* str, SXML_CHAR* pattern)' where 'str' is the string to
  evaluate the match for and 'pattern' the pattern. It should return 'true' (=1) when
  'str' matches 'pattern' and 'false' (=0) when it does not.
  Return the previous function used for matching.
@@ -109,7 +110,7 @@ int XMLSearch_free(XMLSearch* search, int free_next);
  only). In this case, the previous tag is freed.
  Return 'true' upon successful completion, 'false' for memory error.
  */
-int XMLSearch_search_set_tag(XMLSearch* search, const char* tag);
+int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag);
 
 /*
  Add an attribute search criteria.
@@ -119,13 +120,13 @@ int XMLSearch_search_set_tag(XMLSearch* search, const char* tag);
  difference (='false).
  Return the index of the new attribute, or '-1' for memory error.
  */
-int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, const char* attr_value, int value_equal);
+int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value, int value_equal);
 
 /*
  Search for attribute 'attr_name' in Search attribute list and return its index
  or '-1' if not found.
  */
-int XMLSearch_search_get_attribute_index(const XMLSearch* search, const char* attr_name);
+int XMLSearch_search_get_attribute_index(const XMLSearch* search, const SXML_CHAR* attr_name);
 
 /*
  Removes the search attribute given by its index 'i_attr'.
@@ -139,7 +140,7 @@ int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr);
  only). In this case, the previous text is freed.
  Return 'true' upon successful completion, 'false' for memory error.
  */
-int XMLSearch_search_set_text(XMLSearch* search, const char* text);
+int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text);
 
 /*
  Set an additional search on children nodes of a previously matching node.
@@ -165,7 +166,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  A NULL 'search' will return an empty string.
  Return 'false' for a memory problem, 'true' otherwise.
  */
-char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quote);
+SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath, SXML_CHAR quote);
 
 /*
  Initialize a 'search' struct from an XPath-like query. "XPath-like" means that
@@ -176,7 +177,7 @@ char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quo
  Return 'true' when 'search' was correctly initialized, 'false' in case of memory
  problem or malformed 'xpath'.
  */
-int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search);
+int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search);
 
 /*
  Check whether a 'node' matches 'search' criteria.
@@ -212,7 +213,7 @@ XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search);
  The computed XPath is stored in a dynamically-allocated string.
  Return the XPath, or NULL if 'node' is invalid or on memory error.
  */
-char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents);
+SXML_CHAR* XMLNode_get_XPath(XMLNode* node, SXML_CHAR** xpath, int incl_parents);
 
 #ifdef __cplusplus
 }

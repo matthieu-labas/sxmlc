@@ -19,8 +19,60 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#define SXMLC_UNICODE
+
+#ifdef SXMLC_UNICODE
+typedef wchar_t SXML_CHAR;
+#define C2SX(c) L ## c
+#define CEOF WEOF
+#define sx_strcmp wcscmp
+#define sx_strncmp wcsncmp
+#define sx_strlen wcslen
+#define sx_strdup wcsdup
+#define sx_strchr wcschr
+#define sx_strrchr wcsrchr
+#define sx_strcpy wcscpy
+#define sx_strncpy wcsncpy
+#define sx_strcat wcscat
+#define sx_printf wprintf
+#define sx_fprintf fwprintf
+#define sx_sprintf swprintf
+#define sx_fgetc fgetwc
+#define sx_fputc fputwc
+#define sx_isspace iswspace
+#if defined(WIN32) || defined(WIN64)
+#define sx_fopen _wfopen
+#else
+#define sx_fopen fopen
+#endif
+#define sx_fclose fclose
+#else
+typedef char SXML_CHAR;
+#define C2SX(c) c
+#define CEOF EOF
+#define sx_strcmp strcmp
+#define sx_strncmp strncmp
+#define sx_strlen strlen
+#define sx_strdup __strdup
+#define sx_strchr strchr
+#define sx_strrchr strrchr
+#define sx_strcpy strcpy
+#define sx_strncpy strncpy
+#define sx_strcat strcat
+#define sx_printf printf
+#define sx_fprintf fprintf
+#define sx_sprintf sprintf
+#define sx_fgetc fgetc
+#define sx_fputc fputc
+#define sx_isspace isspace
+#define sx_fopen fopen
+#define sx_fclose fclose
 #endif
 
 //#define DBG_MEM
@@ -40,7 +92,7 @@ char* __strdup(const char* s);
 #endif
 
 #ifndef MEM_INCR_RLA
-#define MEM_INCR_RLA 256 /* Initial buffer size and increment for memory reallocations */
+#define MEM_INCR_RLA (256*sizeof(SXML_CHAR)) /* Initial buffer size and increment for memory reallocations */
 #endif
 
 #ifndef false
@@ -51,22 +103,20 @@ char* __strdup(const char* s);
 #define true 1
 #endif
 
-#ifndef CEOF
-#define CEOF ((char)EOF)
-#endif
+#define NULC ((SXML_CHAR)C2SX('\0'))
 
-#define isquote(c) (((c) == '"') || ((c) == '\''))
+#define isquote(c) (((c) == C2SX('"')) || ((c) == C2SX('\'')))
 
 /*
  Buffer data source used by 'read_line_alloc' when required.
  'buf' should be 0-terminated.
  */
 typedef struct _DataSourceBuffer {
-	const char* buf;
+	const SXML_CHAR* buf;
 	int cur_pos;
 } DataSourceBuffer;
 
-typedef FILE DataSourceFile;
+typedef FILE* DataSourceFile;
 
 typedef enum _DataSourceType {
 	DATA_SOURCE_FILE = 0,
@@ -80,7 +130,6 @@ typedef enum _DataSourceType {
  */
 int _bgetc(DataSourceBuffer* ds);
 int _beob(DataSourceBuffer* ds);
-
 /*
  Reads a line from data source 'in', eventually (re-)allocating a given buffer 'line'.
  Characters read will be stored in 'line' starting at 'i0' (this allows multiple calls to
@@ -91,7 +140,7 @@ int _beob(DataSourceBuffer* ds);
  '*sz_line' is the actual buffer size. This allows multiple calls to this function using the
  same buffer (without re-allocating/freeing).
  If 'sz_line' is non NULL and non 0, it means that '*line' is a VALID pointer to a location
- of '*sz_line'.
+ of '*sz_line' SXML_CHAR (not bytes! Multiply by sizeof(SXML_CHAR) to get number of bytes).
  Searches for character 'from' until character 'to'. If 'from' is 0, starts from
  current position. If 'to' is 0, it is replaced by '\n'.
  If 'keep_fromto' is 0, removes characters 'from' and 'to' from the line.
@@ -101,14 +150,14 @@ int _beob(DataSourceBuffer* ds);
  'read_line_alloc' uses constant 'MEM_INCR_RLA' to reallocate memory when needed. It is possible
  to override this definition to use another value.
  */
-int read_line_alloc(void* in, DataSourceType in_type, char** line, int* sz_line, int i0, char from, char to, int keep_fromto, char interest, int* interest_count);
+int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_line, int i0, SXML_CHAR from, SXML_CHAR to, int keep_fromto, SXML_CHAR interest, int* interest_count);
 
 /*
  Concatenates the string pointed at by 'src1' with 'src2' into '*src1' and
  return it ('*src1').
  Return NULL when out of memory.
  */
-char* strcat_alloc(char** src1, const char* src2);
+SXML_CHAR* strcat_alloc(SXML_CHAR** src1, const SXML_CHAR* src2);
 
 /*
  Strip spaces at the beginning and end of 'str', modifying 'str'.
@@ -116,13 +165,13 @@ char* strcat_alloc(char** src1, const char* src2);
  If not '\0', 'protect' is used to protect spaces from being deleted (usually a backslash).
  Returns the string or NULL if 'protect' is a space (which would not make sense).
  */
-char* strip_spaces(char* str, char repl_sq, char protect);
+SXML_CHAR* strip_spaces(SXML_CHAR* str, SXML_CHAR repl_sq);
 
 /*
  Remove '\' characters from 'str'.
  Return 'str'.
  */
-char* str_unescape(char* str);
+SXML_CHAR* str_unescape(SXML_CHAR* str);
 
 /*
  Split 'str' into a left and right part around a separator 'sep'.
@@ -138,7 +187,24 @@ char* str_unescape(char* str);
  If the separator was not found (i.e. left member only), '*i_sep' is '-1'.
  Return 'false' when 'str' is malformed, 'true' when splitting was successful.
  */
-int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
+int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
+
+typedef enum _BOM_TYPE {
+	BOM_NONE = 0,
+	BOM_UTF_8,
+	BOM_UTF_16BE,
+	BOM_UTF_16LE,
+	BOM_UTF_32BE,
+	BOM_UTF_32LE
+} BOM_TYPE;
+/*
+ Detect a potential BOM at the beginning of the file and read it into 'bom' (if not NULL,
+ 'bom' should be at least 5 bytes). It also moves the 'f' beyond the BOM so it's possible to
+ skip it by calling 'freadBOM(f, NULL, NULL)'. It no BOM is found, it leave 'f' untouched.
+ If not null, 'sz_bom' is filled with how many bytes are to be stored in 'bom'.
+ Return the BOM type or BOM_NONE if none found (empty 'bom' in this case).
+ */
+BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom);
 
 /*
  Replace occurrences of special HTML characters escape sequences (e.g. '&amp;') found in 'html'
@@ -147,7 +213,7 @@ int split_left_right(char* str, char sep, int* l0, int* l1, int* i_sep, int* r0,
  If 'str' is NULL, replacement is made into 'html', overwriting it.
  Returns 'str' (or 'html' if 'str' was NULL).
  */
-char* html2str(char* html, char* str);
+SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str);
 
 /*
  Replace occurrences of special characters (e.g. '&') found in 'str' into their HTML escaped
@@ -156,20 +222,20 @@ char* html2str(char* html, char* str);
  different from 'str' (unlike 'html2str'), as string will expand.
  Return 'html' or NULL if 'str' or 'html' are NULL, or when 'html' is 'str'.
 */
-char* str2html(char* str, char* html);
+SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html);
 
 /*
  Return the length of 'str' as if all its special character were replaced by their HTML
  equivalent.
  Return 0 if 'str' is NULL.
  */
-int strlen_html(char* str);
+int strlen_html(SXML_CHAR* str);
 
 /*
  Print 'str' to 'f', transforming special characters into their HTML equivalent.
  Returns the number of output characters.
  */
-int fprintHTML(FILE* f, char* str);
+int fprintHTML(FILE* f, SXML_CHAR* str);
 
 /*
  Checks whether 'str' corresponds to 'pattern'.
@@ -177,7 +243,7 @@ int fprintHTML(FILE* f, char* str);
  '?' (any character) and use '\' as an escape character.
  Returns 'true' when 'str' matches 'pattern', 'false' otherwise.
  */
-int regstrcmp(char* str, char* pattern);
+int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern);
 
 #ifdef __cplusplus
 }

@@ -1,3 +1,9 @@
+*** v4.0.0
+	- Unicode handling through SXMLC_UNICODE define (Use -DSXMLC_UNICODE when compiling).
+	- Use 'sx_*' functions to manipulate strings, and C2SX() macro around constant strings and characters to provide portable code for Unicode/non-Unicode compilation.
+	- Added 'NULC' and 'CEOF' constants as nul and EOF characters, according to SXMLC_UNICODE define.
+	- Removed parameter 'protect' in function 'strip_spaces' (forced to backslash).
+	
 *** v3.5.1
 	- Minor corrections in comments.
 	- 'XMLDoc_parse_file' is now a macro.

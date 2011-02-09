@@ -22,9 +22,9 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include "utils.h"
 #include "sxmlc.h"
 #include "sxmlsearch.h"
-#include "utils.h"
 
 #define INVALID_XMLNODE_POINTER ((XMLNode*)-1)
 
@@ -88,36 +88,36 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 	return true;
 }
 
-int XMLSearch_search_set_tag(XMLSearch* search, const char* tag)
+int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag)
 {
 	if (search == NULL) return false;
 
 	if (tag == NULL && search->tag != NULL) __free(search->tag);
 
-	search->tag = __strdup(tag);
+	search->tag = sx_strdup(tag);
 
 	return true;
 }
 
-int XMLSearch_search_set_text(XMLSearch* search, const char* text)
+int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text)
 {
 	if (search == NULL) return false;
 
 	if (text == NULL && search->text != NULL) __free(search->text);
 
-	search->text = __strdup(text);
+	search->text = sx_strdup(text);
 
 	return true;
 }
 
-int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, const char* attr_value, int value_equal)
+int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value, int value_equal)
 {
 	int i, n;
 	XMLAttribute* p;
 
 	if (search == NULL) return -1;
 
-	if (attr_name == NULL || attr_name[0] == '\0') return -1;
+	if (attr_name == NULL || attr_name[0] == NULC) return -1;
 
 	n = search->n_attributes + 1;
 	p = (XMLAttribute*)__realloc(search->attributes, n * sizeof(XMLAttribute));
@@ -125,17 +125,17 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, con
 
 	i = search->n_attributes;
 	p[i].active = value_equal;
-	p[i].name = __strdup(attr_name);
+	p[i].name = sx_strdup(attr_name);
 	if (p[i].name == NULL) {
-		search->attributes = __realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
+		search->attributes = (XMLAttribute*)__realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
 		return -1;
 	}
 
 	if (attr_value != NULL) {
-		p[i].value = __strdup(attr_value);
+		p[i].value = sx_strdup(attr_value);
 		if (p[i].value == NULL) {
 			__free(p[i].name);
-			search->attributes = __realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
+			search->attributes = (XMLAttribute*)__realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
 			return -1;
 		}
 	}
@@ -146,14 +146,14 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const char* attr_name, con
 	return i;
 }
 
-int XMLSearch_search_get_attribute_index(const XMLSearch* search, const char* attr_name)
+int XMLSearch_search_get_attribute_index(const XMLSearch* search, const SXML_CHAR* attr_name)
 {
 	int i;
 
-	if (search == NULL || attr_name == NULL || attr_name[0] == '\0') return -1;
+	if (search == NULL || attr_name == NULL || attr_name[0] == NULC) return -1;
 
 	for (i = 0; i < search->n_attributes; i++) {
-		if (!strcmp(search->attributes[i].name, attr_name)) return i;
+		if (!sx_strcmp(search->attributes[i].name, attr_name)) return i;
 	}
 
 	return -1;
@@ -185,35 +185,35 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
 	return true;
 }
 
-char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quote)
+SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath, SXML_CHAR quote)
 {
 	const XMLSearch* s;
-	char squote[] = "'";
+	SXML_CHAR squote[] = C2SX("'");
 	int i, fill;
 
 	if (xpath == NULL) return NULL;
 
 	/* NULL 'search' is an empty string */
 	if (search == NULL) {
-		*xpath = __strdup("");
+		*xpath = sx_strdup(C2SX(""));
 		if (*xpath == NULL) return NULL;
 
 		return *xpath;
 	}
 
-	squote[0] = (quote == '\0' ? XML_DEFAULT_QUOTE : quote);
+	squote[0] = (quote == NULC ? XML_DEFAULT_QUOTE : quote);
 
 	for (s = search; s != NULL; s = s->next) {
 		if (s != search) /* No "/" prefix for the first criteria */
-			if (strcat_alloc(xpath, "/") == NULL) goto err;
-		if (strcat_alloc(xpath, s->tag == NULL || s->tag[0] == '\0' ? "*": s->tag) == NULL) goto err;
+			if (strcat_alloc(xpath, C2SX("/")) == NULL) goto err;
+		if (strcat_alloc(xpath, s->tag == NULL || s->tag[0] == NULC ? C2SX("*"): s->tag) == NULL) goto err;
 
-		if (s->n_attributes > '\0' || (s->text != NULL && s->text[0] != '\0'))
-			if (strcat_alloc(xpath, "[") == NULL) goto err;
+		if (s->n_attributes > 0 || (s->text != NULL && s->text[0] != NULC))
+			if (strcat_alloc(xpath, C2SX("[")) == NULL) goto err;
 
 		fill = false; /* '[' has not been filled with text yet, no ", " separator should be added */
-		if (s->text != NULL && s->text[0] != '\0') {
-			if (strcat_alloc(xpath, ".=") == NULL) goto err;
+		if (s->text != NULL && s->text[0] != NULC) {
+			if (strcat_alloc(xpath, C2SX(".=")) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
 			if (strcat_alloc(xpath, s->text) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
@@ -222,21 +222,21 @@ char* XMLSearch_get_XPath_string(const XMLSearch* search, char** xpath, char quo
 
 		for (i = 0; i < s->n_attributes; i++) {
 			if (fill) {
-				if (strcat_alloc(xpath, ", ") == NULL) goto err;
+				if (strcat_alloc(xpath, C2SX(", ")) == NULL) goto err;
 			}
 			else
 				fill = true; /* filling is being performed */
-			if (strcat_alloc(xpath, "@") == NULL) goto err;
+			if (strcat_alloc(xpath, C2SX("@")) == NULL) goto err;
 			if (strcat_alloc(xpath, s->attributes[i].name) == NULL) goto err;
 			if (s->attributes[i].value == NULL) continue;
 
-			if (strcat_alloc(xpath, s->attributes[i].active ? "=" : "!=") == NULL) goto err;
+			if (strcat_alloc(xpath, s->attributes[i].active ? C2SX("=") : C2SX("!=")) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
 			if (strcat_alloc(xpath, s->attributes[i].value) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
 		}
-		if ((s->text != NULL && s->text[0] != '\0') || s->n_attributes > 0) {
-			if (strcat_alloc(xpath, "]") == NULL) goto err;
+		if ((s->text != NULL && s->text[0] != NULC) || s->n_attributes > 0) {
+			if (strcat_alloc(xpath, C2SX("]")) == NULL) goto err;
 		}
 	}
 
@@ -256,49 +256,49 @@ err:
  Return 'false' if parsing failed, 'true' for success.
  This is an internal function so we assume that arguments are valid (non-NULL).
  */
-static int _init_search_from_1XPath(char* xpath, XMLSearch* search)
+static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 {
-	char *p, *q;
-	char c, c1, cc;
+	SXML_CHAR *p, *q;
+	SXML_CHAR c, c1, cc;
 	int l0, l1, is, r0, r1;
 	int ret;
 
 	XMLSearch_init(search);
 
 	/* Look for tag name */
-	for (p = xpath; *p && *p != '['; p++) ;
+	for (p = xpath; *p != NULC && *p != C2SX('['); p++) ;
 	c = *p; /* Either '[' or '\0' */
-	*p = 0;
+	*p = NULC;
 	ret = XMLSearch_search_set_tag(search, xpath);
 	*p = c;
 	if (!ret) return false;
 
-	if (*p == 0) return true;
+	if (*p == NULC) return true;
 
 	/* Here, '*p' is '[', we have to parse either text or attribute names/values until ']' */
-	for (p++; *p && *p != ']'; p++) {
-		for (q = p; *q && *q != ',' && *q != ']'; q++) ; /* Look for potential ',' separator to null it */
+	for (p++; *p && *p != C2SX(']'); p++) {
+		for (q = p; *q && *q != C2SX(',') && *q != C2SX(']'); q++) ; /* Look for potential ',' separator to null it */
 		cc = *q;
-		if (*q == ',') *q = '\0';
+		if (*q == C2SX(',')) *q = NULC;
 		ret = true;
 		switch (*p) {
-			case '.': /* '.[ ]=[ ]["']...["']' to search for text */
-				if (!split_left_right(p, '=', &l0, &l1, &is, &r0, &r1, true, true)) return false;
+			case C2SX('.'): /* '.[ ]=[ ]["']...["']' to search for text */
+				if (!split_left_right(p, C2SX('='), &l0, &l1, &is, &r0, &r1, true, true)) return false;
 				c = p[r1+1];
-				p[r1+1] = '\0';
-				ret = XMLSearch_search_set_text(search, p+r0);
+				p[r1+1] = NULC;
+				ret = XMLSearch_search_set_text(search, &p[r0]);
 				p[r1+1] = c;
 				p += r1+1;
 				break;
 
 			/* Attribute name, possibly '@attrib[[ ]=[ ]"value"]' */
-			case '@':
+			case C2SX('@'):
 				if (!split_left_right(p+1, '=', &l0, &l1, &is, &r0, &r1, true, true)) return false;
 				c = p[l1+2];
 				c1 = p[r1+2];
-				p[l1+2] = '\0';
-				p[r1+2] = '\0';
-				ret = (XMLSearch_search_add_attribute(search, p+1+l0, (is < 0 ? NULL : p+1+r0), true) < 0 ? false : true); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
+				p[l1+2] = NULC;
+				p[r1+2] = NULC;
+				ret = (XMLSearch_search_add_attribute(search, &p[1+l0], (is < 0 ? NULL : &p[1+r0]), true) < 0 ? false : true); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
 				p[l1+2] = c;
 				p[r1+2] = c1;
 				p += r1+1; /* Jump to next value */
@@ -314,22 +314,22 @@ static int _init_search_from_1XPath(char* xpath, XMLSearch* search)
 	return true;
 }
 
-int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search)
+int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 {
 	XMLSearch *search1, *search2;
-	char *p, *tag;
-	char c;
+	SXML_CHAR *p, *tag;
+	SXML_CHAR c;
 
 	if (!XMLSearch_init(search)) return false;
 
 	/* NULL or empty xpath is an empty (initialized only) search */
-	if (xpath == NULL || *xpath == '\0') return true;
+	if (xpath == NULL || *xpath == NULC) return true;
 
 	search1 = NULL;		/* Search struct to add the xpath portion to */
 	search2 = search;	/* Search struct to be filled from xpath portion */
 
 	tag = xpath;
-	while (*tag) {
+	while (*tag != NULC) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
 			search2 = (XMLSearch*)__malloc(sizeof(XMLSearch));
 			if (search2 == NULL) {
@@ -338,15 +338,15 @@ int XMLSearch_init_from_XPath(char* xpath, XMLSearch* search)
 			}
 		}
 		/* Skip all first '/' */
-		for (; *tag && *tag == '/'; tag++) ;
-		if (*tag == '\0') return false; /* Only '/' */
+		for (; *tag != NULC && *tag == C2SX('/'); tag++) ;
+		if (*tag == NULC) return false;
 
 		/* Look for the end of tag name: after '/' (to get another tag) or end of string */
-		for (p = tag+1; *p && *p != '/'; p++) {
-			if (*p == '\\' && *++p == '\0') break; /* Escape character, '\' could be the last character... */
+		for (p = &tag[1]; *p != NULC && *p != C2SX('/'); p++) {
+			if (*p == C2SX('\\') && *++p == NULC) break; /* Escape character, '\' could be the last character... */
 		}
 		c = *p; /* Backup character before nulling it */
-		*p = '\0';
+		*p = NULC;
 		if (!_init_search_from_1XPath(tag, search2)) {
 			*p = c;
 			(void)XMLSearch_free(search, true);
@@ -373,7 +373,7 @@ static int _attribute_matches(XMLAttribute* to_test, XMLAttribute* pattern)
 	if (to_test == NULL || pattern == NULL) return false;
 	
 	/* No test on name => match */
-	if (pattern->name == NULL || pattern->name[0] == '\0') return true;
+	if (pattern->name == NULL || pattern->name[0] == NULC) return true;
 
 	/* Test on name fails => no match */
 	if (!regstrcmp_search(to_test->name, pattern->name)) return false;
@@ -451,31 +451,32 @@ XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search)
 	return NULL;
 }
 
-static char* _get_XPath(const XMLNode* node, char** xpath)
+static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 {
-	int i, n, brackets;
+	int i, n, brackets, sz_xpath;
+	SXML_CHAR* p;
 
 	brackets = 0;
-	n = strlen(node->tag);
+	sz_xpath = sx_strlen(node->tag);
 	if (node->text != NULL) {
-		n += strlen_html(node->text) + 4; /* 4 = '.=""' */
+		sz_xpath += strlen_html(node->text) + 4; /* 4 = '.=""' */
 		brackets = 2; /* Text has to be displayed => add '[]' */
 	}
 	for (i = 0; i < node->n_attributes; i++) {
 		if (!node->attributes[i].active) continue;
 		brackets = 2; /* At least one attribute has to be displayed => add '[]' */
-		n += strlen_html(node->attributes[i].name) + strlen_html(node->attributes[i].value) + 6; /* 6 = ', @=""' */
+		sz_xpath += strlen_html(node->attributes[i].name) + strlen_html(node->attributes[i].value) + 6; /* 6 = ', @=""' */
 	}
-	n += brackets;
-	*xpath = (char*)__malloc(n+1);
+	sz_xpath += brackets + 1;
+	*xpath = (SXML_CHAR*)__malloc(sz_xpath*sizeof(SXML_CHAR));
 
 	if (*xpath == NULL) return NULL;
 
-	strcpy(*xpath, node->tag);
+	sx_strcpy(*xpath, node->tag);
 	if (node->text != NULL) {
-		strcat(*xpath, "[.=\"");
-		(void)str2html(node->text, *xpath+strlen(*xpath));
-		strcat(*xpath, "\"");
+		sx_strcat(*xpath, C2SX("[.=\""));
+		(void)str2html(node->text, &(*xpath[sx_strlen(*xpath)]));
+		sx_strcat(*xpath, C2SX("\""));
 		n = 1; /* Indicates '[' has been put */
 	}
 	else
@@ -485,24 +486,32 @@ static char* _get_XPath(const XMLNode* node, char** xpath)
 		if (!node->attributes[i].active) continue;
 
 		if (n == 0) {
-			strcat(*xpath, "[");
+			sx_strcat(*xpath, C2SX("["));
 			n = 1;
 		}
 		else
-			strcat(*xpath, ", ");
-		sprintf(*xpath+strlen(*xpath), "@%s=\"", node->attributes[i].name);
-		(void)str2html(node->attributes[i].value, *xpath+strlen(*xpath));
-		strcat(*xpath, "\"");
+			sx_strcat(*xpath, C2SX(", "));
+		p = &(*xpath[sx_strlen(*xpath)]);
+
+		/* Standard and Unicode versions of 'sprintf' do not have the same signature! :( */
+		sx_sprintf(p,
+#ifdef SXMLC_UNICODE
+			sz_xpath,
+#endif
+			C2SX("@%s=%c"), node->attributes[i].name, XML_DEFAULT_QUOTE);
+
+		(void)str2html(node->attributes[i].value, p);
+		sx_strcat(*xpath, C2SX("\""));
 	}
-	if (n > 0) strcat(*xpath, "]");
+	if (n > 0) sx_strcat(*xpath, C2SX("]"));
 
 	return *xpath;
 }
 
-char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents)
+SXML_CHAR* XMLNode_get_XPath(XMLNode* node, SXML_CHAR** xpath, int incl_parents)
 {
-	char* xp = NULL;
-	char* xparent;
+	SXML_CHAR* xp = NULL;
+	SXML_CHAR* xparent;
 	XMLNode* parent;
 
 	if (node == NULL || node->init_value != XML_INIT_DONE || xpath == NULL) return NULL;
@@ -521,13 +530,13 @@ char* XMLNode_get_XPath(XMLNode* node, char** xpath, int incl_parents)
 		xparent = NULL;
 		if (_get_XPath(parent, &xparent) == NULL) goto xp_err;
 		if (xp != NULL) {
-			if (strcat_alloc(&xparent, "/") == NULL) goto xp_err;
+			if (strcat_alloc(&xparent, C2SX("/")) == NULL) goto xp_err;
 			if (strcat_alloc(&xparent, xp) == NULL) goto xp_err;
 		}
 		xp = xparent;
 		parent = parent->father;
 	} while (parent != NULL);
-	if ((*xpath = __strdup("/")) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
+	if ((*xpath = sx_strdup(C2SX("/"))) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
 
 	return *xpath;
 

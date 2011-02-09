@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+//#define SXMLC_UNICODE
 #include "../utils.h"
 #include "../sxmlc.h"
 #include "../sxmlsearch.h"
@@ -19,85 +20,94 @@ void test_gen(void)
 {
 	XMLNode *node, *node1;
 	XMLDoc doc;
+	FILE* f;
 	
 	XMLDoc_init(&doc);
 
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
+	XMLNode_set_tag(node, C2SX("xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\""));
 	XMLNode_set_type(node, TAG_INSTR);
 	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, " Pre-comment ");
+	XMLNode_set_tag(node, C2SX(" Pre-comment "));
 	XMLNode_set_type(node, TAG_COMMENT);
 	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "\nAnother one\nMulti-line...\n");
+	XMLNode_set_tag(node, C2SX("\nAnother one\nMulti-line...\n"));
 	XMLNode_set_type(node, TAG_COMMENT);
 	XMLDoc_add_node(&doc, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "properties");
+	XMLNode_set_tag(node, C2SX("properties"));
 	XMLNode_set_type(node, TAG_FATHER);
 	XMLDoc_add_node(&doc, node); // Becomes root node
 	
 	node = XMLNode_alloc();
 	XMLNode_set_type(node, TAG_COMMENT);
-	XMLNode_set_tag(node, "Hello World!");
+	XMLNode_set_tag(node, C2SX("Hello World!"));
 	XMLDoc_add_child_root(&doc, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "data");
-	XMLNode_set_attribute(node, "type", "code");
-	XMLNode_set_text(node, "a >= b && b <= c");
+	XMLNode_set_tag(node, C2SX("data"));
+	XMLNode_set_attribute(node, C2SX("type"), C2SX("code"));
+	XMLNode_set_text(node, C2SX("a >= b && b <= c"));
 	XMLDoc_add_child_root(&doc, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "structure1");
-	XMLNode_set_attribute(node, "name", "spatioconf");
+	XMLNode_set_tag(node, C2SX("structure1"));
+	XMLNode_set_attribute(node, C2SX("name"), C2SX("spatioconf"));
 	XMLDoc_add_child_root(&doc, node);
 	
 	node1 = XMLNode_alloc();
-	XMLNode_set_tag(node1, "structure2");
-	XMLNode_set_attribute(node1, "name", "files");
+	XMLNode_set_tag(node1, C2SX("structure2"));
+	XMLNode_set_attribute(node1, C2SX("name"), C2SX("files"));
 	XMLNode_add_child(node, node1);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "property3");
-	XMLNode_set_attribute(node, "name", "aaa");
-	XMLNode_set_attribute(node, "value", "<truc>");
+	XMLNode_set_tag(node, C2SX("property3"));
+	XMLNode_set_attribute(node, C2SX("name"), C2SX("aaa"));
+	XMLNode_set_attribute(node, C2SX("value"), C2SX("<truc>"));
 	XMLNode_add_child(node1, node);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "property4");
-	XMLNode_set_attribute(node, "name", "bbb");
-	XMLNode_set_attribute(node, "readonly", "true");
-	XMLNode_set_attribute(node, "value", "txt");
-	XMLNode_remove_attribute(node, XMLNode_search_attribute(node, "readonly", 0));
+	XMLNode_set_tag(node, C2SX("property4"));
+	XMLNode_set_attribute(node, C2SX("name"), C2SX("bbb"));
+	XMLNode_set_attribute(node, C2SX("readonly"), C2SX("true"));
+	XMLNode_set_attribute(node, C2SX("value"), C2SX("txt"));
+	XMLNode_remove_attribute(node, XMLNode_search_attribute(node, C2SX("readonly"), 0));
 	XMLNode_add_child(node1, node);
 	node->attributes[1].active = false;
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "structure5");
-	XMLNode_set_attribute(node, "name", "conf2");
+	XMLNode_set_tag(node, C2SX("structure5"));
+	XMLNode_set_attribute(node, C2SX("name"), C2SX("conf2"));
 	XMLDoc_add_child_root(&doc, node);
 	node->active = false;
 	
 	node1 = XMLNode_alloc();
-	XMLNode_set_tag(node1, "property6");
-	XMLNode_set_attribute(node1, "name", "ddd");
-	XMLNode_set_attribute(node1, "readonly", "false");
-	XMLNode_set_attribute(node1, "value", "machin2");
+	XMLNode_set_tag(node1, C2SX("property6"));
+	XMLNode_set_attribute(node1, C2SX("name"), C2SX("ddd"));
+	XMLNode_set_attribute(node1, C2SX("readonly"), C2SX("false"));
+	XMLNode_set_attribute(node1, C2SX("value"), C2SX("machin2"));
 	XMLNode_add_child(node, node1);
 	
 	node = XMLNode_alloc();
-	XMLNode_set_tag(node, "property7");
-	XMLNode_set_attribute(node, "name", "eee");
-	XMLNode_set_attribute(node, "value", "machin3");
+	XMLNode_set_tag(node, C2SX("property7"));
+	XMLNode_set_attribute(node, C2SX("name"), C2SX("eee"));
+	XMLNode_set_attribute(node, C2SX("value"), C2SX("machin3"));
 	XMLDoc_add_child_root(&doc, node);
 
-	XMLDoc_print(&doc, stdout, "\n", "    ", false, 0, 4);
+#if defined(WIN32) || defined(WIN64)
+	//f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Sources\\sxmlc\\data\\testout.xml", "w+t");
+#else
+	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+#endif
+	if (f == NULL) f = stdout;
+	XMLDoc_print(&doc, f, C2SX("\n"), C2SX("    "), false, 0, 4);
+	if (f != stdout) fclose(f);
 
 	XMLDoc_free(&doc);
 }
@@ -110,9 +120,9 @@ void test_DOM(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\sxmlc\\data\\test.xml", &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("G:\\Code\\Workspace\\sxmlc\\data\\test.xml"), &doc))
 #else
-	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
 #endif
 		printf("Error while loading\n");
 #if defined(WIN32) || defined(WIN64)
@@ -121,10 +131,40 @@ void test_DOM(void)
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
 	if (f == NULL) f = stdout;
-	XMLDoc_print(&doc, f, "\n", "\t", false, 0, 4);
+	XMLDoc_print(&doc, f, C2SX("\n"), C2SX("\t"), false, 0, 4);
 	if (f != stdout) fclose(f);
 	XMLDoc_free(&doc);
 }
+
+void test_unicode(void)
+{
+	FILE* f = NULL;
+	XMLDoc doc;
+	SXML_CHAR* mode = C2SX("w+t");
+
+	XMLDoc_init(&doc);
+
+#if defined(WIN32) || defined(WIN64)
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\testunicode.xml"), &doc))
+	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
+#else
+	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
+#endif
+		printf("Error while loading\n");
+#ifdef SXMLC_UNICODE
+	if (doc.sz_bom > 0) mode = C2SX("w+b");
+#endif
+#if defined(WIN32) || defined(WIN64)
+	f = sx_fopen(C2SX("D:\\Sources\\sxmlc\\data\\testout.xml"), mode);
+#else
+	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
+#endif
+	if (f == NULL) f = stdout;
+	XMLDoc_print(&doc, f, C2SX("\n"), C2SX("\t"), false, 0, 4);
+	if (f != stdout) sx_fclose(f);
+	XMLDoc_free(&doc);
+}
+
 
 typedef struct _sxs {
 	int n_nodes;
@@ -153,11 +193,11 @@ void test_speed_SAX(void)
 	sxs.n_nodes = 0;
 	sxs.n_match = 0;
 	XMLSearch_init(&sxs.search);
-	XMLSearch_search_set_tag(&sxs.search, "incategory");
-	XMLSearch_search_add_attribute(&sxs.search, "category", "category*", true);
+	XMLSearch_search_set_tag(&sxs.search, C2SX("incategory"));
+	XMLSearch_search_add_attribute(&sxs.search, C2SX("category"), C2SX("category*"), true);
 	printf("[SAX] Loading...\n");
 	t0 = clock();
-	if (!XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &sxs))
+	if (!XMLDoc_parse_file_SAX(C2SX("/home/matth/Code/tmp/big.xml"), &sax, &sxs))
 		printf("Error while loading\n");
 	printf("[SAX] Loaded %d nodes in %d ms, found %d match\n", sxs.n_nodes, (int)((1000.0f * (clock() - t0)) / CLOCKS_PER_SEC), sxs.n_match);
 	XMLSearch_free(&sxs.search, false);
@@ -175,13 +215,13 @@ void test_speed_DOM(void)
 
 	printf("[DOM] Loading...\n");
 	t0 = clock();
-	if (!XMLDoc_parse_file_DOM("/home/matth/Code/tmp/big.xml", &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/tmp/big.xml"), &doc))
 		printf("Error while loading\n");
 	t1 = clock();
 	printf("[DOM] Loaded in %d ms\n", (int)((1000.0f * (t1 - t0)) / CLOCKS_PER_SEC));
 	XMLSearch_init(&search);
-	XMLSearch_search_set_tag(&search, "incategory");
-	XMLSearch_search_add_attribute(&search, "category", "category*", true);
+	XMLSearch_search_set_tag(&search, C2SX("incategory"));
+	XMLSearch_search_add_attribute(&search, C2SX("category"), C2SX("category*"), true);
 	n_match = 0;
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
 	printf("[DOM] Searching...\n");
@@ -223,16 +263,16 @@ int end_node(const XMLNode* node, SAX_Data* sd)
 	return true;
 }
 
-int new_text(const char* text, SAX_Data* sd)
+int new_text(const SXML_CHAR* text, SAX_Data* sd)
 {
-	char* p = (char*)text;
-	while(*p && isspace(*p++)) ;
+	SXML_CHAR* p = (SXML_CHAR*)text;
+	while(*p && sx_isspace(*p++)) ;
 	if (*p)
-		printf("Text: [%s]\n", text);
+		sx_printf(C2SX("Text: [%s]\n"), text);
 	return true;
 }
 
-int allin1(XMLEvent event, const XMLNode* node, char* text, const int n, SAX_Data* sd)
+int allin1(XMLEvent event, const XMLNode* node, SXML_CHAR* text, const int n, SAX_Data* sd)
 {
 	switch(event) {
 		case XML_EVENT_START_DOC: printf("Document start\n\n"); return true;
@@ -255,9 +295,9 @@ void test_SAX(void)
 	//sax.new_text = new_text;
 	sax.all_event = allin1;
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_SAX("G:\\Code\\workspace\\sxmlc\\data\\test.xml", &sax, NULL))
+	if (!XMLDoc_parse_file_SAX(C2SX("G:\\Code\\workspace\\sxmlc\\data\\test.xml"), &sax, NULL))
 #else
-	if (!XMLDoc_parse_file_SAX("/home/matth/Code/workspace/sxmlc/data/test.xml", &sax, NULL))
+	if (!XMLDoc_parse_file_SAX(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &sax, NULL))
 #endif
 		printf("Error while loading\n");
 }
@@ -271,7 +311,7 @@ void test_SAX_buffer(void)
 	//sax.end_node = NULL;//end_node;
 	//sax.new_text = NULL;//new_text;
 	sax.all_event = allin1;
-	if (!XMLDoc_parse_buffer_SAX("<xml><a>text</a><b name='matth'/></xml>", "Buffer1", &sax, NULL))
+	if (!XMLDoc_parse_buffer_SAX(C2SX("<xml><a>text</a><b name='matth'/></xml>"), C2SX("Buffer1"), &sax, NULL))
 		printf("Error while loading\n");
 }
 
@@ -300,7 +340,7 @@ void test_DOM_from_SAX(void)
 	sax.end_node = my_end;
 	sax.new_text = DOMXMLDoc_node_text;
 	depth = max_depth = 0;
-	if (!XMLDoc_parse_file_SAX("/home/matth/Code/tmp/big.xml", &sax, &dom))
+	if (!XMLDoc_parse_file_SAX(C2SX("/home/matth/Code/tmp/big.xml"), &sax, &dom))
 		printf("Failed\n");
 	//XMLDoc_print(&doc, stdout, "\n", "  ", 0, 4);
 	XMLDoc_free(&doc);
@@ -313,12 +353,12 @@ void test_mem(void)
 {
 	static XMLDoc doc[N];
 	int i, len;
-	char* p;
+	SXML_CHAR* p;
 	FILE* f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", "rt");
 
 	fseek(f, 0, SEEK_END);
 	len = ftell(f);
-	p = (char*)malloc(len+1);
+	p = (SXML_CHAR*)malloc(len+sizeof(SXML_CHAR));
 	fseek(f, 0, SEEK_SET);
 	fread(p, 1, len, f);
 	fclose(f);
@@ -329,7 +369,7 @@ void test_mem(void)
 		XMLDoc_init(&doc[i]);
 		//XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\XML Benchmark\\Data\\big.xml", &doc[i]);
 		//XMLDoc_parse_file_DOM("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", &doc[i]);
-		XMLDoc_parse_buffer_DOM(p, "simple", &doc[i]);
+		XMLDoc_parse_buffer_DOM(p, C2SX("simple"), &doc[i]);
 		if (i % 10 == 0) printf(".");
 	}
 	free(p);
@@ -360,7 +400,7 @@ int NE(const XMLNode* node, SAX_Data* sd)
 {
 	return true;
 }
-int NT(char* text, SAX_Data* sd)
+int NT(SXML_CHAR* text, SAX_Data* sd)
 {
 	return true;
 }
@@ -378,7 +418,7 @@ void test_mem2(void)
 	SAX_Callbacks sax;
 	int i;
 	XMLDoc doc;
-	char* p = strdup("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>");
+	SXML_CHAR* p = sx_strdup(C2SX("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>"));
 
 	SAX_Callbacks_init(&sax);
 	XMLDoc_init(&doc);
@@ -392,7 +432,7 @@ void test_mem2(void)
 	printf("Reading %d files:\n", N);
 	_getch();
 	for (i = 0; i < N; i++) {
-		XMLDoc_parse_buffer_SAX(p, "simple", &sax, &doc);
+		XMLDoc_parse_buffer_SAX(p, C2SX("simple"), &sax, &doc);
 		if (i % 1000 == 0) printf(".");
 	}
 	free(p);
@@ -405,7 +445,7 @@ void test_mem2(void)
 void test_mem3(void)
 {
 	static XMLNode nodes[N];
-	char* p = strdup("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>");
+	SXML_CHAR* p = sx_strdup(C2SX("<tag3456789 att3456789='val3456789'>0123456789</tag3456789>"));
 	int i;
 
 	printf("Reading %d nodes:\n", N);
@@ -430,7 +470,7 @@ void test_search(void)
 	XMLDoc doc;
 	XMLSearch search[3];
 	XMLNode* node;
-	char* xpath = NULL;
+	SXML_CHAR* xpath = NULL;
 
 	XMLDoc_init(&doc);
 
@@ -438,26 +478,26 @@ void test_search(void)
 	XMLSearch_init(&search[1]);
 	XMLSearch_init(&search[2]);
 
-	XMLSearch_search_set_tag(&search[0], "st*");
-	XMLSearch_search_add_attribute(&search[0], "name", "st*sub*", true);
-	XMLSearch_search_add_attribute(&search[0], "valid", "false", false);
+	XMLSearch_search_set_tag(&search[0], C2SX("st*"));
+	XMLSearch_search_add_attribute(&search[0], C2SX("name"), C2SX("st*sub*"), true);
+	XMLSearch_search_add_attribute(&search[0], C2SX("valid"), C2SX("false"), false);
 	//XMLSearch_search_set_text(&search[0], "*inside *");
 
-	XMLSearch_search_set_tag(&search[1], "property");
-	XMLSearch_search_add_attribute(&search[1], "name", "t?t?", true);
+	XMLSearch_search_set_tag(&search[1], C2SX("property"));
+	XMLSearch_search_add_attribute(&search[1], C2SX("name"), C2SX("t?t?"), true);
 
 	XMLSearch_search_set_children_search(&search[0], &search[1]);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM("G:\\Code\\workspace\\sxmlc\\data\\test.xml", &doc)) {
+	if (!XMLDoc_parse_file_DOM(C2SX("G:\\Code\\workspace\\sxmlc\\data\\test.xml"), &doc)) {
 #else
-	if (!XMLDoc_parse_file_DOM("/home/matth/Code/workspace/sxmlc/data/test.xml", &doc)) {
+	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc)) {
 #endif
 		printf("Error while loading\n");
 		return;
 	}
 
-	printf("Start search '%s'\n", XMLSearch_get_XPath_string(&search[0], &xpath, '\"'));
+	sx_printf(C2SX("Start search '%s'\n"), XMLSearch_get_XPath_string(&search[0], &xpath, C2SX('\"')));
 	free(xpath);
 	node = XMLDoc_root(&doc); //doc.nodes[doc.i_root];
 	while ((node = XMLSearch_next(node, &search[0])) != NULL) {
@@ -475,8 +515,8 @@ void test_search(void)
 void test_xpath(void)
 {
 	XMLSearch search;
-	char* xpath2 = NULL;
-	char xpath[] = "/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']";
+	SXML_CHAR* xpath2 = NULL;
+	SXML_CHAR xpath[] = C2SX("/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']");
 
 	if (XMLSearch_init_from_XPath(xpath, &search))
 		printf("%s\n %s\n", xpath, XMLSearch_get_XPath_string(&search, &xpath2, '\''));
@@ -485,7 +525,7 @@ void test_xpath(void)
 	XMLSearch_free(&search, true);
 }
 
-static void tstre(char* s, char* p)
+static void tstre(SXML_CHAR* s, SXML_CHAR* p)
 {
 	if (regstrcmp(s, p))
 		printf("'%s' and '%s' match\n", s, p);
@@ -495,33 +535,33 @@ static void tstre(char* s, char* p)
 
 void test_regexp(void)
 {
-	tstre("abc123", "*");
-	tstre("abc123", "abc123");
-	tstre("abc123", "abc123*");
-	tstre("abc123", "aXc123");
-	tstre("abc123", "a?c123");
-	tstre("abc123", "abc*");
-	tstre("abc123", "*123");
-	tstre("abc123", "a*3");
-	tstre("abc123", "a*1?3");
-	tstre("abc1X3", "a*1?3");
-	tstre("abc123", "a*1?4?");
-	tstre("abc123", "a*1?3*");
-	tstre("ab?123", "a*1?3*");
-	tstre("ab\\123", "ab\\\\123");
-	tstre("ab?123", "ab\\?12*");
-	tstre("st2sub1", "st?sub*");
+	tstre(C2SX("abc123"), C2SX("*"));
+	tstre(C2SX("abc123"), C2SX("abc123"));
+	tstre(C2SX("abc123"), C2SX("abc123*"));
+	tstre(C2SX("abc123"), C2SX("aXc123"));
+	tstre(C2SX("abc123"), C2SX("a?c123"));
+	tstre(C2SX("abc123"), C2SX("abc*"));
+	tstre(C2SX("abc123"), C2SX("*123"));
+	tstre(C2SX("abc123"), C2SX("a*3"));
+	tstre(C2SX("abc123"), C2SX("a*1?3"));
+	tstre(C2SX("abc1X3"), C2SX("a*1?3"));
+	tstre(C2SX("abc123"), C2SX("a*1?4?"));
+	tstre(C2SX("abc123"), C2SX("a*1?3*"));
+	tstre(C2SX("ab?123"), C2SX("a*1?3*"));
+	tstre(C2SX("ab\\123"), C2SX("ab\\\\123"));
+	tstre(C2SX("ab?123"), C2SX("ab\\?12*"));
+	tstre(C2SX("st2sub1"), C2SX("st?sub*"));
 }
 
-void print_split(char* str)
+void print_split(SXML_CHAR* str)
 {
 	int i, l0, l1, r0, r1;
 
-	if (split_left_right(str, '=', &l0, &l1, &i, &r0, &r1, true, true)) {
+	if (split_left_right(str, C2SX('='), &l0, &l1, &i, &r0, &r1, true, true)) {
 		printf("[%s]%s - Left[%d;%d]: [", str, (i < 0 ? " (no sep)": ""), l0, l1);
-		for (i = l0; i <= l1; i++) fputc(str[i], stdout);
+		for (i = l0; i <= l1; i++) sx_fputc(str[i], stdout);
 		printf("], right[%d;%d]: [", r0, r1);
-		for (i = r0; i <= r1; i++) fputc(str[i], stdout);
+		for (i = r0; i <= r1; i++) sx_fputc(str[i], stdout);
 		printf("]\n");
 	}
 	else
@@ -529,46 +569,47 @@ void print_split(char* str)
 }
 void test_split(void)
 {
-	print_split("attrib=\"value\"");
-	print_split("attrib = \"value\"");
-	print_split("'attrib' = 'va\\'lue'");
-	print_split("'attri\\'b ' = 'va\\'lue'");
-	print_split(" attrib = 'va'lue'");
-	print_split("\"att\"rib \" = \"val\\\"ue\"");
-	print_split("attrib = \"value\"");
-	print_split("attrib=\" val ue \"");
-	print_split("attrib=");
-	print_split("attrib=''");
-	print_split("attrib");
+	print_split(C2SX("attrib=\"value\""));
+	print_split(C2SX("attrib = \"value\""));
+	print_split(C2SX("'attrib' = 'va\\'lue'"));
+	print_split(C2SX("'attri\\'b ' = 'va\\'lue'"));
+	print_split(C2SX(" attrib = 'va'lue'"));
+	print_split(C2SX("\"att\"rib \" = \"val\\\"ue\""));
+	print_split(C2SX("attrib = \"value\""));
+	print_split(C2SX("attrib=\" val ue \""));
+	print_split(C2SX("attrib="));
+	print_split(C2SX("attrib=''"));
+	print_split(C2SX("attrib"));
 }
 
 void test_NodeXPath(void)
 {
 	XMLNode node, node1;
-	char* buf;
+	SXML_CHAR* buf;
 
 	XMLNode_init(&node);
-	XMLNode_set_tag(&node, "monroot");
+	XMLNode_set_tag(&node, C2SX("monroot"));
 
 	XMLNode_init(&node1);
-	XMLNode_set_tag(&node1, "montag");
-	XMLNode_set_text(&node1, "This <is> \"some\" text & chars");
-	XMLNode_set_attribute(&node1, "name", "first one");
-	XMLNode_set_attribute(&node1, "readonly", "fa<l>se");
-	XMLNode_set_attribute(&node1, "value", "T\"B\"D");
+	XMLNode_set_tag(&node1, C2SX("montag"));
+	XMLNode_set_text(&node1, C2SX("This <is> \"some\" text & chars"));
+	XMLNode_set_attribute(&node1, C2SX("name"), C2SX("first one"));
+	XMLNode_set_attribute(&node1, C2SX("readonly"), C2SX("fa<l>se"));
+	XMLNode_set_attribute(&node1, C2SX("value"), C2SX("T\"B\"D"));
 
 	XMLNode_add_child(&node, &node1);
 
 	buf = NULL;
-	printf(XMLNode_get_XPath(&node1, &buf, true));
+	sx_printf(XMLNode_get_XPath(&node1, &buf, true));
 	free(buf);
 }
 
 #if 1
 int main(int argc, char** argv)
 {
-	XML_register_user_tag(TAG_USER+1, "<#[MONTAG-", "-]>");
-	test_gen();
+	XML_register_user_tag(TAG_USER+1, C2SX("<#[MONTAG-"), C2SX("-]>"));
+	//test_gen();
+	test_unicode();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();

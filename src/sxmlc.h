@@ -24,8 +24,9 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include "utils.h"
 
-#define SXMLC_VERSION "3.5.1"
+#define SXMLC_VERSION "4.0.0"
 
 #ifndef false
 #define false 0
@@ -54,8 +55,8 @@ typedef enum _TagType {
 /* TODO: Performance improvement with some fixed-sized strings ??? (e.g. XMLAttribute.name[64], XMLNode.tag[64]) */
 
 typedef struct _XMLAttribute {
-	char* name;
-	char* value;
+	SXML_CHAR* name;
+	SXML_CHAR* value;
 	int active;
 } XMLAttribute;
 
@@ -66,8 +67,8 @@ typedef struct _XMLAttribute {
  An XML node.
  */
 typedef struct _XMLNode {
-	char* tag;					/* Tag name */
-	char* text;					/* Text inside the node */
+	SXML_CHAR* tag;					/* Tag name */
+	SXML_CHAR* text;					/* Text inside the node */
 	XMLAttribute* attributes;
 	int n_attributes;
 	
@@ -87,8 +88,13 @@ typedef struct _XMLNode {
 /*
  An XML document.
  */
+#ifndef MAX_PATH
+#define MAX_PATH 256
+#endif
 typedef struct _XMLDoc {
-	char filename[256];
+	SXML_CHAR filename[MAX_PATH];
+	char bom[5];		/* First characters read that might be a BOM when unicode is used */
+	int sz_bom;			/* Number of bytes in BOM */
 	XMLNode** nodes;	/* Nodes of the document, including prolog, comments and root nodes */
 	int n_nodes;
 	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
@@ -105,7 +111,7 @@ typedef struct _XMLDoc {
  Return tag index in user tags table when successful, or '-1' if the 'tag_type' is invalid or
  the new tag could not be registered (e.g. when 'start' does not start with '<' or 'end' does not end with '>').
  */
-int XML_register_user_tag(int tag_type, char* start, char* end);
+int XML_register_user_tag(int tag_type, SXML_CHAR* start, SXML_CHAR* end);
 
 /*
  Remove a registered user tag.
@@ -129,8 +135,9 @@ typedef enum _ParseError {
 	PARSE_ERR_MEMORY = -1,
 	PARSE_ERR_UNEXPECTED_TAG_END = -2,
 	PARSE_ERR_SYNTAX = -3,
-	PARSE_ERR_TEXT_OUTSIDE_NODE = -4, /* During DOM loading */
-	PARSE_ERR_UNEXPECTED_NODE_END = -5 /* During DOM loading */
+	PARSE_ERR_EOF = -4,
+	PARSE_ERR_TEXT_OUTSIDE_NODE = -5, /* During DOM loading */
+	PARSE_ERR_UNEXPECTED_NODE_END = -6 /* During DOM loading */
 } ParseError;
 
 /*
@@ -151,7 +158,7 @@ typedef enum _XMLEvent {
  parsing status
  */
 typedef struct _SAX_Data {
-	const char* name;
+	const SXML_CHAR* name;
 	int line_num;
 	void* user;
 } SAX_Data;
@@ -186,7 +193,7 @@ typedef struct _SAX_Callbacks {
 	/*
 	 Callback called when text has been found in the last node.
 	 */
-	int (*new_text)(char* text, SAX_Data* sd);
+	int (*new_text)(SXML_CHAR* text, SAX_Data* sd);
 
 	/*
 	 Callback called when parsing is finished.
@@ -228,7 +235,7 @@ typedef struct _SAX_Callbacks {
 	 	 	 'text' is the file name if a file is being parsed, NULL if a buffer is being parsed.
 	 	 	 'n' is the number of lines parsed.
 	 */
-	int (*all_event)(XMLEvent event, const XMLNode* node, char* text, const int n, SAX_Data* sd);
+	int (*all_event)(XMLEvent event, const XMLNode* node, SXML_CHAR* text, const int n, SAX_Data* sd);
 } SAX_Callbacks;
 
 /*
@@ -256,7 +263,7 @@ typedef struct _DOM_through_SAX {
 
 int DOMXMLDoc_doc_start(SAX_Data* dom);
 int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* dom);
-int DOMXMLDoc_node_text(char* text, SAX_Data* dom);
+int DOMXMLDoc_node_text(SXML_CHAR* text, SAX_Data* dom);
 int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd);
 int DOMXMLDoc_doc_end(SAX_Data* dom);
@@ -270,14 +277,14 @@ int DOMXMLDoc_doc_end(SAX_Data* dom);
         2 if last quote is missing in the attribute value.
 		1 if 'xmlattr' was filled correctly.
  */
-int XML_parse_attribute(const char* str, XMLAttribute* xmlattr);
+int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr);
 
 /*
  Reads a string that is supposed to be an xml tag like '<tag (attribName="attribValue")* [/]>' or '</tag>'.
  Fills the 'xmlnode' structure with the tag name and its attributes.
  Returns 0 if an error occurred (malformed 'str' or memory). 'TAG_*' when string is recognized.
  */
-TagType XML_parse_1string(char* str, XMLNode* xmlnode);
+TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode);
 
 /*
  Allocate and initialize XML nodes.
@@ -325,7 +332,7 @@ int XMLNode_set_active(XMLNode* node, int active);
  Set 'node' tag.
  Return 'false' for memory error, 'true' otherwise.
  */
-int XMLNode_set_tag(XMLNode* node, const char* tag);
+int XMLNode_set_tag(XMLNode* node, const SXML_CHAR* tag);
 
 /*
  Set the node type among one of the valid ones (TAG_FATHER, TAG_SELF, TAG_INSTR,
@@ -339,13 +346,13 @@ int XMLNode_set_type(XMLNode* node, const TagType tag_type);
  The attribute has a 'name' and a 'value'.
  Return the new number of attributes, or -1 for memory problem.
  */
-int XMLNode_set_attribute(XMLNode* node, const char* attr_name, const char* attr_value);
+int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value);
 
 /*
  Search for the active attribute 'attr_name' in 'node', starting from index 'isearch'
  and returns its index, or -1 if not found or error.
  */
-int XMLNode_search_attribute(const XMLNode* node, const char* attr_name, int isearch);
+int XMLNode_search_attribute(const XMLNode* node, const SXML_CHAR* attr_name, int isearch);
 
 /*
  Remove attribute index 'i_attr'.
@@ -357,7 +364,7 @@ int XMLNode_remove_attribute(XMLNode* node, int i_attr);
  Set node text.
  Return 'true' when successful, 'false' on error.
  */
-int XMLNode_set_text(XMLNode* node, const char* text);
+int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text);
 
 /*
  Add a child to a node.
@@ -458,7 +465,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
  this file.
  */
 #ifndef XML_DEFAULT_QUOTE
-#define XML_DEFAULT_QUOTE '"'
+#define XML_DEFAULT_QUOTE C2SX('"')
 #endif
 
 /*
@@ -476,7 +483,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
    the tree. It should be initialized to 0 at first call.
  Return 'false' on invalid arguments (NULL 'node' or 'f'), 'true' otherwise.
  */
-int XMLNode_print(const XMLNode* node, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+int XMLNode_print(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
 /*
  Print the node "header": <tagname attribname="attibval" ...[/]>, spanning it on several lines if needed.
@@ -487,27 +494,27 @@ int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_
 /*
  Prints the XML document using 'XMLNode_print' on all document root nodes.
  */
-int XMLDoc_print(const XMLDoc* doc, FILE* f, const char* tag_sep, const char* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+int XMLDoc_print(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
 /*
  Create a new XML document from a given 'filename' and load it to 'doc'.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_file_DOM(const char* filename, XMLDoc* doc);
+int XMLDoc_parse_file_DOM(const SXML_CHAR* filename, XMLDoc* doc);
 
 /*
  Create a new XML document from a memory buffer 'buffer' that can be given a name 'name', and load
  it into 'doc'.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_buffer_DOM(const char* buffer, const char* name, XMLDoc* doc);
+int XMLDoc_parse_buffer_DOM(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLDoc* doc);
 
 /*
  Parse an XML document from a given 'filename', calling SAX callbacks given in the 'sax' structure.
  'user' is a user-given pointer that will be given back to all callbacks.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_file_SAX(const char* filename, const SAX_Callbacks* sax, void* user);
+int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user);
 
 /*
  Parse an XML document from a memory buffer 'buffer' that can be given a name 'name',
@@ -515,7 +522,7 @@ int XMLDoc_parse_file_SAX(const char* filename, const SAX_Callbacks* sax, void* 
  'user' is a user-given pointer that will be given back to all callbacks.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_buffer_SAX(const char* buffer, const char* name, const SAX_Callbacks* sax, void* user);
+int XMLDoc_parse_buffer_SAX(const SXML_CHAR* buffer, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user);
 
 /*
  Parse an XML file using the DOM implementation.
