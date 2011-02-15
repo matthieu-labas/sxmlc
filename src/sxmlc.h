@@ -93,11 +93,14 @@ typedef struct _XMLNode {
 #endif
 typedef struct _XMLDoc {
 	SXML_CHAR filename[MAX_PATH];
-	char bom[5];		/* First characters read that might be a BOM when unicode is used */
-	int sz_bom;			/* Number of bytes in BOM */
-	XMLNode** nodes;	/* Nodes of the document, including prolog, comments and root nodes */
-	int n_nodes;
-	int i_root;		/* Index of first root node in 'nodes', -1 if document is empty */
+#ifdef SXMLC_UNICODE
+	BOM_TYPE bom_type;
+	unsigned char bom[5];	/* First characters read that might be a BOM when unicode is used */
+	int sz_bom;				/* Number of bytes in BOM */
+#endif
+	XMLNode** nodes;		/* Nodes of the document, including prolog, comments and root nodes */
+	int n_nodes;			/* Number of nodes in 'nodes' */
+	int i_root;				/* Index of first root node in 'nodes', -1 if document is empty */
 
 	/* Keep 'init_value' as the last member */
 	int init_value;	/* Initialized to 'XML_INIT_DONE' to indicate that document has been initialized properly */

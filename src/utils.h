@@ -168,7 +168,7 @@ SXML_CHAR* strcat_alloc(SXML_CHAR** src1, const SXML_CHAR* src2);
 SXML_CHAR* strip_spaces(SXML_CHAR* str, SXML_CHAR repl_sq);
 
 /*
- Remove '\' characters from 'str'.
+ Remove '\' characters from 'str', modifying it.
  Return 'str'.
  */
 SXML_CHAR* str_unescape(SXML_CHAR* str);
@@ -183,28 +183,29 @@ SXML_CHAR* str_unescape(SXML_CHAR* str);
  if 'ignore_quotes' is 'true', " or ' will not be taken into account when parsing left
  and right members.
  Whenever the right member is empty (e.g. "attrib" or "attrib="), '*r0' is initialized
- to 'str' size and '*r1' to '*r0-1'.
+ to 'str' size and '*r1' to '*r0-1' (crossed).
  If the separator was not found (i.e. left member only), '*i_sep' is '-1'.
  Return 'false' when 'str' is malformed, 'true' when splitting was successful.
  */
 int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
 
 typedef enum _BOM_TYPE {
-	BOM_NONE = 0,
-	BOM_UTF_8,
-	BOM_UTF_16BE,
-	BOM_UTF_16LE,
-	BOM_UTF_32BE,
-	BOM_UTF_32LE
+	BOM_NONE = 0x00,
+	BOM_UTF_8 = 0xefbbbf,
+	BOM_UTF_16BE = 0xfeff,
+	BOM_UTF_16LE = 0xfffe,
+	BOM_UTF_32BE = 0x0000feff,
+	BOM_UTF_32LE = 0xfffe0000
 } BOM_TYPE;
 /*
- Detect a potential BOM at the beginning of the file and read it into 'bom' (if not NULL,
+ Detect a potential BOM at the current file position and read it into 'bom' (if not NULL,
  'bom' should be at least 5 bytes). It also moves the 'f' beyond the BOM so it's possible to
- skip it by calling 'freadBOM(f, NULL, NULL)'. It no BOM is found, it leave 'f' untouched.
- If not null, 'sz_bom' is filled with how many bytes are to be stored in 'bom'.
+ skip it by calling 'freadBOM(f, NULL, NULL)'. If no BOM is found, it leaves 'f' file pointer
+ is reset to its original location.
+ If not null, 'sz_bom' is filled with how many bytes are stored in 'bom'.
  Return the BOM type or BOM_NONE if none found (empty 'bom' in this case).
  */
-BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom);
+BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom);
 
 /*
  Replace occurrences of special HTML characters escape sequences (e.g. '&amp;') found in 'html'

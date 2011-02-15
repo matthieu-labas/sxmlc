@@ -145,14 +145,14 @@ void test_unicode(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\testunicode.xml"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\testutf8.xml"), &doc))
 	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
 #endif
 		printf("Error while loading\n");
 #ifdef SXMLC_UNICODE
-	if (doc.sz_bom > 0) mode = C2SX("w+b");
+	if (doc.bom_type != BOM_NONE && doc.bom_type != BOM_UTF_8) mode = C2SX("w+b");
 #endif
 #if defined(WIN32) || defined(WIN64)
 	f = sx_fopen(C2SX("D:\\Sources\\sxmlc\\data\\testout.xml"), mode);

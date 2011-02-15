@@ -313,14 +313,14 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	return true;
 }
 
-BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom)
+BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 {
-	char c1, c2;
+	unsigned char c1, c2;
 	long pos;
 
 	if (f == NULL) return BOM_NONE;
 
-	/* Skip BOM if found. If not, go back */
+	/* Save position and try to read and skip BOM if found. If not, go back to save position. */
 	pos = ftell(f);
 	fread(&c1, sizeof(char), 1, f);
 	fread(&c2, sizeof(char), 1, f);
@@ -330,11 +330,11 @@ BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom)
 		bom[2] = '\0';
 		if (sz_bom != NULL) *sz_bom = 2;
 	}
-	switch ((short)(c1 << 8 | c2)) {
-		case 0xfeff:
+	switch ((unsigned short)(c1 << 8) | c2) {
+		case (unsigned short)0xfeff:
 			return BOM_UTF_16BE;
 
-		case (short)0xfffe:
+		case (unsigned short)0xfffe:
 			pos = ftell(f); /* Save current position to get it back if BOM is not UTF-32LE */
 			fread(&c1, sizeof(char), 1, f);
 			fread(&c2, sizeof(char), 1, f);
@@ -346,7 +346,7 @@ BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom)
 			fseek(f, pos, SEEK_SET); /* fseek(f, -2, SEEK_CUR) is not garanteed under Windows (and actually fail in Unicode...) */
 			return BOM_UTF_16LE;
 
-		case (short)0x0000:
+		case (unsigned short)0x0000:
 			fread(&c1, sizeof(char), 1, f);
 			fread(&c2, sizeof(char), 1, f);
 			if (c1 == 0xfe && c2 == 0xff) {
@@ -359,7 +359,7 @@ BOM_TYPE freadBOM(FILE* f, char* bom, int* sz_bom)
 			fseek(f, pos, SEEK_SET);
 			return BOM_NONE;
 
-		case (short)0xefbb: /* UTF-8? */
+		case (unsigned short)0xefbb: /* UTF-8? */
 			fread(&c1, sizeof(char), 1, f);
 			if (c1 != 0xbf) { /* Not UTF-8 */
 				fseek(f, pos, SEEK_SET);

@@ -778,8 +778,10 @@ int XMLDoc_print(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXM
 	
 	if (doc == NULL || f == NULL || doc->init_value != XML_INIT_DONE) return false;
 	
-	/* Write BOM if it exist and we are at the beginning of the file */
-	if (ftell(f) == 0 && doc->bom[0] != NULC) fwrite(doc->bom, sizeof(char), doc->sz_bom, f);
+#ifdef SXMLC_UNICODE
+	/* Write BOM if it exist */
+	if (doc->sz_bom > 0) fwrite(doc->bom, sizeof(unsigned char), doc->sz_bom, f);
+#endif
 
 	depth = -1; /* UGLY HACK: 'depth' forced negative on very first line so we don't print an extra 'tag_sep' (usually "\n") */
 	for (i = 0, cur_sz_line = 0; i < doc->n_nodes; i++) {
@@ -1259,12 +1261,14 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	FILE* f;
 	int ret;
 	SAX_Data sd;
+	SXML_CHAR* fmode = 
+#ifndef SXMLC_UNICODE
+	C2SX("rt");
+#else
+	C2SX("rb"); /* In Unicode, open the file as binary so that further 'fgetwc' read all bytes */
 	BOM_TYPE bom;
-	SXML_CHAR* fmode = C2SX("rt");
-
-#ifdef SXMLC_UNICODE
-	fmode = C2SX("rb"); /* In Unicode, open the file as binary so that further 'fgetwc' read all bytes */
 #endif
+
 
 	if (sax == NULL || filename == NULL || filename[0] == NULC) return false;
 
@@ -1280,14 +1284,15 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 
 	sd.name = (SXML_CHAR*)filename;
 	sd.user = user;
-	bom = freadBOM(f, NULL, NULL); /* Skip BOM, if any */
-	/* In Unicode, re-open the file in text-mode if there is no BOM as we assume that the
-	   file is "plain" text (i.e. 1 byte = 1 character). If opened in binary mode, 'fgetwc'
-	   would read 2 bytes for 1 character, which would not work on "plain" files. */
 #ifdef SXMLC_UNICODE
-	if (bom == BOM_NONE) {
+	bom = freadBOM(f, NULL, NULL); /* Skip BOM, if any */
+	/* In Unicode, re-open the file in text-mode if there is no BOM (or UTF-8) as we assume that
+	   the file is "plain" text (i.e. 1 byte = 1 character). If opened in binary mode, 'fgetwc'
+	   would read 2 bytes for 1 character, which would not work on "plain" files. */
+	if (bom == BOM_NONE || bom == BOM_UTF_8) {
 		fclose(f);
 		f = sx_fopen(filename, C2SX("rt"));
+		if (bom == BOM_UTF_8) freadBOM(f, NULL, NULL); /* Skip the UTF-8 BOM that was found */
 		if (f == NULL) return false;
 	}
 #endif
@@ -1328,7 +1333,7 @@ int XMLDoc_parse_file_DOM(const SXML_CHAR* filename, XMLDoc* doc)
 			#if defined(SXMLC_UNICODE) && (defined(WIN32) || defined(WIN64))
 			//setvbuf(f, NULL, _IONBF, 0);
 			#endif
-			freadBOM(f, doc->bom, &doc->sz_bom);
+			doc->bom_type = freadBOM(f, doc->bom, &doc->sz_bom);
 			fclose(f);
 		}
 	}

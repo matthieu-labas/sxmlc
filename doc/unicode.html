@@ -110,18 +110,60 @@ margin-left: 2%;
 
 <div class="middle">
 <h2>Handling Unicode</h2>
+<ul>
+<li><a href="#USE">Using Unicode</a></li>
+<li><a href="#CODE">Coding Unicode</a></li>
+<li><a href="#WRITE">Writing Unicode XML</a></li>
+</ul>
+
+<hr/>
 
 <p>Unicode is available since version 4.0.0.</p>
 <p>
 It required quite a lot of work to mutualize code between Unicode and non-Unicode functions, as <code>char</code>
 became <code>wchar_t</code> and all functions related to character handling had to be changed to their wide version.<br/>
+Hence, the code has complexified somehow due to the <code>#ifdef/#else/#endif</code> that has to cope with Unicode being
+used or not.<br/>
+</p>
+
+<a name="USING"/><h3>Using Unicode</h3>
+
+<p>
+Unicode is handled through the definition of <code>SXMLC_UNICODE</code> in preprocessor. To activate it, give <code>-DSXMLC_UNICODE</code>
+to the compiler (to most of them anyway).<br/>
+Defining it changes the definition of <code>SXML_CHAR</code> type to <code>wchar_t</code> instead of <code>char</code>.<br/>
+It also adds three more members to the <code>XMLDoc</code> struct to deal with Byte Order Mark (BOM):
+<ul>
+<li><code>bom_type</code> represents the BOM that has been read in the file. It is <code>BOM_NONE</code> when no BOM
+has been detected, or one of the <code>BOM_*</code> enum.</li>
+<li><code>bom</code> is the BOM byte content.</li>
+<li><code>sz_bom</code> is the size of the BOM (i.e. how many bytes is the BOM, usefull when writing the file).</li>
+</ul>
 </p>
 
 <p>
-Unicode is handled through the definition of <code>SXMLC_UNICODE</code> in preprocessor. To activate it, pass <code>-DSXMLC_UNICODE</code>
-to the compiler (to most of them usually ;-)).<br/>
-Defining it changes the definition of <code>SXML_CHAR</code> type to <code>wchar_t</code> instead of <code>char</code>.<br/>
+The function <code>freadBOM</code> has been added to determine the BOM and skip it, so that the file can be read straight.<br/>
+It can recognize several BOMs:
+<ul>
+<li>No BOM</li>
+<li>UTF-8 (file starts with sequence <code>0xef 0xbb 0xbf</code>)</li>
+<li>UTF-16LE (Little Endian, file starts with sequence <code>0xff 0xfe</code>)</li>
+<li>UTF-16BE (Big Endian, file starts with sequence <code>0xfe 0xff</code>)</li>
+<li>UTF-32LE (Little Endian, file starts with sequence <code>0xff 0xfe 0x00 0x00</code>)</li>
+<li>UTF-32BE (Big Endian, file starts with sequence <code>0x00 0x00 0xfe 0xff</code>)</li>
+</ul>
 </p>
+
+<p>
+<strong><u>/!\</u> Warning!</strong><br/>
+Though it can recognize (and skip) UTF-32 BOM, SXMLC can handle it only to the extent of <code>wchar_t</code>. That
+means that under Microsoft OS, Unicode handling stops at UTF-16.<br/>
+Also, UTF-8 is handled only on a one-byte-per-character basis as, internally, SXMLC opens the file in text mode when
+detecting UTF-8 BOM. If you know fancier portable <code>fopen/fgetc/fprintf</code> functions to process UTF-8, please
+tell me! :-)
+</p>
+
+<a name="CODE"/><h3>Coding Unicode</h3>
 
 <p>
 To ease creating Unicode-portable code, several macros are defined when opening/reading/writing streams. All of them
@@ -170,15 +212,16 @@ XMLNode_add_attribute(&node, <strong>C2SX(</strong>"name"<strong>)</strong>, <st
 </pre>
 </p>
 <p>
-The full list of <code>sx_*</code> function is available in <code>utils.h</code>:
+The full list of <code>sx_*</code> function is available in <code>utils.h</code>.
 </p>
 
-<h3>Writing Unicode XML</h3>
+<a name="WRITE"/><h3>Writing Unicode XML</h3>
 
 <p>
 <strong><u>/!\</u> Be careful</strong> when writing files with <code>XMLDoc_print</code>! The <code>FILE*</code> object has to be opened
-in <strong>binary mode</strong> when dealing with UTF-16 encoding! (either Little or Big Endian)<br/>
-Other encodings such as ASCII or UTF-8 can be opened in text mode.
+in <strong>binary mode</strong> when dealing with UTF-16 encoding! (either Little or Big Endian).<br/>
+Other encodings such as ASCII or "regular" UTF-8 have to be opened in text mode as they are one-byte characters.<br/>
+Note that you <strong>HAVE TO</strong> define <code>SXMLC_UNICODE</code> if you plan to write or read Unicode files.
 </p>
 
 <p>
@@ -190,7 +233,7 @@ int write_doc(XMLDoc* doc, SXML_CHAR* filename)
 	SXML_CHAR* mode;
 	FILE* f;
 	
-	if (doc->sz_bom > 0)
+	if (doc->sz_bom > 0 && doc->bom_type != BOM_UTF_8) /* Use text mode for UTF-8 */
 		mode = C2SX("w+b");
 	else
 		mode = C2SX("w+t");
