@@ -166,7 +166,7 @@ XMLNode* XMLNode_allocN(int n)
 	
 	if (n <= 0) return NULL;
 	
-	p = (XMLNode*)__malloc(n * sizeof(XMLNode));
+	p = (XMLNode*)__calloc(n, sizeof(XMLNode));
 	if (p == NULL) return NULL;
 
 	for (i = 0; i < n; i++)
@@ -181,7 +181,7 @@ XMLNode* XMLNode_dup(const XMLNode* node, int copy_children)
 
 	if (node == NULL) return NULL;
 
-	n = (XMLNode*)__malloc(sizeof(XMLNode));
+	n = (XMLNode*)__calloc(1, sizeof(XMLNode));
 	if (n == NULL) return NULL;
 
 	XMLNode_init(n);
@@ -260,7 +260,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 
 	/* Attributes */
 	if (src->n_attributes > 0) {
-		dst->attributes = (XMLAttribute*)__malloc(src->n_attributes * sizeof(XMLAttribute));
+		dst->attributes = (XMLAttribute*)__calloc(src->n_attributes, sizeof(XMLAttribute));
 		if (dst->attributes== NULL) goto copy_err;
 		dst->n_attributes = src->n_attributes;
 		for (i = 0; i < src->n_attributes; i++) {
@@ -278,7 +278,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 	
 	/* Copy children if required */
 	if (copy_children) {
-		dst->children = (XMLNode**)__malloc(src->n_children * sizeof(XMLNode*));
+		dst->children = (XMLNode**)__calloc(src->n_children, sizeof(XMLNode*));
 		if (dst->children == NULL) goto copy_err;
 		dst->n_children = src->n_children;
 		for (i = 0; i < src->n_children; i++) {
@@ -1210,12 +1210,23 @@ int DOMXMLDoc_node_text(SXML_CHAR* text, SAX_Data* sd)
 		return false; /* There is some "real" text => raise an error */
 	}
 
-	if ((dom->current->text = sx_strdup(text)) == NULL) {
+	/* 'p' will point at the new text */
+	if (dom->current->text == NULL) {
+		p = sx_strdup(text);
+	} else {
+		p = (SXML_CHAR*)__realloc(dom->current->text, (sx_strlen(dom->current->text) + sx_strlen(text) + 1)*sizeof(SXML_CHAR));
+		if (p != NULL)
+			sx_strcat(p, text);
+	}
+
+	if (p == NULL) {
 		dom->error = PARSE_ERR_MEMORY;
 		dom->line_error = sd->line_num;
 
 		return false;
 	}
+
+	dom->current->text = p;
 
 	return true;
 }

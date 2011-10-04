@@ -1,3 +1,7 @@
+*** v4.0.1 - Corrections given by Pete (bothap@users.sourceforge.net)
+	- Corrected coredump when memory not initialised after malloc when init_value happens to contain XML_INIT_DONE.
+	- Corrected emory leak in DOM parser when 'dom->current->text' alrady contained text.
+
 *** v4.0.0
 	- Unicode handling through SXMLC_UNICODE define (Use -DSXMLC_UNICODE when compiling).
 	- Use 'sx_*' functions to manipulate strings, and C2SX() macro around constant strings and characters to provide portable code for Unicode/non-Unicode compilation.
