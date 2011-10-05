@@ -209,7 +209,7 @@ int start(const XMLNode* node, SAX_Callbacks* cb)
 {
 	/* Do fancy stuff */
 	if (something_relevant)
-		cb->end = my_special_end; /* From now on, 
+		cb->end = my_special_end; /* From now on, 'my_special_end' will be used instead of 'end' */
 }
 
 int my_special_end(const XMLNode* node, SAX_Callbacks* cb)
@@ -258,11 +258,9 @@ void test_DOM_from_SAX(void)
 	dom.doc = &doc;
 	dom.current = NULL;
 	
-	SAX_Callbacks_init(&sax);
+	SAX_Callbacks_init_DOM(&sax);
 	sax.start_node = my_start;
 	sax.end_node = my_end;
-	sax.new_text = DOMXMLDoc_node_text;
-	sax.all_event = NULL;
 	
 	depth = max_depth = 0;
 	
@@ -312,14 +310,14 @@ XMLDoc_add_node(&doc, node);
 node = XMLNode_alloc();
 XMLNode_set_tag(node, "properties");
 XMLNode_set_type(node, TAG_FATHER);
-XMLDoc_add_node(&doc, node); // Becomes root node
+XMLDoc_add_node(&doc, node); // Becomes root node because of 'TAG_FATHER'
 
 node = XMLNode_alloc();
 XMLNode_set_type(node, TAG_COMMENT);
 XMLNode_set_tag(node, "Hello World!");
 XMLDoc_add_child_root(&doc, node);
 
-node = XMLNode_alloc(1);
+node = XMLNode_alloc();
 XMLNode_set_tag(node, "info");
 XMLNode_set_text(node, "This is my name");
 XMLNode_set_attribute(node, "type", "Name");
@@ -354,10 +352,10 @@ void XMLDoc_print(XMLDoc* doc, FILE* f, char* tag_sep, char* child_sep, int sz_l
 </li>
 <li>
 	<code>child_sep</code> is a string that will be added to <code>tag_sep</code> to separate
-	children tags from their father tag. <code>"\t"</code> should be used for pretty print.
+	children tags from their father tag. <code>"\t"</code> or <code>"    "</code> should be used for pretty print.
 </li>
 </ul>
-Additional parameters can be provided to automatically split a tag on several lines according to
+Additional parameters can be provided to automatically split a node on several lines according to
 a line size (the <code>sz_line</code> parameter), as well as specifying how many characters a <code>tab</code>
 should be accounted for (the <code>nb_char_tab</code> parameter).
 </p>
@@ -398,7 +396,7 @@ Match on names and values is made using a regexp-like string. It does not fully 
 '<code>?</code>' (any single character) and '<code>*</code>' (any possibly-empty string) are available but it is possible
 to use a custom function by calling <code>XMLSearch_set_regexpr_compare</code>. The given function takes the string to test
 and the pattern to match and should return <code>true</code> whenever the string matches the pattern.<br/>
-The '<code>\</code>' character can be used to escape the next one.
+'<code>\</code>' can be used to escape the next character.
 </p>
 
 <p>
@@ -448,7 +446,7 @@ XPath-like queries can be used to initialize a search struct. It does not totall
 search tree.<br/>
 <ul>
 <li>Search on node tag is performed by giving the tag to match, or '<code>*</code>' for any tag.</li>
-<li>Search on node text is performed by specifying '<code>./="text regexp to search"</code>' between the <code>[]</code>
+<li>Search on node text is performed by specifying '<code>.="text regexp to search"</code>' between the <code>[]</code>
 after the tag.</li>
 <li>Attributes search is performed by giving the attribute name prefixed by '<code>@</code>' between <code>[]</code>. Additional
 attributes are specified by separating their names/values with a comma '<code>,</code>'.
@@ -499,6 +497,7 @@ When parsing such nodes, the whole text between <code>start</code> and <code>end
 the '<code>tag</code>' member of an <code>XMLNode</code>. The text itself is kept "as is" but you can remove potential
 escape characters with the <code>str_unescape</code> function.
 </p>
+<p>
 NB: Internally, that is how comments, processing instructions and CDATA are handled.
 </p>
 

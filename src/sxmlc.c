@@ -196,39 +196,16 @@ XMLNode* XMLNode_dup(const XMLNode* node, int copy_children)
 
 int XMLNode_free(XMLNode* node)
 {
-	int i;
-
 	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
 	
 	if (node->tag != NULL) {
 		__free(node->tag);
 		node->tag = NULL;
 	}
-	if (node->text != NULL) {
-		__free(node->text);
-		node->text = NULL;
-	}
 
-	if (node->attributes != NULL) {
-		for (i = 0; i < node->n_attributes; i++) {
-			if (node->attributes[i].name != NULL) __free(node->attributes[i].name);
-			if (node->attributes[i].value != NULL) __free(node->attributes[i].value);
-		}
-		__free(node->attributes);
-		node->attributes = NULL;
-	}
-	node->n_attributes = 0;
-	
-	if (node->children != NULL) {
-		for (i = 0; i < node->n_children; i++)
-			if (node->children[i] != NULL) {
-				(void)XMLNode_free(node->children[i]);
-				__free(node->children[i]);
-			}
-		__free(node->children);
-		node->children = NULL;
-	}
-	node->n_children = 0;
+	XMLNode_remove_text(node);
+	XMLNode_remove_all_attributes(node);
+	XMLNode_remove_children(node);
 	
 	node->tag_type = TAG_NONE;
 
@@ -392,11 +369,30 @@ int XMLNode_remove_attribute(XMLNode* node, int i_attr)
 	return node->n_attributes;
 }
 
+int XMLNode_remove_all_attributes(XMLNode* node)
+{
+	int i;
+
+	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
+
+	if (node->attributes != NULL) {
+		for (i = 0; i < node->n_attributes; i++) {
+			if (node->attributes[i].name != NULL) __free(node->attributes[i].name);
+			if (node->attributes[i].value != NULL) __free(node->attributes[i].value);
+		}
+		__free(node->attributes);
+		node->attributes = NULL;
+	}
+	node->n_attributes = 0;
+
+	return true;
+}
+
 int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 {
 	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
 
-	if (text == NULL) { /* We want to remove it => __free node text */
+	if (text == NULL) { /* We want to remove it => free node text */
 		if (node->text != NULL) {
 			__free(node->text);
 			node->text = NULL;
@@ -488,6 +484,26 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 	return node->n_children;
 }
 
+int XMLNode_remove_children(XMLNode* node)
+{
+	int i;
+
+	if (node == NULL || node->init_value != XML_INIT_DONE) return false;
+
+	if (node->children != NULL) {
+		for (i = 0; i < node->n_children; i++)
+			if (node->children[i] != NULL) {
+				(void)XMLNode_free(node->children[i]);
+				__free(node->children[i]);
+			}
+		__free(node->children);
+		node->children = NULL;
+	}
+	node->n_children = 0;
+	
+	return true;
+}
+
 int XMLNode_equal(const XMLNode* node1, const XMLNode* node2)
 {
 	int i, j;
@@ -525,6 +541,8 @@ XMLNode* XMLNode_next_sibling(const XMLNode* node)
 	if (node == NULL || node->init_value != XML_INIT_DONE || node->father == NULL) return NULL;
 
 	father = node->father;
+	if (father == NULL) return NULL;
+
 	for (i = 0; i < father->n_children && father->children[i] != node; i++) ;
 	i++; /* father->children[i] is now 'node' next sibling */
 
@@ -1267,6 +1285,21 @@ int DOMXMLDoc_doc_end(SAX_Data* sd)
 	return true;
 }
 
+int SAX_Callbacks_init_DOM(SAX_Callbacks* sax)
+{
+	if (sax == NULL) return false;
+
+	sax->start_doc = DOMXMLDoc_doc_start;
+	sax->start_node = DOMXMLDoc_node_start;
+	sax->end_node = DOMXMLDoc_node_end;
+	sax->new_text = DOMXMLDoc_node_text;
+	sax->on_error = DOMXMLDoc_parse_error;
+	sax->end_doc = DOMXMLDoc_doc_end;
+	sax->all_event = NULL;
+
+	return true;
+}
+
 int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user)
 {
 	FILE* f;
@@ -1351,13 +1384,7 @@ int XMLDoc_parse_file_DOM(const SXML_CHAR* filename, XMLDoc* doc)
 #endif
 
 	dom.doc = doc;
-	sax.start_doc = DOMXMLDoc_doc_start;
-	sax.start_node = DOMXMLDoc_node_start;
-	sax.end_node = DOMXMLDoc_node_end;
-	sax.new_text = DOMXMLDoc_node_text;
-	sax.on_error = DOMXMLDoc_parse_error;
-	sax.end_doc = DOMXMLDoc_doc_end;
-	sax.all_event = NULL;
+	SAX_Callbacks_init_DOM(&sax);
 
 	if (!XMLDoc_parse_file_SAX(filename, &sax, &dom)) {
 		(void)XMLDoc_free(doc);
@@ -1377,13 +1404,7 @@ int XMLDoc_parse_buffer_DOM(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLD
 
 	dom.doc = doc;
 	dom.current = NULL;
-	sax.start_doc = DOMXMLDoc_doc_start;
-	sax.start_node = DOMXMLDoc_node_start;
-	sax.end_node = DOMXMLDoc_node_end;
-	sax.new_text = DOMXMLDoc_node_text;
-	sax.on_error = DOMXMLDoc_parse_error;
-	sax.end_doc = DOMXMLDoc_doc_end;
-	sax.all_event = NULL;
+	SAX_Callbacks_init_DOM(&sax);
 
 	return XMLDoc_parse_buffer_SAX(buffer, name, &sax, &dom) ? true : XMLDoc_free(doc);
 }

@@ -26,7 +26,7 @@ extern "C" {
 #include <stdio.h>
 #include "utils.h"
 
-#define SXMLC_VERSION "4.0.0"
+#define SXMLC_VERSION "4.0.1"
 
 #ifndef false
 #define false 0
@@ -40,7 +40,7 @@ extern "C" {
 typedef enum _TagType {
 	TAG_ERROR = -1,
 	TAG_NONE = 0,
-	TAG_PARTIAL,	/* Tag containing a legal '>' which stopped file reading */
+	TAG_PARTIAL,	/* Node containing a legal '>' which stopped file reading */
 	TAG_FATHER,		/* <tag> - Next nodes will be children of this one. */
 	TAG_SELF,		/* <tag/> - Standalone node. */
 	TAG_INSTR,		/* <?prolog?> - Processing instructions, or prolog node. */
@@ -67,8 +67,8 @@ typedef struct _XMLAttribute {
  An XML node.
  */
 typedef struct _XMLNode {
-	SXML_CHAR* tag;					/* Tag name */
-	SXML_CHAR* text;					/* Text inside the node */
+	SXML_CHAR* tag;				/* Tag name */
+	SXML_CHAR* text;			/* Text inside the node */
 	XMLAttribute* attributes;
 	int n_attributes;
 	
@@ -271,6 +271,11 @@ int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* dom);
 int DOMXMLDoc_parse_error(ParseError error_num, int line_number, SAX_Data* sd);
 int DOMXMLDoc_doc_end(SAX_Data* dom);
 
+/*
+ Initialize 'sax' with the "official" DOM callbacks.
+ */
+int SAX_Callbacks_init_DOM(SAX_Callbacks* sax);
+
 /* --- XMLNode methods --- */
 
 /*
@@ -364,10 +369,20 @@ int XMLNode_search_attribute(const XMLNode* node, const SXML_CHAR* attr_name, in
 int XMLNode_remove_attribute(XMLNode* node, int i_attr);
 
 /*
+ Remove all attributes from 'node'.
+ */
+int XMLNode_remove_all_attributes(XMLNode* node);
+
+/*
  Set node text.
  Return 'true' when successful, 'false' on error.
  */
 int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text);
+
+/*
+ Helper macro to remove text from 'node'.
+ */
+#define XMLNode_remove_text(node) XMLNode_set_text(node, NULL);
 
 /*
  Add a child to a node.
@@ -393,6 +408,11 @@ XMLNode* XMLNode_get_child(const XMLNode* node, int i_child);
  Return the new number of children or -1 on invalid arguments.
  */
 int XMLNode_remove_child(XMLNode* node, int i_child, int free_child);
+
+/*
+ Remove all children from 'node'.
+ */
+int XMLNode_remove_children(XMLNode* node);
 
 /*
  Return 'true' if 'node1' is the same as 'node2' (i.e. same tag, same active attributes).

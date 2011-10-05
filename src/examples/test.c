@@ -145,7 +145,7 @@ void test_unicode(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\testutf8.xml"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
 	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
