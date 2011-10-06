@@ -1,6 +1,10 @@
-*** v4.0.1 - Corrections given by Pete (bothap@users.sourceforge.net)
+*** v4.0.1 - Corrections/Suggestions given by Pete (bothap@users.sourceforge.net)
 	- Corrected coredump when memory not initialised after malloc when init_value happens to contain XML_INIT_DONE.
-	- Corrected emory leak in DOM parser when 'dom->current->text' alrady contained text.
+	- Corrected memory leak in DOM parser when 'dom->current->text' alrady contained text.
+	- Renamed 'utils.*' to 'sxmlutils.*'.
+	- Removed automatic freeing of 'XMLNode' and 'XMLDoc' (documented in 'datastruct.html').
+	- Enclosed BOM zeroing into '#ifdef SXMLC_UNICODE' in 'XMLNode_init'.
+	- Added functions 'XMLNode_get_attribute*' to retrieve an attribute value based on its name.
 
 *** v4.0.0
 	- Unicode handling through SXMLC_UNICODE define (Use -DSXMLC_UNICODE when compiling).
