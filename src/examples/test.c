@@ -12,7 +12,7 @@
 #include <time.h>
 #include <string.h>
 //#define SXMLC_UNICODE
-#include "../utils.h"
+#include "../sxmlutils.h"
 #include "../sxmlc.h"
 #include "../sxmlsearch.h"
 
@@ -347,14 +347,15 @@ void test_DOM_from_SAX(void)
 	printf("Max depth: %d\n", max_depth);
 }
 
-#define N 100000
+#define N 10000
 
 void test_mem(void)
 {
 	static XMLDoc doc[N];
 	int i, len;
 	SXML_CHAR* p;
-	FILE* f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", "rt");
+	//FILE* f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\simple.xml", "rt");
+	FILE* f = fopen("D:\\Sources\\sxmlc\\data\\test.xml", "rt");
 
 	fseek(f, 0, SEEK_END);
 	len = ftell(f);
@@ -604,12 +605,31 @@ void test_NodeXPath(void)
 	free(buf);
 }
 
+void test_search_attribute(void)
+{
+	XMLNode node;
+	SXML_CHAR* val;
+
+	XMLNode_init(&node);
+	XMLNode_set_attribute(&node, C2SX("name"), C2SX("first one"));
+	XMLNode_set_attribute(&node, C2SX("readonly"), C2SX("false"));
+	XMLNode_set_attribute(&node, C2SX("value"), C2SX("TBD"));
+
+	XMLNode_get_attribute(&node, C2SX("value"), &val);
+	sx_printf(C2SX("'value' without default: [%s]\n"), val);
+	__free(val);
+
+	XMLNode_get_attribute_with_default(&node, C2SX("value2"), &val, C2SX("defval"));
+	sx_printf(C2SX("'value2' with default 'defval' [%s]\n"), val);
+	__free(val);
+}
+
 #if 1
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, C2SX("<#[MONTAG-"), C2SX("-]>"));
 	//test_gen();
-	test_unicode();
+	//test_unicode();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -621,7 +641,8 @@ int main(int argc, char** argv)
 	//test_speed_DOM();
 	//test_speed_SAX();
 	//test_NodeXPath();
-	//test_mem2();
+	//test_mem();
+	test_search_attribute();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

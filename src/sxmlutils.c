@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "utils.h"
+#include "sxmlutils.h"
 
 #ifdef DBG_MEM
 static int nb_alloc = 0, nb_free = 0;
@@ -142,8 +142,7 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 			(*line)[n] = NULC;
 			ret = meos(in) ? n : 0;
 			break;
-		}
-		else {
+		} else {
 			(*line)[n] = c;
 			if (c != to || (keep_fromto && to != NULC && c == to)) n++; /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
 			if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
@@ -152,8 +151,7 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 				if (pt == NULL) {
 					ret = 0;
 					break;
-				}
-				else
+				} else
 					*line = pt;
 			}
 			(*line)[n] = NULC; /* If we reached the 'to' character and we want to strip it, 'n' hasn't changed and 'line[n]' (which is 'to') will be replaced by '\0' */
@@ -220,8 +218,7 @@ SXML_CHAR* strip_spaces(SXML_CHAR* str, SXML_CHAR repl_sq)
 		if (sx_isspace(*p)) {
 			str[i++] = repl_sq;
 			while (sx_isspace(*++p)) ; /* Skips all next spaces */
-		}
-		else {
+		} else {
 			if (*p == C2SX('\\')) p++;
 			str[i++] = *p++;
 		}
@@ -266,13 +263,11 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 				if (str[n1] == C2SX('\\') && str[++n1] == NULC) break; /* Escape character (can be the last) */
 			}
 			for (is = n1 + 1; str[is] && sx_isspace(str[is]); is++) ; /* '--' not to take quote into account */
-		}
-		else {
+		} else {
 			for (n1 = n0; str[n1] && str[n1] != sep && !sx_isspace(str[n1]); n1++) ; /* Search for separator or a space */
 			for (is = n1; str[is] && sx_isspace(str[is]); is++) ;
 		}
-	}
-	else {
+	} else {
 		n0 = 0;
 		for (n1 = 0; str[n1] && str[n1] != sep; n1++) ; /* Search for separator only */
 		if (str[n1] != sep) return false; /* Separator not found: malformed string */

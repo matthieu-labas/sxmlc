@@ -130,6 +130,11 @@ An XML document is considered as:
 The root node is given by its index in the <code>nodes</code> array.<br/>
 It usually happens that the root index is > 0, typically when XML prolog and comments are given before.
 </p>
+<p>
+<code>XMLDoc</code> struct HAS TO be initialized with <code>XMLDoc_init</code>, and freed with
+<code>XMLDoc_free</code>. Calling <code>XMLDoc_init</code> several times without <code>XMLDoc_free</code>
+in between can lead to memory leak.
+</p>
 
 <h4>XML node</h4>
 <p>
@@ -188,6 +193,11 @@ Hence, knowing the tag type eases its display:
 <p>
 The <code>user</code> attribute is where you can put any type of data related to the node (e.g. pointer
 to a struct, ...).
+</p>
+<p>
+<code>XMLNode</code> struct HAS TO be initialized with <code>XMLNode_init</code>, and freed with
+<code>XMLNode_free</code>. Calling <code>XMLNode_init</code> several times without <code>XMLNode_free</code>
+in between can lead to memory leak.
 </p>
 
 </div>

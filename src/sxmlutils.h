@@ -25,8 +25,6 @@
 extern "C" {
 #endif
 
-#define SXMLC_UNICODE
-
 #ifdef SXMLC_UNICODE
 typedef wchar_t SXML_CHAR;
 #define C2SX(c) L ## c

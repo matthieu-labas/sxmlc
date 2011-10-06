@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include "utils.h"
+#include "sxmlutils.h"
 
 #define SXMLC_VERSION "4.0.1"
 
@@ -355,6 +355,19 @@ int XMLNode_set_type(XMLNode* node, const TagType tag_type);
  Return the new number of attributes, or -1 for memory problem.
  */
 int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value);
+
+/*
+ Retrieve an attribute value, based on its name, allocating 'attr_value'.
+ If the attribute name does not exist, set 'attr_value' to the given default value.
+ Return 'false' when the node is invalid, 'attr_name' is NULL or empty, or 'attr_value' is NULL.
+ */
+int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name, const SXML_CHAR** attr_value, const SXML_CHAR* default_attr_value);
+
+/*
+ Helper macro that retrieve an attribute value, or an empty string if the attribute does
+ not exist.
+ */
+#define XMLNode_get_attribute(node, attr_name, attr_value) XMLNode_get_attribute_with_default(node, attr_name, attr_value, C2SX(""))
 
 /*
  Search for the active attribute 'attr_name' in 'node', starting from index 'isearch'

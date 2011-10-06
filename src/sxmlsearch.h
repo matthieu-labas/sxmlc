@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#include "utils.h"
+#include "sxmlutils.h"
 #include "sxmlc.h"
 
 /*

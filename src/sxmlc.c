@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "utils.h"
+#include "sxmlutils.h"
 #include "sxmlc.h"
 
 /*
@@ -139,7 +139,7 @@ int XMLNode_init(XMLNode* node)
 {
 	if (node == NULL) return false;
 	
-	if (node->init_value == XML_INIT_DONE) (void)XMLNode_free(node);
+	/*if (node->init_value == XML_INIT_DONE) (void)XMLNode_free(node);*/
 
 	node->tag = NULL;
 	node->text = NULL;
@@ -321,8 +321,7 @@ int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_
 		if (pt[i].value != NULL) __free(pt[i].value);
 		pt[i].value = sx_strdup(attr_value);
 		if (pt[i].value == NULL) return -1;
-	}
-	else {
+	} else {
 		i = node->n_attributes;
 		pt = (XMLAttribute*)__realloc(node->attributes, (i+1) * sizeof(XMLAttribute));
 		if (pt == NULL) return 0;
@@ -333,14 +332,36 @@ int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_
 			pt[i].active = true;
 			node->attributes = pt;
 			node->n_attributes = i + 1;
-		}
-		else {
+		} else {
 			node->attributes = (XMLAttribute*)__realloc(pt, i * sizeof(XMLAttribute)); /* Frees memory, cannot fail hopefully! */
 			return -1;
 		}
 	}
 
 	return node->n_attributes;
+}
+
+int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name, const SXML_CHAR** attr_value, const SXML_CHAR* default_attr_value)
+{
+	XMLAttribute* pt;
+	int i;
+	
+	if (node == NULL || attr_name == NULL || attr_name[0] == NULC || attr_value == NULL || node->init_value != XML_INIT_DONE) return false;
+	
+	i = XMLNode_search_attribute(node, attr_name, 0);
+	if (i >= 0) {
+		pt = node->attributes;
+		if (pt[i].value != NULL) {
+			*attr_value = sx_strdup(pt[i].value);
+			if (*attr_value == NULL) return false;
+		} else *attr_value = NULL; /* NULL but returns 'true' as 'NULL' is the actual attribute value */
+	} else if (default_attr_value != NULL) {
+		*attr_value = sx_strdup(default_attr_value);
+		if (*attr_value == NULL) return false;
+	} else
+		*attr_value = NULL;
+
+	return true;
 }
 
 int XMLNode_search_attribute(const XMLNode* node, const SXML_CHAR* attr_name, int i_search)
@@ -405,8 +426,7 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 	if (node->text == NULL) {
 		node->text = (SXML_CHAR*)__malloc((sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
 		if (node->text == NULL) return false;
-	}
-	else {
+	} else {
 		SXML_CHAR* p = (SXML_CHAR*)__realloc(node->text, (sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
 		if (p == NULL) return false;
 		node->text = p;
@@ -425,8 +445,7 @@ int XMLNode_add_child(XMLNode* node, XMLNode* child)
 		node->tag_type = TAG_FATHER;
 		child->father = node;
 		return true;
-	}
-	else
+	} else
 		return true;
 }
 
@@ -576,10 +595,10 @@ int XMLDoc_init(XMLDoc* doc)
 {
 	if (doc == NULL) return false;
 
-	if (doc->init_value == XML_INIT_DONE) XMLDoc_free(doc);
-
 	doc->filename[0] = NULC;
+#ifdef SXMLC_UNICODE
 	memset(&doc->bom, 0, sizeof(doc->bom));
+#endif
 	doc->nodes = NULL;
 	doc->n_nodes = 0;
 	doc->i_root = -1;
@@ -730,8 +749,7 @@ static int _XMLNode_print_header(const XMLNode* node, FILE* f, const SXML_CHAR* 
 	/* End the tag if there are no children and no text */
 	if (node->n_children == 0 && (node->text == NULL || node->text[0] == NULC)) {
 		cur_sz_line += sx_fprintf(f, C2SX("/>"));
-	}
-	else {
+	} else {
 		(void)sx_fputc(C2SX('>'), f);
 		cur_sz_line++;
 	}
@@ -765,12 +783,10 @@ static int _XMLNode_print(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep
 		/* Text has to be printed: check if it is only spaces */
 		if (!keep_text_spaces) {
 			for (p = node->text; *p && sx_isspace(*p); p++) ; /* 'p' points to first non-space character, or to '\0' if only spaces */
-		}
-		else
+		} else
 			p = node->text; /* '*p' won't be '\0' */
 		if (*p != NULC) cur_sz_line += fprintHTML(f, node->text);
-	}
-	else if (node->n_children <= 0) return true; /* Everything has already been printed */
+	} else if (node->n_children <= 0) return true; /* Everything has already been printed */
 	
 	/* Recursively print children */
 	for (i = 0; i < node->n_children; i++)
@@ -848,8 +864,7 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 		xmlattr->value[i] = NULC;
 		(void)html2str(str_unescape(xmlattr->value), NULL); /* Convert HTML escape sequences */
 		if (remQ && *p != quote) ret = 2; /* Quote at the beginning but not at the end */
-	}
-	else ret = 0;
+	} else ret = 0;
 	
 	if (ret == 0) {
 		if (xmlattr->name != NULL) __free(xmlattr->name);
@@ -971,8 +986,7 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 				if (str[nn] == C2SX('\\')) nn++;
 			}
 			nn++;
-		}
-		else { /* Attribute value stops at first space or end of XML string */
+		} else { /* Attribute value stops at first space or end of XML string */
 			for (nn = p-str+1; str[nn] != NULC && !sx_isspace(str[nn]) && str[nn] != C2SX('/') && str[nn] != C2SX('>'); nn++) ; /* Go to the end of the attribute value */ // CHECK UNICODE
 		}
 		
@@ -1066,8 +1080,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				if (sax->on_error == NULL && sax->all_event == NULL) {
 					sx_fprintf(stderr, C2SX("%s:%d: SYNTAX ERROR (%s%s).\n"), sd->name, sd->line_num, txt_end, p == NULL ? C2SX("") : C2SX("..."));
 					if (p != NULL) *p = C2SX('\n');
-				}
-				else {
+				} else {
 					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_SYNTAX, sd->line_num, sd)) break;
 					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd)) break;
 				}
@@ -1167,8 +1180,7 @@ int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* sd)
 		if ((i = _add_node(&dom->doc->nodes, &dom->doc->n_nodes, new_node)) < 0) goto node_start_err;
 
 		if (dom->doc->i_root < 0 && node->tag_type == TAG_FATHER) dom->doc->i_root = i;
-	}
-	else {
+	} else {
 		if (_add_node(&dom->current->children, &dom->current->n_children, new_node) < 0) goto node_start_err;
 	}
 
@@ -1280,6 +1292,7 @@ int DOMXMLDoc_doc_end(SAX_Data* sd)
 		sx_fprintf(stderr, C2SX("%s:%d: An error was found (%s), loading aborted...\n"), sd->name, dom->line_error, msg);
 		dom->current = NULL;
 		(void)XMLDoc_free(dom->doc);
+		dom->doc = NULL;
 	}
 
 	return true;
@@ -1388,6 +1401,7 @@ int XMLDoc_parse_file_DOM(const SXML_CHAR* filename, XMLDoc* doc)
 
 	if (!XMLDoc_parse_file_SAX(filename, &sax, &dom)) {
 		(void)XMLDoc_free(doc);
+		dom.doc = NULL;
 
 		return false;
 	}

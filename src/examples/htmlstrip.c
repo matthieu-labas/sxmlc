@@ -9,7 +9,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../utils.h"
+#include "../sxmlutils.h"
 #include "../sxmlc.h"
 
 #if (defined(WIN32) || defined(WIN64)) && !defined(strcasecmp)

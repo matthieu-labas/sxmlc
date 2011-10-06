@@ -22,7 +22,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "utils.h"
+#include "sxmlutils.h"
 #include "sxmlc.h"
 #include "sxmlsearch.h"
 
@@ -223,8 +223,7 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
 		for (i = 0; i < s->n_attributes; i++) {
 			if (fill) {
 				if (strcat_alloc(xpath, C2SX(", ")) == NULL) goto err;
-			}
-			else
+			} else
 				fill = true; /* filling is being performed */
 			if (strcat_alloc(xpath, C2SX("@")) == NULL) goto err;
 			if (strcat_alloc(xpath, s->attributes[i].name) == NULL) goto err;
@@ -478,8 +477,7 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 		(void)str2html(node->text, &(*xpath[sx_strlen(*xpath)]));
 		sx_strcat(*xpath, C2SX("\""));
 		n = 1; /* Indicates '[' has been put */
-	}
-	else
+	} else
 		n = 0;
 
 	for (i = 0; i < node->n_attributes; i++) {
@@ -488,8 +486,7 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 		if (n == 0) {
 			sx_strcat(*xpath, C2SX("["));
 			n = 1;
-		}
-		else
+		} else
 			sx_strcat(*xpath, C2SX(", "));
 		p = &(*xpath[sx_strlen(*xpath)]);
 
