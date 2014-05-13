@@ -1,3 +1,5 @@
+*** v4.0.2 - Updated license to LGPL v2.1 (mistakenly LGPL v3)
+
 *** v4.0.1 - Corrections/Suggestions given by Pete (bothap@users.sourceforge.net)
 	- Corrected coredump when memory not initialised after malloc when init_value happens to contain XML_INIT_DONE.
 	- Corrected memory leak in DOM parser when 'dom->current->text' alrady contained text.
