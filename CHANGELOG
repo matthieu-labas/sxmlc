@@ -1,6 +1,11 @@
+*** v4.0.3 - Updated license to BSD
+	- Corrected bug #4: mis-initialization in XML search struct (thanks to Carmel (@lablabla))
+	- Corrected bug #5: infinite loop in sx_strdup with DBG_MEM defined (thanks to Carmel (@lablabla))
+	- Reformatted code (unfinished)
+
 *** v4.0.2 - Updated license to LGPL v2.1 (mistakenly LGPL v3)
 
-*** v4.0.1 - Corrections/Suggestions given by Pete (bothap@users.sourceforge.net)
+*** v4.0.1 - Corrections/Suggestions given by Pete (@bothap)
 	- Corrected coredump when memory not initialised after malloc when init_value happens to contain XML_INIT_DONE.
 	- Corrected memory leak in DOM parser when 'dom->current->text' alrady contained text.
 	- Renamed 'utils.*' to 'sxmlutils.*'.

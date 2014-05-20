@@ -1,21 +1,31 @@
 /*
-    This file is part of sxmlc.
+	Copyright (c) 2010, Matthieu Labas
+	All rights reserved.
 
-    sxmlc is free software: you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+	Redistribution and use in source and binary forms, with or without modification,
+	are permitted provided that the following conditions are met:
 
-    sxmlc is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	1. Redistributions of source code must retain the above copyright notice,
+	   this list of conditions and the following disclaimer.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with sxmlc; if not, write to the Free Software
-	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	2. Redistributions in binary form must reproduce the above copyright notice,
+	   this list of conditions and the following disclaimer in the documentation
+	   and/or other materials provided with the distribution.
 
-	Copyright 2010 - Matthieu Labas
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+	IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+	INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+	NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+	PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+	WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+	OF SUCH DAMAGE.
+
+	The views and conclusions contained in the software and documentation are those of the
+	authors and should not be interpreted as representing official policies, either expressed
+	or implied, of the FreeBSD Project.
 */
 #ifndef _UTILS_H_
 #define _UTILS_H_
@@ -27,67 +37,67 @@ extern "C" {
 #endif
 
 #ifdef SXMLC_UNICODE
-typedef wchar_t SXML_CHAR;
-#define C2SX(c) L ## c
-#define CEOF WEOF
-#define sx_strcmp wcscmp
-#define sx_strncmp wcsncmp
-#define sx_strlen wcslen
-#define sx_strdup wcsdup
-#define sx_strchr wcschr
-#define sx_strrchr wcsrchr
-#define sx_strcpy wcscpy
-#define sx_strncpy wcsncpy
-#define sx_strcat wcscat
-#define sx_printf wprintf
-#define sx_fprintf fwprintf
-#define sx_sprintf swprintf
-#define sx_fgetc fgetwc
-#define sx_fputc fputwc
-#define sx_isspace iswspace
-#if defined(WIN32) || defined(WIN64)
-#define sx_fopen _wfopen
+	typedef wchar_t SXML_CHAR;
+	#define C2SX(c) L ## c
+	#define CEOF WEOF
+	#define sx_strcmp wcscmp
+	#define sx_strncmp wcsncmp
+	#define sx_strlen wcslen
+	#define sx_strdup wcsdup
+	#define sx_strchr wcschr
+	#define sx_strrchr wcsrchr
+	#define sx_strcpy wcscpy
+	#define sx_strncpy wcsncpy
+	#define sx_strcat wcscat
+	#define sx_printf wprintf
+	#define sx_fprintf fwprintf
+	#define sx_sprintf swprintf
+	#define sx_fgetc fgetwc
+	#define sx_fputc fputwc
+	#define sx_isspace iswspace
+	#if defined(WIN32) || defined(WIN64)
+		#define sx_fopen _wfopen
+	#else
+		#define sx_fopen fopen
+	#endif
+	#define sx_fclose fclose
 #else
-#define sx_fopen fopen
-#endif
-#define sx_fclose fclose
-#else
-typedef char SXML_CHAR;
-#define C2SX(c) c
-#define CEOF EOF
-#define sx_strcmp strcmp
-#define sx_strncmp strncmp
-#define sx_strlen strlen
-#define sx_strdup __strdup
-#define sx_strchr strchr
-#define sx_strrchr strrchr
-#define sx_strcpy strcpy
-#define sx_strncpy strncpy
-#define sx_strcat strcat
-#define sx_printf printf
-#define sx_fprintf fprintf
-#define sx_sprintf sprintf
-#define sx_fgetc fgetc
-#define sx_fputc fputc
-#define sx_isspace isspace
-#define sx_fopen fopen
-#define sx_fclose fclose
+	typedef char SXML_CHAR;
+	#define C2SX(c) c
+	#define CEOF EOF
+	#define sx_strcmp strcmp
+	#define sx_strncmp strncmp
+	#define sx_strlen strlen
+	#define sx_strdup __strdup
+	#define sx_strchr strchr
+	#define sx_strrchr strrchr
+	#define sx_strcpy strcpy
+	#define sx_strncpy strncpy
+	#define sx_strcat strcat
+	#define sx_printf printf
+	#define sx_fprintf fprintf
+	#define sx_sprintf sprintf
+	#define sx_fgetc fgetc
+	#define sx_fputc fputc
+	#define sx_isspace isspace
+	#define sx_fopen fopen
+	#define sx_fclose fclose
 #endif
 
 //#define DBG_MEM
 
 #ifdef DBG_MEM
-void* __malloc(size_t sz);
-void* __calloc(size_t count, size_t sz);
-void* __realloc(void* mem, size_t sz);
-void __free(void* mem);
-char* __strdup(const char* s);
+	void* __malloc(size_t sz);
+	void* __calloc(size_t count, size_t sz);
+	void* __realloc(void* mem, size_t sz);
+	void __free(void* mem);
+	char* __strdup(const char* s);
 #else
-#define __malloc malloc
-#define __calloc calloc
-#define __realloc realloc
-#define __free free
-#define __strdup strdup
+	#define __malloc malloc
+	#define __calloc calloc
+	#define __realloc realloc
+	#define __free free
+	#define __strdup strdup
 #endif
 
 #ifndef MEM_INCR_RLA

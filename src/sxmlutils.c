@@ -1,21 +1,31 @@
 /*
-    This file is part of sxmlc.
+	Copyright (c) 2010, Matthieu Labas
+	All rights reserved.
 
-    sxmlc is free software: you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+	Redistribution and use in source and binary forms, with or without modification,
+	are permitted provided that the following conditions are met:
 
-    sxmlc is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+	1. Redistributions of source code must retain the above copyright notice,
+	   this list of conditions and the following disclaimer.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with sxmlc; if not, write to the Free Software
-	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+	2. Redistributions in binary form must reproduce the above copyright notice,
+	   this list of conditions and the following disclaimer in the documentation
+	   and/or other materials provided with the distribution.
 
-	Copyright 2010 - Matthieu Labas
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+	ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+	IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+	INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+	NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+	PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+	WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+	OF SUCH DAMAGE.
+
+	The views and conclusions contained in the software and documentation are those of the
+	authors and should not be interpreted as representing official policies, either expressed
+	or implied, of the FreeBSD Project.
 */
 #if defined(WIN32) || defined(WIN64)
 #pragma warning(disable : 4996)
@@ -29,40 +39,55 @@
 
 #ifdef DBG_MEM
 static int nb_alloc = 0, nb_free = 0;
+
 void* __malloc(size_t sz)
 {
 	void* p = malloc(sz);
-	if (p != NULL) nb_alloc++;
+	if (p != NULL)
+		nb_alloc++;
 	printf("0x%x: MALLOC (%d) - NA %d - NF %d = %d\n", p, sz, nb_alloc, nb_free, nb_alloc - nb_free);
 	return p;
 }
+
 void* __calloc(size_t count, size_t sz)
 {
 	void* p = calloc(count, sz);
-	if (p != NULL) nb_alloc++;
+	if (p != NULL)
+		nb_alloc++;
 	printf("0x%x: CALLOC (%d, %d) - NA %d - NF %d = %d\n", p, count, sz, nb_alloc, nb_free, nb_alloc - nb_free);
 	return p;
 }
+
 void* __realloc(void* mem, size_t sz)
 {
 	void* p = realloc(mem, sz);
-	if (mem == NULL && p != NULL) nb_alloc++;
+	if (mem == NULL && p != NULL)
+		nb_alloc++;
 	printf("0x%x: REALLOC 0x%x (%d)", p, mem, sz);
 	if (mem == NULL)
 		printf(" - NA %d - NF %d = %d", nb_alloc, nb_free, nb_alloc - nb_free);
 	printf("\n");
 	return p;
 }
+
 void __free(void* mem)
 {
 	nb_free++;
 	printf("0x%x: FREE - NA %d - NF %d = %d\n", mem, nb_alloc, nb_free, nb_alloc - nb_free);
 	free(mem);
 }
+
 char* __strdup(const char* s)
 {
-	char* p = sx_strdup(s);
-	if (p != NULL) nb_alloc++;
+/* Mimic the behavior of sx_strdup(), as we can't use it directly here: DBG_MEM is defined
+   and sx_strdup is this function! (bug #5) */
+#ifdef SXMLC_UNICODE
+	char* p = wcsdup(s);
+#else
+	char* p = strdup(s);
+#end
+	if (p != NULL)
+		nb_alloc++;
 	printf("0x%x: STRDUP (%d) - NA %d - NF %d = %d\n", p, sx_strlen(s), nb_alloc, nb_free, nb_alloc - nb_free);
 	return p;
 }
@@ -71,7 +96,7 @@ char* __strdup(const char* s)
 /* Dictionary of special characters and their HTML equivalent */
 static struct _html_special_dict {
 	SXML_CHAR chr;		/* Original character */
-	SXML_CHAR* html;		/* Equivalent HTML string */
+	SXML_CHAR* html;	/* Equivalent HTML string */
 	int html_len;	/* 'sx_strlen(html)' */
 } HTML_SPECIAL_DICT[] = {
 	{ C2SX('<'), C2SX("&lt;"), 4 },
@@ -83,7 +108,8 @@ static struct _html_special_dict {
 
 int _bgetc(DataSourceBuffer* ds)
 {
-	if (ds == NULL || ds->buf[ds->cur_pos] == NULC) return EOF;
+	if (ds == NULL || ds->buf[ds->cur_pos] == NULC)
+		return EOF;
 	
 	return (int)(ds->buf[ds->cur_pos++]);
 }
@@ -91,7 +117,8 @@ int _bgetc(DataSourceBuffer* ds)
 int _beob(DataSourceBuffer* ds)
 {
 
-	if (ds == NULL || ds->buf[ds->cur_pos] == NULC) return true;
+	if (ds == NULL || ds->buf[ds->cur_pos] == NULC)
+		return true;
 
 	return false;
 }
@@ -104,28 +131,36 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 	int (*mgetc)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_bgetc : (int(*)(void*))sx_fgetc);
 	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
 	
-	if (in == NULL || line == NULL) return 0;
+	if (in == NULL || line == NULL)
+		return 0;
 	
-	if (to == NULC) to = C2SX('\n');
+	if (to == NULC)
+		to = C2SX('\n');
 	/* Search for character 'from' */
-	if (interest_count != NULL) *interest_count = 0;
+	if (interest_count != NULL)
+		*interest_count = 0;
 	while (true) {
 		c = (SXML_CHAR)mgetc(in);
-		if (interest_count != NULL && c == interest) (*interest_count)++;
+		if (interest_count != NULL && c == interest)
+			(*interest_count)++;
 		/* Reaching EOF before 'to' char is not an error but should trigger 'line' alloc and init to '' */
 		/* If 'from' is '\0', we stop here */
-		if (c == from || c == CEOF || from == NULC) break;
+		if (c == from || c == CEOF || from == NULC)
+			break;
 	}
 	
-	if (sz_line == NULL) sz_line = &init_sz;
+	if (sz_line == NULL)
+		sz_line = &init_sz;
 	
 	if (*line == NULL || *sz_line == 0) {
 		if (*sz_line == 0) *sz_line = MEM_INCR_RLA;
 		*line = (SXML_CHAR*)__malloc(*sz_line*sizeof(SXML_CHAR));
-		if (*line == NULL) return 0;
+		if (*line == NULL)
+			return 0;
 	}
 	if (i0 < 0) i0 = 0;
-	if (i0 > *sz_line) return 0;
+	if (i0 > *sz_line)
+		return 0;
 	
 	n = i0;
 	if (c == CEOF) { /* EOF reached before 'to' char => return the empty string */
@@ -138,14 +173,16 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 	ret = 0;
 	while (true) {
 		c = (SXML_CHAR)mgetc(in);
-		if (interest_count != NULL && c == interest) (*interest_count)++;
+		if (interest_count != NULL && c == interest)
+			(*interest_count)++;
 		if (c == CEOF) { /* EOF or error */
 			(*line)[n] = NULC;
 			ret = meos(in) ? n : 0;
 			break;
 		} else {
 			(*line)[n] = c;
-			if (c != to || (keep_fromto && to != NULC && c == to)) n++; /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
+			if (c != to || (keep_fromto && to != NULC && c == to)) /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
+				n++;
 			if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
 				*sz_line += MEM_INCR_RLA;
 				pt = (SXML_CHAR*)__realloc(*line, *sz_line*sizeof(SXML_CHAR));
@@ -180,15 +217,20 @@ SXML_CHAR* strcat_alloc(SXML_CHAR** src1, const SXML_CHAR* src2)
 	SXML_CHAR* cat;
 	int n;
 
-	if (src1 == NULL || *src1 == src2) return NULL; /* Do not concatenate '*src1' with itself */
+	/* Do not concatenate '*src1' with itself */
+	if (src1 == NULL || *src1 == src2)
+		return NULL;
 
 	/* Concatenate a NULL or empty string */
-	if (src2 == NULL || *src2 == NULC) return *src1;
+	if (src2 == NULL || *src2 == NULC)
+		return *src1;
 
 	n = (*src1 == NULL ? 0 : sx_strlen(*src1)) + sx_strlen(src2) + 1;
 	cat = (SXML_CHAR*)__realloc(*src1, n*sizeof(SXML_CHAR));
-	if (cat == NULL) return NULL;
-	if (*src1 == NULL) *cat = NULC;
+	if (cat == NULL)
+		return NULL;
+	if (*src1 == NULL)
+		*cat = NULC;
 	*src1 = cat;
 	sx_strcat(*src1, src2);
 
@@ -204,11 +246,13 @@ SXML_CHAR* strip_spaces(SXML_CHAR* str, SXML_CHAR repl_sq)
 	for (p = str; *p && sx_isspace(*p); p++) ; /* No need to search for 'protect' as it is not a space */
 	len = sx_strlen(str);
 	for (i = len-1; sx_isspace(str[i]); i--) ;
-	if (str[i] == C2SX('\\')) i++; /* If last non-space is the protection, keep the last space */
+	if (str[i] == C2SX('\\')) /* If last non-space is the protection, keep the last space */
+		i++;
 	str[i+1] = NULC; /* New end of string to last non-space */
 	
 	if (repl_sq == NULC) {
-		if (p == str && i == len) return str; /* Nothing to do */
+		if (p == str && i == len)
+			return str; /* Nothing to do */
 		for (i = 0; (str[i] = *p) != NULC; i++, p++) ; /* Copy 'p' to 'str' */
 		return str;
 	}
@@ -220,7 +264,8 @@ SXML_CHAR* strip_spaces(SXML_CHAR* str, SXML_CHAR repl_sq)
 			str[i++] = repl_sq;
 			while (sx_isspace(*++p)) ; /* Skips all next spaces */
 		} else {
-			if (*p == C2SX('\\')) p++;
+			if (*p == C2SX('\\'))
+				p++;
 			str[i++] = *p++;
 		}
 	}
@@ -233,10 +278,12 @@ SXML_CHAR* str_unescape(SXML_CHAR* str)
 {
 	int i, j;
 
-	if (str == NULL) return NULL;
+	if (str == NULL)
+		return NULL;
 
 	for (i = j = 0; str[j]; j++) {
-		if (str[j] == C2SX('\\')) j++;
+		if (str[j] == C2SX('\\'))
+			j++;
 		str[i++] = str[j];
 	}
 
@@ -248,11 +295,14 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	int n0, n1, is;
 	SXML_CHAR quote;
 
-	if (str == NULL) return false;
+	if (str == NULL)
+		return false;
 
-	if (i_sep != NULL) *i_sep = -1;
+	if (i_sep != NULL)
+		*i_sep = -1;
 
-	if (!ignore_spaces) ignore_quotes = false; /* No sense of ignore quotes if spaces are to be kept */
+	if (!ignore_spaces) /* No sense of ignore quotes if spaces are to be kept */
+		ignore_quotes = false;
 
 	/* Parse left part */
 
@@ -261,7 +311,8 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 		if (ignore_quotes && isquote(str[n0])) { /* If quote is found, look for next one */
 			quote = str[n0++]; /* Quote can be '\'' or '"' */
 			for (n1 = n0; str[n1] && str[n1] != quote; n1++) {
-				if (str[n1] == C2SX('\\') && str[++n1] == NULC) break; /* Escape character (can be the last) */
+				if (str[n1] == C2SX('\\') && str[++n1] == NULC)
+					break; /* Escape character (can be the last) */
 			}
 			for (is = n1 + 1; str[is] && sx_isspace(str[is]); is++) ; /* '--' not to take quote into account */
 		} else {
@@ -271,19 +322,26 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	} else {
 		n0 = 0;
 		for (n1 = 0; str[n1] && str[n1] != sep; n1++) ; /* Search for separator only */
-		if (str[n1] != sep) return false; /* Separator not found: malformed string */
+		if (str[n1] != sep) /* Separator not found: malformed string */
+			return false;
 		is = n1;
 	}
 
 	/* Here 'n0' is the start of left member, 'n1' is the character after the end of left member */
 
-	if (l0 != NULL) *l0 = n0;
-	if (l1 != NULL) *l1 = n1 - 1;
-	if (i_sep != NULL) *i_sep = is;
+	if (l0 != NULL)
+		*l0 = n0;
+	if (l1 != NULL)
+		*l1 = n1 - 1;
+	if (i_sep != NULL)
+		*i_sep = is;
 	if (str[is] == NULC || str[is+1] == NULC) { /* No separator => empty right member */
-		if (r0 != NULL) *r0 = is;
-		if (r1 != NULL) *r1 = is-1;
-		if (i_sep != NULL) *i_sep = (str[is] == NULC ? -1 : is);
+		if (r0 != NULL)
+			*r0 = is;
+		if (r1 != NULL)
+			*r1 = is-1;
+		if (i_sep != NULL)
+			*i_sep = (str[is] == NULC ? -1 : is);
 		return true;
 	}
 
@@ -292,19 +350,25 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	n0 = is + 1;
 	if (ignore_spaces) {
 		for (; str[n0] && sx_isspace(str[n0]); n0++) ;
-		if (ignore_quotes && isquote(str[n0])) quote = str[n0];
+		if (ignore_quotes && isquote(str[n0]))
+			quote = str[n0];
 	}
 
 	for (n1 = ++n0; str[n1]; n1++) {
-		if (ignore_quotes && str[n1] == quote) break; /* Quote was reached */
-		if (str[n1] == C2SX('\\') && str[++n1] == NULC) break; /* Escape character (can be the last) */
+		if (ignore_quotes && str[n1] == quote) /* Quote was reached */
+			break;
+		if (str[n1] == C2SX('\\') && str[++n1] == NULC) /* Escape character (can be the last) */
+			break;
 	}
-	if (ignore_quotes && str[n1--] != quote) return false; /* Quote is not the same than earlier, '--' is not to take it into account */
+	if (ignore_quotes && str[n1--] != quote) /* Quote is not the same than earlier, '--' is not to take it into account */
+		return false;
 	if (!ignore_spaces)
 		while (str[++n1]) ; /* Jump down the end of the string */
 
-	if (r0 != NULL) *r0 = n0;
-	if (r1 != NULL) *r1 = n1;
+	if (r0 != NULL)
+		*r0 = n0;
+	if (r1 != NULL)
+		*r1 = n1;
 
 	return true;
 }
@@ -314,7 +378,8 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 	unsigned char c1, c2;
 	long pos;
 
-	if (f == NULL) return BOM_NONE;
+	if (f == NULL)
+		return BOM_NONE;
 
 	/* Save position and try to read and skip BOM if found. If not, go back to save position. */
 	pos = ftell(f);
@@ -324,7 +389,8 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 		bom[0] = c1;
 		bom[1] = c2;
 		bom[2] = '\0';
-		if (sz_bom != NULL) *sz_bom = 2;
+		if (sz_bom != NULL)
+			*sz_bom = 2;
 	}
 	switch ((unsigned short)(c1 << 8) | c2) {
 		case (unsigned short)0xfeff:
@@ -335,8 +401,10 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 			fread(&c1, sizeof(char), 1, f);
 			fread(&c2, sizeof(char), 1, f);
 			if (c1 == 0x00 && c2 == 0x00) {
-				if (bom != NULL) bom[2] = bom[3] = bom[4] = '\0';
-				if (sz_bom != NULL) *sz_bom = 4;
+				if (bom != NULL)
+					bom[2] = bom[3] = bom[4] = '\0';
+				if (sz_bom != NULL)
+					*sz_bom = 4;
 				return BOM_UTF_32LE;
 			}
 			fseek(f, pos, SEEK_SET); /* fseek(f, -2, SEEK_CUR) is not garanteed under Windows (and actually fail in Unicode...) */
@@ -349,7 +417,8 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 				bom[2] = c1;
 				bom[3] = c2;
 				bom[4] = '\0';
-				if (sz_bom != NULL) *sz_bom = 4;
+				if (sz_bom != NULL)
+					*sz_bom = 4;
 				return BOM_UTF_32BE;
 			}
 			fseek(f, pos, SEEK_SET);
@@ -359,21 +428,26 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 			fread(&c1, sizeof(char), 1, f);
 			if (c1 != 0xbf) { /* Not UTF-8 */
 				fseek(f, pos, SEEK_SET);
-				if (bom != NULL) bom[0] = '\0';
-				if (sz_bom != NULL) *sz_bom = 0;
+				if (bom != NULL)
+					bom[0] = '\0';
+				if (sz_bom != NULL)
+					*sz_bom = 0;
 				return BOM_NONE;
 			}
 			if (bom != NULL) {
 				bom[2] = c1;
 				bom[3] = '\0';
 			}
-			if (sz_bom != NULL) *sz_bom = 3;
+			if (sz_bom != NULL)
+				*sz_bom = 3;
 			return BOM_UTF_8;
 
 		default: /* No BOM, go back */
 			fseek(f, pos, SEEK_SET);
-			if (bom != NULL) bom[0] = '\0';
-			if (sz_bom != NULL) *sz_bom = 0;
+			if (bom != NULL)
+				bom[0] = '\0';
+			if (sz_bom != NULL)
+				*sz_bom = 0;
 			return BOM_NONE;
 	}
 }
@@ -394,19 +468,22 @@ SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str)
 	/* 'p2' is the char to analyze, 'p1' is where to insert it */
 	for (pd = str, ps = html; *ps; ps++, pd++) {
 		if (*ps != C2SX('&')) {
-			if (pd != ps) *pd = *ps;
+			if (pd != ps)
+				*pd = *ps;
 			continue;
 		}
 		
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
-			if (sx_strncmp(ps, HTML_SPECIAL_DICT[i].html, HTML_SPECIAL_DICT[i].html_len)) continue;
+			if (sx_strncmp(ps, HTML_SPECIAL_DICT[i].html, HTML_SPECIAL_DICT[i].html_len))
+				continue;
 			
 			*pd = HTML_SPECIAL_DICT[i].chr;
 			ps += HTML_SPECIAL_DICT[i].html_len-1;
 			break;
 		}
 		/* If no string was found, simply copy the character */
-		if (HTML_SPECIAL_DICT[i].chr == NULC && pd != ps) *pd = *ps;
+		if (HTML_SPECIAL_DICT[i].chr == NULC && pd != ps)
+			*pd = *ps;
 	}
 	*pd = NULC;
 	
@@ -419,9 +496,11 @@ SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 	SXML_CHAR *ps, *pd;
 	int i;
 
-	if (str == NULL || html == NULL) return NULL;
+	if (str == NULL || html == NULL)
+		return NULL;
 
-	if (html == str) return NULL; /* Not handled yet */
+	if (html == str) /* Not handled yet */
+		return NULL;
 
 	for (ps = str, pd = html; *ps; ps++, pd++) {
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
@@ -431,7 +510,8 @@ SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 				break;
 			}
 		}
-		if (HTML_SPECIAL_DICT[i].chr == NULC && pd != ps) *pd = *ps;
+		if (HTML_SPECIAL_DICT[i].chr == NULC && pd != ps)
+			*pd = *ps;
 	}
 	*pd = NULC;
 
@@ -442,7 +522,8 @@ int strlen_html(SXML_CHAR* str)
 {
 	int i, j, n;
 	
-	if (str == NULL) return 0;
+	if (str == NULL)
+		return 0;
 
 	n = 0;
 	for (i = 0; str[i]; i++) {
@@ -452,7 +533,8 @@ int strlen_html(SXML_CHAR* str)
 				break;
 			}
 		}
-		if (HTML_SPECIAL_DICT[j].chr == NULC) n++;
+		if (HTML_SPECIAL_DICT[j].chr == NULC)
+			n++;
 	}
 
 	return n;
@@ -465,7 +547,8 @@ int fprintHTML(FILE* f, SXML_CHAR* str)
 	
 	for (p = str, n = 0; *p != NULC; p++) {
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
-			if (*p != HTML_SPECIAL_DICT[i].chr) continue;
+			if (*p != HTML_SPECIAL_DICT[i].chr)
+				continue;
 			sx_fprintf(f, HTML_SPECIAL_DICT[i].html);
 			n += HTML_SPECIAL_DICT[i].html_len;
 			break;
@@ -483,9 +566,11 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 {
 	SXML_CHAR *p, *s;
 
-	if (str == NULL && pattern == NULL) return true;
+	if (str == NULL && pattern == NULL)
+		return true;
 
-	if (str == NULL || pattern == NULL) return false;
+	if (str == NULL || pattern == NULL)
+		return false;
 
 	p = pattern;
 	s = str;
@@ -500,10 +585,12 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 			/* Go to next character in pattern and wait until it is found in 'str' */
 			case C2SX('*'):
 				for (; *p != NULC; p++) { /* Squeeze '**?*??**' to '*' */
-					if (*p != C2SX('*') && *p != C2SX('?')) break;
+					if (*p != C2SX('*') && *p != C2SX('?'))
+						break;
 				}
 				for (; *s != NULC; s++) {
-					if (*s == *p) break;
+					if (*s == *p)
+						break;
 				}
 				break;
 
@@ -512,8 +599,10 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 				return *s ? false : true;
 
 			default:
-				if (*p == C2SX('\\')) p++; /* Escape character */
-				if (*p++ != *s++) return false; /* Characters do not match */
+				if (*p == C2SX('\\')) /* Escape character */
+					p++;
+				if (*p++ != *s++) /* Characters do not match */
+					return false;
 				break;
 		}
 	}
