@@ -85,7 +85,7 @@ char* __strdup(const char* s)
 	char* p = wcsdup(s);
 #else
 	char* p = strdup(s);
-#end
+#endif
 	if (p != NULL)
 		nb_alloc++;
 	printf("0x%x: STRDUP (%d) - NA %d - NF %d = %d\n", p, sx_strlen(s), nb_alloc, nb_free, nb_alloc - nb_free);

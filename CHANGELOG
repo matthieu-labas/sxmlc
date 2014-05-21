@@ -1,3 +1,5 @@
+*** v4.0.4 - Corrected #end instead of #endif
+
 *** v4.0.3 - Updated license to BSD
 	- Corrected bug #4: mis-initialization in XML search struct (thanks to Carmel (@lablabla))
 	- Corrected bug #5: infinite loop in sx_strdup with DBG_MEM defined (thanks to Carmel (@lablabla))
