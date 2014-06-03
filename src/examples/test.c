@@ -101,7 +101,7 @@ void test_gen(void)
 
 #if defined(WIN32) || defined(WIN64)
 	//f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
-	f = fopen("D:\\Sources\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -120,13 +120,13 @@ void test_DOM(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("G:\\Code\\Workspace\\sxmlc\\data\\test.xml"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
 #endif
 		printf("Error while loading\n");
 #if defined(WIN32) || defined(WIN64)
-	f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -145,7 +145,7 @@ void test_unicode(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
 	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
@@ -155,7 +155,7 @@ void test_unicode(void)
 	if (doc.bom_type != BOM_NONE && doc.bom_type != BOM_UTF_8) mode = C2SX("w+b");
 #endif
 #if defined(WIN32) || defined(WIN64)
-	f = sx_fopen(C2SX("D:\\Sources\\sxmlc\\data\\testout.xml"), mode);
+	f = sx_fopen(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml"), mode);
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif

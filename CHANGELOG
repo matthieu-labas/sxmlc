@@ -1,3 +1,6 @@
+*** v4.0.5 - Corrected bug #6: XMLNode_equal was not testing attribute value (thanks to Carmel (@lablabla))
+	- Finished code reformatting
+
 *** v4.0.4 - Corrected #end instead of #endif
 
 *** v4.0.3 - Updated license to BSD
