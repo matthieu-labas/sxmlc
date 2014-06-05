@@ -592,8 +592,7 @@ int XMLNode_equal(const XMLNode* node1, const XMLNode* node2)
 		j = XMLNode_search_attribute(node2, node1->attributes[i].name, 0);
 		if (j < 0)
 			return false;
-		if (sx_strcmp(node1->attributes[i].name, node2->attributes[j].name)
-			|| sx_strcmp(node1->attributes[i].value, node2->attributes[j].value))
+		if (sx_strcmp(node1->attributes[i].value, node2->attributes[j].value))
 			return false;
 	}
 
