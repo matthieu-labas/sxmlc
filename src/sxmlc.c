@@ -240,7 +240,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 {
 	int i;
 	
-	if (dst == NULL || (src != NULL &&  src->init_value != XML_INIT_DONE))
+	if (dst == NULL || (src != NULL && src->init_value != XML_INIT_DONE))
 		return false;
 	
 	(void)XMLNode_free(dst); /* 'dst' is freed first */

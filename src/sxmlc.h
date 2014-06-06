@@ -294,7 +294,7 @@ int SAX_Callbacks_init_DOM(SAX_Callbacks* sax);
  'str' is supposed to be like 'attrName[ ]=[ ]["]attr Value["]'.
  Return 0 if not enough memory or bad parameters (NULL 'str' or 'xmlattr').
         2 if last quote is missing in the attribute value.
-		1 if 'xmlattr' was filled correctly.
+        1 if 'xmlattr' was filled correctly.
  */
 int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr);
 
