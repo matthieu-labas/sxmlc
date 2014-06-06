@@ -542,11 +542,13 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 
 	/* Free node first */
 	(void)XMLNode_free(node->children[i_child]);
-	if (free_child) __free(node->children[i_child]);
+	if (free_child)
+		__free(node->children[i_child]);
 	
 	memmove(&node->children[i_child], &node->children[i_child+1], (node->n_children - i_child - 1) * sizeof(XMLNode*));
 	node->children = (XMLNode**)__realloc(node->children, --(node->n_children) * sizeof(XMLNode*)); /* Frees memory */
-	if (node->n_children == 0) node->tag_type = TAG_SELF;
+	if (node->n_children == 0)
+		node->tag_type = TAG_SELF;
 	
 	return node->n_children;
 }
@@ -735,9 +737,12 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node)
 static int _count_new_char_line(const SXML_CHAR* str, int nb_char_tab, int cur_sz_line)
 {
 	for (; *str; str++) {
-		if (*str == C2SX('\n')) cur_sz_line = 0;
-		else if (*str == C2SX('\t')) cur_sz_line += nb_char_tab;
-		else cur_sz_line++;
+		if (*str == C2SX('\n'))
+			cur_sz_line = 0;
+		else if (*str == C2SX('\t'))
+			cur_sz_line += nb_char_tab;
+		else
+			cur_sz_line++;
 	}
 	
 	return cur_sz_line;
