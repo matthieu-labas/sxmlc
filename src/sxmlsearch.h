@@ -126,7 +126,7 @@ int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag);
 /*
  Add an attribute search criteria.
  'attr_name' is mandatory. 'attr_value' should be NULL to test for attribute presence only
- (no test on value).  An empty string for 'attr_value' is not an equivalent to 'NULL'!
+ (no test on value). An empty string for 'attr_value' is not an equivalent to 'NULL'!
  'value_equal' should be specified to test for attribute value equality (='true') or
  difference (='false).
  Return the index of the new attribute, or '-1' for memory error.
