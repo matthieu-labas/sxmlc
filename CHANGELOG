@@ -1,3 +1,6 @@
+*** v4.0.6 - Merged sxmlutils.c into sxmlc.c.
+	- Corrected test when re-opening the file as text could be used before being NULL-tested.
+
 *** v4.0.5 - Corrected bug #6: XMLNode_equal was not testing attribute value (thanks to Carmel (@lablabla))
 	- Finished code reformatting
 
