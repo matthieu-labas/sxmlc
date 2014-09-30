@@ -1175,7 +1175,8 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		
 			case TAG_NONE:
 				p = sx_strchr(txt_end, C2SX('\n'));
-				if (p != NULL) *p = NULC;
+				if (p != NULL)
+					*p = NULC;
 				if (sax->on_error == NULL && sax->all_event == NULL) {
 					sx_fprintf(stderr, C2SX("%s:%d: SYNTAX ERROR (%s%s).\n"), sd->name, sd->line_num, txt_end, p == NULL ? C2SX("") : C2SX("..."));
 					if (p != NULL)
