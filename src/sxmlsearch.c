@@ -367,19 +367,22 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 	search1 = NULL;		/* Search struct to add the xpath portion to */
 	search2 = search;	/* Search struct to be filled from xpath portion */
 
-	tag = xpath;
+	tag = sx_strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
 	while (*tag != NULC) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
 			search2 = (XMLSearch*)__malloc(sizeof(XMLSearch));
 			if (search2 == NULL) {
+				__free(tag);
 				(void)XMLSearch_free(search, true);
 				return false;
 			}
 		}
 		/* Skip all first '/' */
 		for (; *tag != NULC && *tag == C2SX('/'); tag++) ;
-		if (*tag == NULC)
+		if (*tag == NULC) {
+			__free(tag);
 			return false;
+		}
 
 		/* Look for the end of tag name: after '/' (to get another tag) or end of string */
 		for (p = &tag[1]; *p != NULC && *p != C2SX('/'); p++) {
@@ -389,7 +392,7 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 		c = *p; /* Backup character before nulling it */
 		*p = NULC;
 		if (!_init_search_from_1XPath(tag, search2)) {
-			*p = c;
+			__free(tag);
 			(void)XMLSearch_free(search, true);
 			return false;
 		}
@@ -404,6 +407,7 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 		tag = p;
 	}
 
+	__free(tag);
 	return true;
 }
 
