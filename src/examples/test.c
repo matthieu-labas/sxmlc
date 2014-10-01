@@ -12,7 +12,6 @@
 #include <time.h>
 #include <string.h>
 //#define SXMLC_UNICODE
-#include "../sxmlutils.h"
 #include "../sxmlc.h"
 #include "../sxmlsearch.h"
 
@@ -517,7 +516,7 @@ void test_xpath(void)
 {
 	XMLSearch search;
 	SXML_CHAR* xpath2 = NULL;
-	SXML_CHAR xpath[] = C2SX("/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']");
+	const SXML_CHAR xpath[] = C2SX("/tagFather[@name, @id!='0', .='toto*']/tagChild[.='text', @attrib='value']");
 
 	if (XMLSearch_init_from_XPath(xpath, &search))
 		printf("%s\n %s\n", xpath, XMLSearch_get_XPath_string(&search, &xpath2, '\''));
@@ -635,7 +634,7 @@ int main(int argc, char** argv)
 	//test_SAX_buffer();
 	//test_DOM_from_SAX();
 	//test_search();
-	//test_xpath();
+	test_xpath();
 	//test_regexp();
 	//test_split();
 	//test_speed_DOM();

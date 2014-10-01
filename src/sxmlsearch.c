@@ -33,7 +33,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "sxmlutils.h"
 #include "sxmlc.h"
 #include "sxmlsearch.h"
 
@@ -162,7 +161,8 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name
 			search->attributes = (XMLAttribute*)__realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
 			return -1;
 		}
-	}
+	} else
+		p[i].value = NULL;
 
 	search->n_attributes = n;
 	search->attributes = p;
@@ -351,10 +351,10 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 	return true;
 }
 
-int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
+int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 {
 	XMLSearch *search1, *search2;
-	SXML_CHAR *p, *tag;
+	SXML_CHAR *p, *tag, *tag0;
 	SXML_CHAR c;
 
 	if (!XMLSearch_init(search))
@@ -367,12 +367,12 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 	search1 = NULL;		/* Search struct to add the xpath portion to */
 	search2 = search;	/* Search struct to be filled from xpath portion */
 
-	tag = sx_strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
+	tag = tag0 = sx_strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
 	while (*tag != NULC) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
 			search2 = (XMLSearch*)__malloc(sizeof(XMLSearch));
 			if (search2 == NULL) {
-				__free(tag);
+				__free(tag0);
 				(void)XMLSearch_free(search, true);
 				return false;
 			}
@@ -380,7 +380,7 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 		/* Skip all first '/' */
 		for (; *tag != NULC && *tag == C2SX('/'); tag++) ;
 		if (*tag == NULC) {
-			__free(tag);
+			__free(tag0);
 			return false;
 		}
 
@@ -392,7 +392,7 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 		c = *p; /* Backup character before nulling it */
 		*p = NULC;
 		if (!_init_search_from_1XPath(tag, search2)) {
-			__free(tag);
+			__free(tag0);
 			(void)XMLSearch_free(search, true);
 			return false;
 		}
@@ -407,7 +407,7 @@ int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search)
 		tag = p;
 	}
 
-	__free(tag);
+	__free(tag0);
 	return true;
 }
 
