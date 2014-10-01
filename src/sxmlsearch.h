@@ -34,7 +34,6 @@
 extern "C" {
 #endif
 
-#include "sxmlutils.h"
 #include "sxmlc.h"
 
 /*
@@ -188,7 +187,7 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
  Return 'true' when 'search' was correctly initialized, 'false' in case of memory
  problem or malformed 'xpath'.
  */
-int XMLSearch_init_from_XPath(SXML_CHAR* xpath, XMLSearch* search);
+int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search);
 
 /*
  Check whether a 'node' matches 'search' criteria.
