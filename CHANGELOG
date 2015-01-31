@@ -1,3 +1,5 @@
+*** v4.0.9 - Corrected SAX callbacks return value not taken into account (Thanks to Logan (nslogan@users.sf.net)!).
+
 *** v4.0.8 - Corrected potential bad free during initialization of search from XPath (Cnacu6o to Sergey (sekaich@users.sf.net)!).
 	- Set search attribute value to NULL when no '=' is given.
 	- Removed #include "sxmlutils.h" not needed anymore.
