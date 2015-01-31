@@ -1126,6 +1126,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 			n0 = read_line_alloc(in, in_type, &line, &sz, n0, 0, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
 			sd->line_num += ncr;
 			if (!n0) {
+				ret = false;
 				if (sax->on_error == NULL && sax->all_event == NULL)
 					sx_fprintf(stderr, C2SX("%s:%d: MEMORY ERROR.\n"), sd->name, sd->line_num);
 				else {
@@ -1134,11 +1135,11 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd))
 						break;
 				}
-				ret = false;
 				break; /* 'txt_end' is still NULL here so we'll display the syntax error below */
 			}
 		}
 		if (txt_end == NULL) { /* Missing tag start */
+			ret = false;
 			if (sax->on_error == NULL && sax->all_event == NULL)
 				sx_fprintf(stderr, C2SX("%s:%d: ERROR: Unexpected end character '>', without matching '<'!\n"), sd->name, sd->line_num);
 			else {
@@ -1147,33 +1148,33 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_UNEXPECTED_TAG_END, sd))
 					break;
 			}
-			ret = false;
 			break;
 		}
 		/* First part of 'line' (before '<') is to be added to 'father->text' */
 		*txt_end = NULC; /* Have 'line' be the text for 'father' */
 		if (*line != NULC && (sax->new_text != NULL || sax->all_event != NULL)) {
-			if (sax->new_text != NULL && !sax->new_text(str_unescape(line), sd))
+			if (sax->new_text != NULL && (exit = !sax->new_text(str_unescape(line), sd)))
 				break;
-			if (sax->all_event != NULL && !sax->all_event(XML_EVENT_TEXT, NULL, line, sd->line_num, sd))
+			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, line, sd->line_num, sd)))
 				break;
 		}
 		*txt_end = '<'; /* Restores tag start */
 
 		switch (tag_type = XML_parse_1string(txt_end, &node)) {
 			case TAG_ERROR: /* Memory error */
+				ret = false;
 				if (sax->on_error == NULL && sax->all_event == NULL)
 					sx_fprintf(stderr, C2SX("%s:%d: MEMORY ERROR.\n"), sd->name, sd->line_num);
 				else {
-					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd))
+					if (sax->on_error != NULL && (exit = !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd)))
 						break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd))
+					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd)))
 						break;
 				}
-				ret = false;
 				break;
 		
 			case TAG_NONE:
+				ret = false;
 				p = sx_strchr(txt_end, C2SX('\n'));
 				if (p != NULL)
 					*p = NULC;
@@ -1182,19 +1183,18 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 					if (p != NULL)
 						*p = C2SX('\n');
 				} else {
-					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_SYNTAX, sd->line_num, sd))
+					if (sax->on_error != NULL && (exit = !sax->on_error(PARSE_ERR_SYNTAX, sd->line_num, sd)))
 						break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd))
+					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd)))
 						break;
 				}
-				ret = false;
 				break;
 
 			case TAG_END:
 				if (sax->end_node != NULL || sax->all_event != NULL) {
-					if (sax->end_node != NULL && !sax->end_node(&node, sd))
+					if (sax->end_node != NULL && (exit = !sax->end_node(&node, sd)))
 						break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd))
+					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)))
 						break;
 				}
 				break;
@@ -1209,9 +1209,9 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 						if (sax->on_error == NULL && sax->all_event == NULL)
 							sx_fprintf(stderr, C2SX("%s:%d: SYNTAX ERROR.\n"), sd->name, sd->line_num);
 						else {
-							if (sax->on_error != NULL && !sax->on_error(meos(in) ? PARSE_ERR_EOF : PARSE_ERR_MEMORY, sd->line_num, sd))
+							if (sax->on_error != NULL && (exit = !sax->on_error(meos(in) ? PARSE_ERR_EOF : PARSE_ERR_MEMORY, sd->line_num, sd)))
 								break;
-							if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd))
+							if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd)))
 								break;
 						}
 						break;
@@ -1223,9 +1223,9 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 						if (sax->on_error == NULL && sax->all_event == NULL)
 							sx_fprintf(stderr, C2SX("%s:%d: PARSE ERROR.\n"), sd->name, sd->line_num);
 						else {
-							if (sax->on_error != NULL && !sax->on_error(meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd->line_num, sd))
+							if (sax->on_error != NULL && (exit = !sax->on_error(meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd->line_num, sd)))
 								break;
-							if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd))
+							if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd)))
 								break;
 						}
 						break;
@@ -1233,14 +1233,14 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				}
 				if (ret == false)
 					break;
-				if (sax->start_node != NULL && !sax->start_node(&node, sd))
+				if (sax->start_node != NULL && (exit = !sax->start_node(&node, sd)))
 					break;
-				if (sax->all_event != NULL && !sax->all_event(XML_EVENT_START_NODE, &node, NULL, sd->line_num, sd))
+				if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_START_NODE, &node, NULL, sd->line_num, sd)))
 					break;
 				if (node.tag_type != TAG_FATHER && (sax->end_node != NULL || sax->all_event != NULL)) {
-					if (sax->end_node != NULL && !sax->end_node(&node, sd))
+					if (sax->end_node != NULL && (exit = !sax->end_node(&node, sd)))
 						break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd))
+					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_END_NODE, &node, NULL, sd->line_num, sd)))
 						break;
 				}
 			break;
