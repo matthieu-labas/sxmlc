@@ -623,6 +623,17 @@ void test_search_attribute(void)
 	__free(val);
 }
 
+void test_backslash(void)
+{
+	XMLDoc doc;
+	XMLNode* r;
+
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM(C2SX("<tag k=\"key\" v=\"value\\\"/>"), C2SX("simple"), &doc);
+	r = doc.nodes[0];
+	printf("<%s %s=\"%s\" %s=\"%s\" />\n", r->tag, r->attributes[0].name, r->attributes[0].value, r->attributes[1].name, r->attributes[1].value);
+}
+
 #if 1
 int main(int argc, char** argv)
 {
@@ -634,14 +645,15 @@ int main(int argc, char** argv)
 	//test_SAX_buffer();
 	//test_DOM_from_SAX();
 	//test_search();
-	test_xpath();
+	//test_xpath();
 	//test_regexp();
 	//test_split();
 	//test_speed_DOM();
 	//test_speed_SAX();
 	//test_NodeXPath();
 	//test_mem();
-	test_search_attribute();
+	//test_search_attribute();
+	test_backslash();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();
