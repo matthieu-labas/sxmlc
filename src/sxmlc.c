@@ -439,8 +439,10 @@ int XMLNode_remove_all_attributes(XMLNode* node)
 
 	if (node->attributes != NULL) {
 		for (i = 0; i < node->n_attributes; i++) {
-			if (node->attributes[i].name != NULL) __free(node->attributes[i].name);
-			if (node->attributes[i].value != NULL) __free(node->attributes[i].value);
+			if (node->attributes[i].name != NULL)
+				__free(node->attributes[i].name);
+			if (node->attributes[i].value != NULL)
+				__free(node->attributes[i].value);
 		}
 		__free(node->attributes);
 		node->attributes = NULL;
@@ -708,7 +710,8 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node)
 	if (_add_node(&doc->nodes, &doc->n_nodes, node) < 0)
 		return -1;
 
-	if (node->tag_type == TAG_FATHER) doc->i_root = doc->n_nodes - 1; /* Main root node is the last father node */
+	if (node->tag_type == TAG_FATHER)
+		doc->i_root = doc->n_nodes - 1; /* Main root node is the last father node */
 
 	return doc->n_nodes;
 }
@@ -920,7 +923,8 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 	/* 'n0' is where the attribute name stops, 'n1' is where the attribute value starts */
 	for (n0 = 0; str[n0] != NULC && str[n0] != C2SX('=') && !sx_isspace(str[n0]); n0++) ; /* Search for '=' or a space */
 	for (n1 = n0; str[n1] && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
-	if (str[n1] != C2SX('=')) return 0; /* '=' not found: malformed string */
+	if (str[n1] != C2SX('='))
+		return 0; /* '=' not found: malformed string */
 	for (n1++; str[n1] && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
 	if (isquote(str[n1])) { /* Remove quotes */
 		quote = str[n1];
@@ -934,13 +938,13 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 		/* Copy name */
 		sx_strncpy(xmlattr->name, str, n0);
 		xmlattr->name[n0] = NULC;
-		(void)str_unescape(xmlattr->name);
+		/* (void)str_unescape(xmlattr->name); do not unescape the name */
 		/* Copy value (p starts after the quote (if any) and stops at the end of 'str'
 		  (skipping the quote if any, hence the '*(p+remQ)') */
 		for (i = 0, p = str + n1 + remQ; *(p+remQ) != NULC; i++, p++)
 			xmlattr->value[i] = *p;
 		xmlattr->value[i] = NULC;
-		(void)html2str(str_unescape(xmlattr->value), NULL); /* Convert HTML escape sequences */
+		(void)html2str(xmlattr->value, NULL); /* Convert HTML escape sequences, do not str_unescape(xmlattr->value) */
 		if (remQ && *p != quote)
 			ret = 2; /* Quote at the beginning but not at the end */
 	} else
@@ -1071,7 +1075,7 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 		while (*p != NULC && sx_isspace(*++p)) ; /* Skip spaces */
 		if (isquote(*p)) { /* Attribute value starts with a quote, look for next one, ignoring protected ones with '\' */
 			for (nn = p-str+1; str[nn] && str[nn] != *p; nn++) { // CHECK UNICODE "nn = p-str+1"
-				if (str[nn] == C2SX('\\')) nn++;
+				/* if (str[nn] == C2SX('\\')) nn++; [bugs:#7]: '\' is valid in values */
 			}
 			nn++;
 		} else { /* Attribute value stops at first space or end of XML string */
@@ -1153,7 +1157,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		/* First part of 'line' (before '<') is to be added to 'father->text' */
 		*txt_end = NULC; /* Have 'line' be the text for 'father' */
 		if (*line != NULC && (sax->new_text != NULL || sax->all_event != NULL)) {
-			if (sax->new_text != NULL && (exit = !sax->new_text(str_unescape(line), sd)))
+			if (sax->new_text != NULL && (exit = !sax->new_text(line, sd))) /* no str_unescape(line) */
 				break;
 			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, line, sd->line_num, sd)))
 				break;
@@ -1297,7 +1301,7 @@ int DOMXMLDoc_node_start(const XMLNode* node, SAX_Data* sd)
 	if (dom->current == NULL) {
 		if ((i = _add_node(&dom->doc->nodes, &dom->doc->n_nodes, new_node)) < 0) goto node_start_err;
 
-		if (dom->doc->i_root < 0 && node->tag_type == TAG_FATHER)
+		if (dom->doc->i_root < 0 && (node->tag_type == TAG_FATHER || node->tag_type == TAG_SELF))
 			dom->doc->i_root = i;
 	} else {
 		if (_add_node(&dom->current->children, &dom->current->n_children, new_node) < 0) goto node_start_err;
