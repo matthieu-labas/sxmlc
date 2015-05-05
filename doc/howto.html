@@ -433,7 +433,7 @@ while ((node = XMLSearch_next(node, &search)) != NULL) {
 	printf("Found match: &lt;%s&gt;\n", node-&gt;tag);
 }
 
-XMLSearch_free(&search);
+XMLSearch_free(&search, false);
 XMLDoc_free(&doc);
 </pre>
 </p>
