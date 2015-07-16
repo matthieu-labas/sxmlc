@@ -148,7 +148,8 @@ An XML node is basically what lies between the '&lt;' and '&gt;' characters. It 
 	<li>attribute value</li>
 	</ol>
 </li>
-<li>potentially a <em>tag "finisher"</em> <strong>/</strong> before the <strong>&gt;</strong></li>
+<li>potentially a <em>"tag finisher slash"</em> <strong>/</strong> before the <strong>&gt;</strong></li>
+<li><em>text</em> (if there is no "tag finisher slash")</li>
 </ol>
 <code>&lt;tag attribName="attribValue" ...&gt;</code><br/>
 </p>
@@ -187,6 +188,12 @@ Hence, knowing the tag type eases its display:
 </li>
 <li>
 	<code>TAG_DOCTYPE</code> (<code>&lt;!DOCTYPE text]/&gt;</code>) is a DOCTYPE node.
+</li>
+<li>
+	<code>TAG_TEXT</code> (since v4.1.0) is a special node which <code>text</code> field contains the text of its father node.
+	It is particularly useful when you want to DOM-parse a document and want to keep the text position in the
+	childrend, instead of merging all text pieces (default behavior before v4.1.0).<br/>
+	Thanks go to Olgierd Stankiewicz for that improvement! :)
 </li>
 </ul>
 </p>

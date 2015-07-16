@@ -152,6 +152,7 @@ typedef enum _TagType {
 	TAG_CDATA,		/* <![CDATA[ ]]> - CDATA node */
 	TAG_DOCTYPE,	/* <!DOCTYPE [ ]> - DOCTYPE node */
 	TAG_END,		/* </tag> - End of father node. */
+	TAG_TEXT,		/* text node*/
 
 	TAG_USER = 100	/* User-defined tag start */
 } TagType;
@@ -192,11 +193,11 @@ typedef struct _XMLNode {
 /*
  An XML document.
  */
-#ifndef MAX_PATH
-#define MAX_PATH 256
+#ifndef SXMLC_MAX_PATH
+#define SXMLC_MAX_PATH 256
 #endif
 typedef struct _XMLDoc {
-	SXML_CHAR filename[MAX_PATH];
+	SXML_CHAR filename[SXMLC_MAX_PATH];
 #ifdef SXMLC_UNICODE
 	BOM_TYPE bom_type;
 	unsigned char bom[5];	/* First characters read that might be a BOM when unicode is used */
@@ -366,6 +367,7 @@ typedef struct _DOM_through_SAX {
 	XMLNode* current;	/* For internal use (current father node) */
 	ParseError error;	/* For internal use (parse status) */
 	int line_error;		/* For internal use (line number when error occurred) */
+	int text_as_nodes;	/* For internal use (store text inside nodes as sequential TAG_TEXT nodes) */
 } DOM_through_SAX;
 
 int DOMXMLDoc_doc_start(SAX_Data* dom);
@@ -623,7 +625,10 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
    the tree. It should be initialized to 0 at first call.
  Return 'false' on invalid arguments (NULL 'node' or 'f'), 'true' otherwise.
  */
-int XMLNode_print(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+int XMLNode_print_attr_sep(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+
+/* For backward compatibility */
+#define XMLNode_print(node, f, tag_sep, child_sep, keep_text_spaces, sz_line, nb_char_tab) XMLNode_print_attr_sep(node, f, tag_sep, child_sep, C2SX(" "), keep_text_spaces, sz_line, nb_char_tab)
 
 /*
  Print the node "header": <tagname attribname="attibval" ...[/]>, spanning it on several lines if needed.
@@ -634,20 +639,31 @@ int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_
 /*
  Prints the XML document using 'XMLNode_print' on all document root nodes.
  */
-int XMLDoc_print(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+int XMLDoc_print_attr_sep(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
+
+/* For backward compatibility */
+#define XMLDoc_print(doc, f, tag_sep, child_sep, keep_text_spaces, sz_line, nb_char_tab) XMLDoc_print_attr_sep(doc, f, tag_sep, child_sep, C2SX(" "), keep_text_spaces, sz_line, nb_char_tab)
 
 /*
  Create a new XML document from a given 'filename' and load it to 'doc'.
+ 'text_as_nodes' should be non-zero to put text into separate TAG_TEXT nodes.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_file_DOM(const SXML_CHAR* filename, XMLDoc* doc);
+int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, int text_as_nodes);
+
+/* For backward compatibility */
+#define XMLDoc_parse_file_DOM(filename, doc) XMLDoc_parse_file_DOM_text_as_nodes(filename, doc, 0)
 
 /*
  Create a new XML document from a memory buffer 'buffer' that can be given a name 'name', and load
  it into 'doc'.
+ 'text_as_nodes' should be non-zero to put text into separate TAG_TEXT nodes.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_buffer_DOM(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLDoc* doc);
+int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLDoc* doc, int text_as_nodes);
+
+/* For backward compatibility */
+#define XMLDoc_parse_buffer_DOM(buffer, name, doc) XMLDoc_parse_buffer_DOM_text_as_nodes(buffer, name, doc, 0)
 
 /*
  Parse an XML document from a given 'filename', calling SAX callbacks given in the 'sax' structure.

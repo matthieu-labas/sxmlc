@@ -9,15 +9,16 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../sxmlutils.h"
 #include "../sxmlc.h"
 
-#if (defined(WIN32) || defined(WIN64)) && !defined(strcasecmp)
-#ifdef SXMLC_UNICODE
-#define strcasecmp _wcsicmp
-#else
-#define strcasecmp _strcmpi
-#endif
+#ifndef strcasecmp
+	#if (defined(WIN32) || defined(WIN64))
+	#ifdef SXMLC_UNICODE
+	#define strcasecmp _wcsicmp
+	#else
+	#define strcasecmp _strcmpi
+	#endif
+	#endif
 #endif
 
 #define N_LIST_INTRIC 8
