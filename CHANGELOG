@@ -1,3 +1,9 @@
+*** v4.1.0 - Thanks to Olgierd Stankiewicz!
+	- Added support for sparse text in nodes.
+	- Added attribute separator for XML print.
+	- Corrected missing +1 in attribute value char allocation.
+	- Changed constant name 'MAX_PATH' to 'SXMLC_MAX_PATH' to prevent potential conflicts with OS includes.
+
 *** v4.0.10 - Corrected backslash were not allowed in values (Thanks to Jörg Singendonk (singendonk@users.sf.net)!).
 	- Corrected root node was not set when it is a "self-contained" node.
 

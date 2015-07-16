@@ -158,6 +158,7 @@ It is as simple as a call to one of the <code>XMLDoc_parse_file</code> method:
 <pre class="code">
 XMLDoc_parse_file("path_to_my_file.xml", &doc);
 XMLDoc_parse_file_DOM("path_to_my_file.xml", &doc);
+XMLDoc_parse_file_DOM_text_as_nodes("path_to_my_file.xml", &doc, 1);
 XMLDoc_parse_file_SAX("path_to_my_file.xml", &sax_callbacks, &user_data);
 </pre>
 The first two methods are the same and use the DOM implementation, creating the XML tree internally.
@@ -232,7 +233,7 @@ but you would like to run some extra processing on the fly, as the document is b
 In this case, you have to use the SAX parser and define your own callbacks to run your processing
 before calling the "official" DOM callbacks that will create the document DOM structure.<br/>
 To achieve that, you <strong>HAVE TO</strong> use a <code>DOM_through_SAX</code> struct as the user pointer and initialize
-its 'doc' member with your initialized <code>XMLDoc</code> document and call the DOM callbacks with this.<br/>
+its <code>doc</code> member with your initialized <code>XMLDoc</code> document and call the DOM callbacks with this.<br/>
 Here is an example to compute nesting while the document is being DOM-style loaded.
  
 <pre class="code">
@@ -272,10 +273,35 @@ void test_DOM_from_SAX(void)
 }
 </pre>
 </p>
-
 <p>
 It is also possible to parse a character buffer instead of a file, using the <code>XMLDoc_parse_buffer_*</code> instead
 of <code>XMLDoc_parse_file_*</code> functions.
+</p>
+
+<h6>DOM text handling</h6>
+<p>
+Before v4.1.0 (and the help of Olgierd Stankiewicz :)), the default behavior of the <code>DOMXMLDoc_node_text()</code> function
+was to concatenate all texts together for a node. Consider the following XML structure:
+<pre class="code">
+&lt;tag1&gt;
+	text1
+	&lt;tag2&gt;text2&lt;/tag2&gt;
+	text3
+&lt;/tag1&gt;
+</pre>
+Before v4.1.0, if <code>node1</code> is the <code>&lt;tag1&gt;</code> node, <code>node1.tag</code> is <code>tag1</code>
+and <code>node1.text</code> is <code>text1text3</code>.<br/>
+From v4.1.0, a new parameter is available in the <code>DOM_through_SAX</code> structure: <code>text_as_nodes</code> field
+should be set to non-zero to switch to a new behavior: texts will be added as extra <code>TAG_TEXT</code> nodes, which
+<code>text</code> field contains the text. It enables keeping the order of text insertions:
+<ul>
+<li><code>node1.text</code> is <code>NULL</code></li>
+<li><code>node1.n_children</code> is 3</li>
+<li><code>node1.children[0]->tag_type</code> is <code>TAG_FATHER</code></li>
+<li><code>node1.children[0]->text</code> is <code>text1</code></li>
+<li><code>node1.children[2]->text</code> is <code>text3</code></li>
+</ul>
+The previous behavior is kept if <code>DOM_through_SAX.text_as_nodes</code> is 0 (text concatenation).
 </p>
 
 <a name="WRITE"/>

@@ -100,7 +100,7 @@ void test_gen(void)
 
 #if defined(WIN32) || defined(WIN64)
 	//f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
-	f = fopen("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Sources\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -119,13 +119,13 @@ void test_DOM(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\test.xml"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
 #endif
 		printf("Error while loading\n");
 #if defined(WIN32) || defined(WIN64)
-	f = fopen("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Sources\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -144,7 +144,7 @@ void test_unicode(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
 	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
@@ -154,7 +154,7 @@ void test_unicode(void)
 	if (doc.bom_type != BOM_NONE && doc.bom_type != BOM_UTF_8) mode = C2SX("w+b");
 #endif
 #if defined(WIN32) || defined(WIN64)
-	f = sx_fopen(C2SX("D:\\Signalis\\Sources\\sxmlc\\data\\testout.xml"), mode);
+	f = sx_fopen(C2SX("D:\\Sources\\sxmlc\\data\\testout.xml"), mode);
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -632,6 +632,24 @@ void test_backslash(void)
 	XMLDoc_parse_buffer_DOM(C2SX("<tag k=\"key\" v=\"value\\\"/>"), C2SX("simple"), &doc);
 	r = doc.nodes[0];
 	printf("<%s %s=\"%s\" %s=\"%s\" />\n", r->tag, r->attributes[0].name, r->attributes[0].value, r->attributes[1].name, r->attributes[1].value);
+	XMLDoc_free(&doc);
+}
+
+void test_text_node(void)
+{
+	XMLDoc doc;
+
+	fprintf(stdout, "text_as_nodes 0\n");
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM_text_as_nodes(C2SX("<node1>text1<node2>text2</node2>text3</node1>"), C2SX("simple"), &doc, 0);
+	XMLDoc_print(&doc, stdout, C2SX("\n"), C2SX("\t"), false, 0, 4);
+	XMLDoc_free(&doc);
+
+	fprintf(stdout, "\n\ntext_as_nodes 1\n");
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM_text_as_nodes(C2SX("<node1>text1<node2>text2</node2>text3</node1>"), C2SX("simple"), &doc, 1);
+	XMLDoc_print(&doc, stdout, C2SX("\n"), C2SX("\t"), false, 0, 4);
+	XMLDoc_free(&doc);
 }
 
 #if 1
@@ -653,7 +671,8 @@ int main(int argc, char** argv)
 	//test_NodeXPath();
 	//test_mem();
 	//test_search_attribute();
-	test_backslash();
+	//test_backslash();
+	test_text_node();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();
