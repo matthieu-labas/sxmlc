@@ -652,6 +652,42 @@ void test_text_node(void)
 	XMLDoc_free(&doc);
 }
 
+void test_xpath2(void)
+{
+	XMLDoc doc;
+	XMLSearch search;
+	XMLNode* res;
+
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><mode>1</mode></video>"), C2SX("simple"), &doc, 1);
+
+	XMLSearch_init_from_XPath("/video/mode", &search);
+	res = XMLSearch_next(doc.nodes[doc.i_root], &search);
+	if (res != NULL)
+		fprintf(stdout, "<%s>%s</%s>\n", res->tag, res->text == NULL ? "null" : res->text, res->tag);
+
+	XMLSearch_free(&search, 0);
+	XMLDoc_free(&doc);
+}
+
+void test_xpath3(void)
+{
+	XMLDoc doc;
+	XMLSearch search;
+	XMLNode* res;
+
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><Option myattr='2' /></video>"), C2SX("simple"), &doc, 1);
+
+	XMLSearch_init_from_XPath("Option[@myattr]", &search);
+	res = XMLSearch_next(doc.nodes[doc.i_root], &search);
+	if (res != NULL)
+		fprintf(stdout, "<%s>%s</%s>\n", res->tag, res->text == NULL ? "null" : res->text, res->tag);
+
+	XMLSearch_free(&search, 0);
+	XMLDoc_free(&doc);
+}
+
 #if 1
 int main(int argc, char** argv)
 {
@@ -672,7 +708,7 @@ int main(int argc, char** argv)
 	//test_mem();
 	//test_search_attribute();
 	//test_backslash();
-	test_text_node();
+	test_xpath3();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

@@ -1194,7 +1194,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				}
 				break;
 		
-			case TAG_NONE:
+			case TAG_NONE: /* Syntax error */
 				ret = false;
 				p = sx_strchr(txt_end, C2SX('\n'));
 				if (p != NULL)
