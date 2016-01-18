@@ -312,7 +312,7 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 	for (p++; *p && *p != C2SX(']'); p++) {
 		for (q = p; *q && *q != C2SX(',') && *q != C2SX(']'); q++) ; /* Look for potential ',' separator to null it */
 		cc = *q;
-		if (*q == C2SX(','))
+		if (*q == C2SX(',') || *q == C2SX(']'))
 			*q = NULC;
 		ret = true;
 		switch (*p) {
@@ -328,16 +328,16 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 
 			/* Attribute name, possibly '@attrib[[ ]=[ ]"value"]' */
 			case C2SX('@'):
-				if (!split_left_right(p+1, '=', &l0, &l1, &is, &r0, &r1, true, true))
+				if (!split_left_right(++p, '=', &l0, &l1, &is, &r0, &r1, true, true))
 					return false;
-				c = p[l1+2];
-				c1 = p[r1+2];
-				p[l1+2] = NULC;
-				p[r1+2] = NULC;
-				ret = (XMLSearch_search_add_attribute(search, &p[1+l0], (is < 0 ? NULL : &p[1+r0]), true) < 0 ? false : true); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
-				p[l1+2] = c;
-				p[r1+2] = c1;
-				p += r1+1; /* Jump to next value */
+				c = p[l1+1];
+				c1 = p[r1+1];
+				p[l1+1] = NULC;
+				p[r1+1] = NULC;
+				ret = (XMLSearch_search_add_attribute(search, &p[l0], (is < 0 ? NULL : &p[r0]), true) < 0 ? false : true); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
+				p[l1+1] = c;
+				p[r1+1] = c1;
+				p += r1-1; /* Jump to next value */
 				break;
 
 			default: /* Not implemented */
