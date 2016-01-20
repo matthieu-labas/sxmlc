@@ -1680,7 +1680,8 @@ int _beob(DataSourceBuffer* ds)
 int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_line, int i0, SXML_CHAR from, SXML_CHAR to, int keep_fromto, SXML_CHAR interest, int* interest_count)
 {
 	int init_sz = 0;
-	SXML_CHAR c, *pt;
+	SXML_CHAR ch, *pt;
+	int c;
 	int n, ret;
 	int (*mgetc)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_bgetc : (int(*)(void*))sx_fgetc);
 	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
@@ -1694,12 +1695,14 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 	if (interest_count != NULL)
 		*interest_count = 0;
 	while (true) {
-		c = (SXML_CHAR)mgetc(in);
-		if (interest_count != NULL && c == interest)
-			(*interest_count)++;
 		/* Reaching EOF before 'to' char is not an error but should trigger 'line' alloc and init to '' */
+		if ((c = mgetc(in)) == EOF)
+			break;
+		ch = (SXML_CHAR)c;
+		if (interest_count != NULL && ch == interest)
+			(*interest_count)++;
 		/* If 'from' is '\0', we stop here */
-		if (c == from || c == CEOF || from == NULC)
+		if (ch == from || from == NULC)
 			break;
 	}
 	
@@ -1721,36 +1724,35 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 		(*line)[n] = NULC;
 		return meos(in) ? n : 0; /* Error if not EOF */
 	}
-	if (c != from || keep_fromto)
-		(*line)[n++] = c;
+	if (ch != from || keep_fromto)
+		(*line)[n++] = ch;
 	(*line)[n] = NULC;
 	ret = 0;
 	while (true) {
-		c = (SXML_CHAR)mgetc(in);
-		if (interest_count != NULL && c == interest)
-			(*interest_count)++;
-		if (c == CEOF) { /* EOF or error */
+		if ((c = mgetc(in)) == CEOF) { /* EOF or error */
 			(*line)[n] = NULC;
 			ret = meos(in) ? n : 0;
 			break;
-		} else {
-			(*line)[n] = c;
-			if (c != to || (keep_fromto && to != NULC && c == to)) /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
-				n++;
-			if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
-				*sz_line += MEM_INCR_RLA;
-				pt = (SXML_CHAR*)__realloc(*line, *sz_line*sizeof(SXML_CHAR));
-				if (pt == NULL) {
-					ret = 0;
-					break;
-				} else
-					*line = pt;
-			}
-			(*line)[n] = NULC; /* If we reached the 'to' character and we want to strip it, 'n' hasn't changed and 'line[n]' (which is 'to') will be replaced by '\0' */
-			if (c == to) {
-				ret = n;
+		}
+		ch = (SXML_CHAR)c;
+		if (interest_count != NULL && ch == interest)
+			(*interest_count)++;
+		(*line)[n] = ch;
+		if (ch != to || (keep_fromto && to != NULC && ch == to)) /* If we reached the 'to' character and we keep it, we still need to add the extra '\0' */
+			n++;
+		if (n >= *sz_line) { /* Too many characters for our line => realloc some more */
+			*sz_line += MEM_INCR_RLA;
+			pt = (SXML_CHAR*)__realloc(*line, *sz_line*sizeof(SXML_CHAR));
+			if (pt == NULL) {
+				ret = 0;
 				break;
-			}
+			} else
+				*line = pt;
+		}
+		(*line)[n] = NULC; /* If we reached the 'to' character and we want to strip it, 'n' hasn't changed and 'line[n]' (which is 'to') will be replaced by '\0' */
+		if (ch == to) {
+			ret = n;
+			break;
 		}
 	}
 	
