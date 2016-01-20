@@ -100,7 +100,7 @@ void test_gen(void)
 
 #if defined(WIN32) || defined(WIN64)
 	//f = fopen("G:\\Code\\Workspace\\sxmlc\\data\\testout.xml", "w+t");
-	f = fopen("D:\\Sources\\sxmlc\\data\\testout.xml", "w+t");
+	f = fopen("D:\\Workspaces\\misc\\sxmlc\\data\\testout.xml", "w+t");
 #else
 	f = fopen("/home/matth/Code/workspace/sxmlc/data/testout.xml", "w+t");
 #endif
@@ -144,8 +144,8 @@ void test_unicode(void)
 	XMLDoc_init(&doc);
 
 #if defined(WIN32) || defined(WIN64)
-	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
-	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\test.xml"), &doc))
+	//if (!XMLDoc_parse_file_DOM(C2SX("D:\\Sources\\sxmlc\\data\\wordutf8.txt"), &doc))
+	if (!XMLDoc_parse_file_DOM(C2SX("D:\\Workspaces\\misc\\sxmlc\\data\\test.xml"), &doc))
 #else
 	if (!XMLDoc_parse_file_DOM(C2SX("/home/matth/Code/workspace/sxmlc/data/test.xml"), &doc))
 #endif
@@ -659,7 +659,7 @@ void test_xpath2(void)
 	XMLNode* res;
 
 	XMLDoc_init(&doc);
-	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><mode>1</mode></video>"), C2SX("simple"), &doc, 1);
+	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><mode>1</mode></video>"), C2SX("simple"), &doc);
 
 	XMLSearch_init_from_XPath("/video/mode", &search);
 	res = XMLSearch_next(doc.nodes[doc.i_root], &search);
@@ -677,7 +677,7 @@ void test_xpath3(void)
 	XMLNode* res;
 
 	XMLDoc_init(&doc);
-	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><Option myattr='2' /></video>"), C2SX("simple"), &doc, 1);
+	XMLDoc_parse_buffer_DOM(C2SX("<?xml blah blah blah?><video><Option myattr='2' /></video>"), C2SX("simple"), &doc);
 
 	XMLSearch_init_from_XPath("Option[@myattr]", &search);
 	res = XMLSearch_next(doc.nodes[doc.i_root], &search);
@@ -692,8 +692,8 @@ void test_xpath3(void)
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, C2SX("<#[MONTAG-"), C2SX("-]>"));
-	//test_gen();
-	//test_unicode();
+	test_gen();
+	test_unicode();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -708,7 +708,8 @@ int main(int argc, char** argv)
 	//test_mem();
 	//test_search_attribute();
 	//test_backslash();
-	test_xpath3();
+	//test_xpath3();
+	//test_text_node();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();
