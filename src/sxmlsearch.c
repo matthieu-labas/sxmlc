@@ -82,7 +82,7 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 		search->tag = NULL;
 	}
 
-	if (search->n_attributes > 0 && search->attributes != NULL) {
+	if (search->attributes != NULL) {
 		for (i = 0; i < search->n_attributes; i++) {
 			if (search->attributes[i].name != NULL)
 				__free(search->attributes[i].name);
@@ -109,12 +109,16 @@ int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag)
 	if (search == NULL)
 		return false;
 
-	if (tag == NULL && search->tag != NULL)
-		__free(search->tag);
+	if (tag == NULL) {
+		if (search->tag != NULL) {
+			__free(search->tag);
+			search->tag = NULL;
+		}
+		return true;
+	}
 
 	search->tag = sx_strdup(tag);
-
-	return true;
+	return (search->tag != NULL);
 }
 
 int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text)
@@ -122,18 +126,24 @@ int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text)
 	if (search == NULL)
 		return false;
 
-	if (text == NULL && search->text != NULL)
-		__free(search->text);
+	if (text == NULL) {
+		if (search->text != NULL) {
+			__free(search->text);
+			search->text = NULL;
+		}
+		return true;
+	}
 
 	search->text = sx_strdup(text);
-
-	return true;
+	return (search->text != NULL);
 }
 
 int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value, int value_equal)
 {
-	int i, n;
-	XMLAttribute* p;
+	int i;
+	XMLAttribute* pt;
+	SXML_CHAR* name;
+	SXML_CHAR* value;
 
 	if (search == NULL)
 		return -1;
@@ -141,31 +151,30 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name
 	if (attr_name == NULL || attr_name[0] == NULC)
 		return -1;
 
-	n = search->n_attributes + 1;
-	p = (XMLAttribute*)__realloc(search->attributes, n * sizeof(XMLAttribute));
-	if (p == NULL)
-		return -1;
+	name = sx_strdup(attr_name);
+	value = (attr_value == NULL ? NULL : sx_strdup(attr_value));
+	if (name == NULL || (attr_value && value == NULL)) {
+		if (value != NULL)
+			__free(value);
+		if (name != NULL)
+			__free(name);
+	}
 
 	i = search->n_attributes;
-	p[i].active = value_equal;
-	p[i].name = sx_strdup(attr_name);
-	if (p[i].name == NULL) {
-		search->attributes = (XMLAttribute*)__realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
+	pt = (XMLAttribute*)__realloc(search->attributes, (i + 1) * sizeof(XMLAttribute));
+	if (pt == NULL) {
+		if (value)
+			__free(value);
+		__free(name);
 		return -1;
 	}
 
-	if (attr_value != NULL) {
-		p[i].value = sx_strdup(attr_value);
-		if (p[i].value == NULL) {
-			__free(p[i].name);
-			search->attributes = (XMLAttribute*)__realloc(p, i*sizeof(XMLAttribute)); /* Revert back to original size */
-			return -1;
-		}
-	} else
-		p[i].value = NULL;
+	pt[i].name = name;
+	pt[i].value = value;
+	pt[i].active = value_equal;
 
-	search->n_attributes = n;
-	search->attributes = p;
+	search->n_attributes = i+1;
+	search->attributes = pt;
 
 	return i;
 }
@@ -187,17 +196,32 @@ int XMLSearch_search_get_attribute_index(const XMLSearch* search, const SXML_CHA
 
 int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr)
 {
+	XMLAttribute* pt;
+
 	if (search == NULL || i_attr < 0 || i_attr >= search->n_attributes)
 		return -1;
 
 	/* Free attribute fields first */
+	if (search->n_attributes == 1)
+		pt = NULL;
+	else {
+		pt = (XMLAttribute*)__malloc((search->n_attributes - 1) * sizeof(XMLAttribute));
+		if (pt == NULL)
+			return -1;
+	}
 	if (search->attributes[i_attr].name != NULL)
 		__free(search->attributes[i_attr].name);
 	if (search->attributes[i_attr].value != NULL)
 		__free(search->attributes[i_attr].value);
 
-	memmove(&search->attributes[i_attr], &search->attributes[i_attr+1], (search->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
-	search->attributes = (XMLAttribute*)__realloc(search->attributes, --(search->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
+	if (pt != NULL) {
+		memcpy(pt, search->attributes, i_attr * sizeof(XMLAttribute));
+		memcpy(&pt[i_attr], &search->attributes[i_attr + 1], (search->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
+	}
+	if (search->attributes)
+		__free(search->attributes);
+	search->attributes = pt;
+	search->n_attributes--;
 
 	return search->n_attributes;
 }
@@ -555,7 +579,7 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 			n = 1;
 		} else
 			sx_strcat(*xpath, C2SX(", "));
-		p = &(*xpath[sx_strlen(*xpath)]);
+		p = &(*xpath)[sx_strlen(*xpath)];
 
 		/* Standard and Unicode versions of 'sprintf' do not have the same signature! :( */
 		sx_sprintf(p,
