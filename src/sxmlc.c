@@ -93,7 +93,7 @@ int XML_register_user_tag(TagType tag_type, SXML_CHAR* start, SXML_CHAR* end)
 	n = i + 1;
 	p = (_TAG*)__realloc(_user_tags.tags, n * sizeof(_TAG));
 	if (p == NULL)
-		return false;
+		return -1;
 
 	p[i].tag_type = tag_type;
 	p[i].start = start;
@@ -108,10 +108,27 @@ int XML_register_user_tag(TagType tag_type, SXML_CHAR* start, SXML_CHAR* end)
 
 int XML_unregister_user_tag(int i_tag)
 {
-	if (i_tag < 0 || i_tag > _user_tags.n_tags)
-		return -1;
+	_TAG* pt;
 
-	_user_tags.tags = (_TAG*)__realloc(_user_tags.tags, (_user_tags.n_tags--) * sizeof(_TAG));
+	if (i_tag < 0 || i_tag >= _user_tags.n_tags)
+ 		return -1;
+
+	if (_user_tags.n_tags == 1)
+		pt = NULL;
+	else {
+		pt = (_TAG*)__malloc((_user_tags.n_tags - 1) * sizeof(_TAG));
+		if (pt == NULL)
+			return -1;
+	}
+ 
+	if (pt != NULL) {
+		memcpy(pt, _user_tags.tags, i_tag * sizeof(_TAG));
+		memcpy(&pt[i_tag], &_user_tags.tags[i_tag + 1], (_user_tags.n_tags - i_tag - 1) * sizeof(_TAG));
+	}
+	if (_user_tags.tags != NULL)
+		__free(_user_tags.tags);
+	_user_tags.tags = pt;
+	_user_tags.n_tags--;
 
 	return _user_tags.n_tags;
 }
@@ -279,8 +296,8 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 	dst->user = src->user;
 	dst->active = src->active;
 	
-	/* Copy children if required */
-	if (copy_children) {
+	/* Copy children if required (and there are any) */
+	if (copy_children && src->n_children > 0) {
 		dst->children = (XMLNode**)__calloc(src->n_children, sizeof(XMLNode*));
 		if (dst->children == NULL) goto copy_err;
 		dst->n_children = src->n_children;
@@ -309,14 +326,16 @@ int XMLNode_set_active(XMLNode* node, int active)
 
 int XMLNode_set_tag(XMLNode* node, const SXML_CHAR* tag)
 {
+	SXML_CHAR* newtag;
 	if (node == NULL || tag == NULL || node->init_value != XML_INIT_DONE)
 		return false;
 	
-	if (node->tag != NULL) __free(node->tag);
-	node->tag = sx_strdup(tag);
-	if (node->tag == NULL)
+	newtag = sx_strdup(tag);
+	if (newtag == NULL)
 		return false;
-	
+	if (node->tag != NULL) __free(node->tag);
+	node->tag = newtag;
+
 	return true;
 }
 
@@ -347,28 +366,38 @@ int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_
 		return -1;
 	
 	i = XMLNode_search_attribute(node, attr_name, 0);
-	if (i >= 0) {
+	if (i >= 0) { /* Attribute found: update it */
+		SXML_CHAR* value = NULL;
+		if (attr_value != NULL && (value = sx_strdup(attr_value)) == NULL)
+			return -1;
 		pt = node->attributes;
 		if (pt[i].value != NULL)
 			__free(pt[i].value);
-		pt[i].value = sx_strdup(attr_value);
-		if (pt[i].value == NULL)
-			return -1;
-	} else {
+		pt[i].value = value;
+	} else { /* Attribute not found: add it */
+		SXML_CHAR* name = sx_strdup(attr_name);
+		SXML_CHAR* value = (attr_value == NULL ? NULL : sx_strdup(attr_value));
+		if (name == NULL || (value == NULL && attr_value != NULL)) {
+			if (value != NULL)
+				__free(value);
+			if (name != NULL)
+				__free(name);
+ 			return -1;
+		}
 		i = node->n_attributes;
 		pt = (XMLAttribute*)__realloc(node->attributes, (i+1) * sizeof(XMLAttribute));
-		if (pt == NULL) return 0;
-
-		pt[i].name = sx_strdup(attr_name);
-		pt[i].value = sx_strdup(attr_value);
-		if (pt[i].name != NULL && pt[i].value != NULL) {
-			pt[i].active = true;
-			node->attributes = pt;
-			node->n_attributes = i + 1;
-		} else {
-			node->attributes = (XMLAttribute*)__realloc(pt, i * sizeof(XMLAttribute)); /* Frees memory, cannot fail hopefully! */
+		if (pt == NULL) {
+			if (value != NULL)
+				__free(value);
+			__free(name);
 			return -1;
 		}
+
+		pt[i].name = name;
+		pt[i].value = value;
+		pt[i].active = true;
+		node->attributes = pt;
+		node->n_attributes = i + 1;
 	}
 
 	return node->n_attributes;
@@ -417,15 +446,31 @@ int XMLNode_search_attribute(const XMLNode* node, const SXML_CHAR* attr_name, in
 
 int XMLNode_remove_attribute(XMLNode* node, int i_attr)
 {
+	XMLAttribute* pt;
 	if (node == NULL || node->init_value != XML_INIT_DONE || i_attr < 0 || i_attr >= node->n_attributes)
 		return -1;
 	
-	/* Free attribute fields first */
+	/* Before modifying first see if we run out of memory */
+	if (node->n_attributes == 1)
+		pt = NULL;
+	else {
+		pt = (XMLAttribute*)__malloc((node->n_attributes - 1) * sizeof(XMLAttribute));
+		if (pt == NULL)
+			return -1;
+	}
+
+	/* Can't fail anymore, free item */
 	if (node->attributes[i_attr].name != NULL) __free(node->attributes[i_attr].name);
 	if (node->attributes[i_attr].value != NULL) __free(node->attributes[i_attr].value);
 	
-	memmove(&node->attributes[i_attr], &node->attributes[i_attr+1], (node->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
-	node->attributes = (XMLAttribute*)__realloc(node->attributes, --(node->n_attributes) * sizeof(XMLAttribute)); /* Frees memory */
+	if (pt != NULL) {
+		memcpy(pt, node->attributes, i_attr * sizeof(XMLAttribute));
+		memcpy(&pt[i_attr], &node->attributes[i_attr + 1], (node->n_attributes - i_attr - 1) * sizeof(XMLAttribute));
+	}
+	if (node->attributes != NULL)
+		__free(node->attributes);
+	node->attributes = pt;
+	node->n_attributes--;
 	
 	return node->n_attributes;
 }
@@ -454,6 +499,7 @@ int XMLNode_remove_all_attributes(XMLNode* node)
 
 int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 {
+	SXML_CHAR* p;
 	if (node == NULL || node->init_value != XML_INIT_DONE)
 		return false;
 
@@ -466,17 +512,10 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 		return true;
 	}
 
-	/* No text is defined yet => allocate it */
-	if (node->text == NULL) {
-		node->text = (SXML_CHAR*)__malloc((sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
-		if (node->text == NULL)
-			return false;
-	} else {
-		SXML_CHAR* p = (SXML_CHAR*)__realloc(node->text, (sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
-		if (p == NULL)
-			return false;
-		node->text = p;
-	}
+	p = (SXML_CHAR*)__realloc(node->text, (sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
+	if (p == NULL)
+		return false;
+	node->text = p;
 
 	sx_strcpy(node->text, text);
 
@@ -493,7 +532,7 @@ int XMLNode_add_child(XMLNode* node, XMLNode* child)
 		child->father = node;
 		return true;
 	} else
-		return true;
+		return false;
 }
 
 int XMLNode_get_children_count(const XMLNode* node)
@@ -529,6 +568,7 @@ XMLNode* XMLNode_get_child(const XMLNode* node, int i_child)
 int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 {
 	int i;
+	XMLNode** pt;
 
 	if (node == NULL || node->init_value != XML_INIT_DONE || i_child < 0 || i_child >= node->n_children)
 		return -1;
@@ -543,13 +583,28 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 	if (i >= node->n_children)
 		return -1; /* Children is not found */
 
-	/* Free node first */
+	/* Before modifying first see if we run out of memory */
+	if (node->n_children == 1)
+		pt = NULL;
+	else {
+		pt = (XMLNode**)__malloc((node->n_children - 1) * sizeof(XMLNode*));
+		if (pt == NULL);
+			return -1;
+	}
+
+	/* Can't fail anymore, free item */
 	(void)XMLNode_free(node->children[i_child]);
 	if (free_child)
 		__free(node->children[i_child]);
 	
-	memmove(&node->children[i_child], &node->children[i_child+1], (node->n_children - i_child - 1) * sizeof(XMLNode*));
-	node->children = (XMLNode**)__realloc(node->children, --(node->n_children) * sizeof(XMLNode*)); /* Frees memory */
+	if (pt != NULL) {
+		memcpy(pt, node->children, i_child * sizeof(XMLNode*));
+		memcpy(&pt[i_child], &node->children[i_child + 1], (node->n_children - i_child - 1) * sizeof(XMLNode*));
+	}
+	if (node->children != NULL)
+		__free(node->children);
+	node->children = pt;
+	node->n_children--;
 	if (node->n_children == 0)
 		node->tag_type = TAG_SELF;
 	
@@ -705,7 +760,7 @@ int XMLDoc_set_root(XMLDoc* doc, int i_root)
 int XMLDoc_add_node(XMLDoc* doc, XMLNode* node)
 {
 	if (doc == NULL || node == NULL || doc->init_value != XML_INIT_DONE)
-		return false;
+		return -1;
 	
 	if (_add_node(&doc->nodes, &doc->n_nodes, node) < 0)
 		return -1;
@@ -718,15 +773,32 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node)
 
 int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node)
 {
+	XMLNode** pt;
 	if (doc == NULL || doc->init_value != XML_INIT_DONE || i_node < 0 || i_node > doc->n_nodes)
 		return false;
 
-	/* Free node first */
+	/* Before modifying first see if we run out of memory */
+	if (doc->n_nodes == 1)
+		pt = NULL;
+	else {
+		pt = (XMLNode**)__malloc((doc->n_nodes - 1) * sizeof(XMLNode*));
+		if (pt == NULL)
+			return false;
+	}
+
+	/* Can't fail anymore, free item */
 	(void)XMLNode_free(doc->nodes[i_node]);
 	if (free_node) __free(doc->nodes[i_node]);
 	
-	memmove(&doc->nodes[i_node], &doc->nodes[i_node+1], (doc->n_nodes - i_node - 1) * sizeof(XMLNode*));
-	doc->nodes = (XMLNode**)__realloc(doc->nodes, --(doc->n_nodes) * sizeof(XMLNode*)); /* Frees memory */
+	if (pt != NULL) {
+		memcpy(pt, &doc->nodes[i_node], i_node * sizeof(XMLNode*));
+		memcpy(&pt[i_node], &doc->nodes[i_node + 1], (doc->n_nodes - i_node - 1) * sizeof(XMLNode*));
+	}
+
+	if (doc->nodes != NULL)
+		__free(doc->nodes);
+	doc->nodes = pt;
+	doc->n_nodes--;
 
 	return true;
 }
@@ -770,7 +842,7 @@ static int _XMLNode_print_header(const XMLNode* node, FILE* f, const SXML_CHAR* 
 	SXML_CHAR* p;
 
 	if (node == NULL || f == NULL || !node->active || node->tag == NULL || node->tag[0] == NULC)
-		return false;
+		return -1;
 	
 	/* Special handling of DOCTYPE */
 	if (node->tag_type == TAG_DOCTYPE) {
@@ -967,8 +1039,14 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 		ret = 0;
 	
 	if (ret == 0) {
-		if (xmlattr->name != NULL) __free(xmlattr->name);
-		if (xmlattr->value != NULL) __free(xmlattr->value);
+		if (xmlattr->name != NULL) {
+			__free(xmlattr->name);
+			xmlattr->name = NULL;
+		}
+		if (xmlattr->value != NULL) {
+			__free(xmlattr->value);
+			xmlattr->value = NULL;
+		}
 	}
 	
 	return ret;
@@ -1001,7 +1079,7 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 {
 	SXML_CHAR *p, c;
 	XMLAttribute* pt;
-	int n, nn, len, tag_end = 0;
+	int n, nn, len, rc, tag_end = 0;
 	
 	if (str == NULL || xmlnode == NULL)
 		return TAG_ERROR;
@@ -1087,6 +1165,9 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 		pt = (XMLAttribute*)__realloc(xmlnode->attributes, (xmlnode->n_attributes + 1) * sizeof(XMLAttribute));
 		if (pt == NULL) goto parse_err;
 		
+		pt[xmlnode->n_attributes].name = NULL;
+		pt[xmlnode->n_attributes].value = NULL;
+		pt[xmlnode->n_attributes].active = false;
 		xmlnode->n_attributes++;
 		xmlnode->attributes = pt;
 		while (*p != NULC && sx_isspace(*++p)) ; /* Skip spaces */
@@ -1103,8 +1184,9 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 		/* the attribute definition ('attrName="attr val"') is between 'str[n]' and 'str[nn]' */
 		c = str[nn]; /* Backup character */
 		str[nn] = NULC; /* End string to call 'parse_XML_attribute' */
-		if (!XML_parse_attribute(&str[n], &xmlnode->attributes[xmlnode->n_attributes - 1])) goto parse_err;
+		rc = XML_parse_attribute(&str[n], &xmlnode->attributes[xmlnode->n_attributes - 1]);
 		str[nn] = c;
+		if (!rc) goto parse_err;
 		
 		n = nn;
 	}
@@ -1540,7 +1622,8 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 	if (doc == NULL || filename == NULL || filename[0] == NULC || doc->init_value != XML_INIT_DONE)
 		return false;
 
-	sx_strncpy(doc->filename, filename, SXMLC_MAX_PATH);
+	sx_strncpy(doc->filename, filename, SXMLC_MAX_PATH - 1);
+	doc->filename[SXMLC_MAX_PATH - 1] = NULC;
 
 	/* Read potential BOM on file, only when unicode is defined */
 #ifdef SXMLC_UNICODE
@@ -1617,6 +1700,8 @@ void* __realloc(void* mem, size_t sz)
 	void* p = realloc(mem, sz);
 	if (mem == NULL && p != NULL)
 		nb_alloc++;
+	else if (mem != NULL && sz == 0)
+		nb_free++;
 	printf("0x%x: REALLOC 0x%x (%d)", p, mem, sz);
 	if (mem == NULL)
 		printf(" - NA %d - NF %d = %d", nb_alloc, nb_free, nb_alloc - nb_free);
@@ -1939,8 +2024,12 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 
 	/* Save position and try to read and skip BOM if found. If not, go back to save position. */
 	pos = ftell(f);
-	fread(&c1, sizeof(char), 1, f);
-	fread(&c2, sizeof(char), 1, f);
+	if (pos < 0)
+		return BOM_NONE;
+	if (fread(&c1, sizeof(char), 1, f) != 1 || fread(&c2, sizeof(char), 1, f) != 1) {
+		fseek(f, pos, SEEK_SET);
+		return BOM_NONE;
+	}
 	if (bom != NULL) {
 		bom[0] = c1;
 		bom[1] = c2;
@@ -1954,8 +2043,12 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 
 		case (unsigned short)0xfffe:
 			pos = ftell(f); /* Save current position to get it back if BOM is not UTF-32LE */
-			fread(&c1, sizeof(char), 1, f);
-			fread(&c2, sizeof(char), 1, f);
+			if (pos < 0)
+				return BOM_UTF_16LE;
+			if (fread(&c1, sizeof(char), 1, f) != 1 || fread(&c2, sizeof(char), 1, f) != 1) {
+				fseek(f, pos, SEEK_SET);
+				return BOM_UTF_16LE;
+			}
 			if (c1 == 0x00 && c2 == 0x00) {
 				if (bom != NULL)
 					bom[2] = bom[3] = bom[4] = '\0';
@@ -1963,13 +2056,12 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 					*sz_bom = 4;
 				return BOM_UTF_32LE;
 			}
-			fseek(f, pos, SEEK_SET); /* fseek(f, -2, SEEK_CUR) is not garanteed under Windows (and actually fail in Unicode...) */
+			fseek(f, pos, SEEK_SET); /* fseek(f, -2, SEEK_CUR) is not garanteed on Windows (and actually fail in Unicode...) */
 			return BOM_UTF_16LE;
 
 		case (unsigned short)0x0000:
-			fread(&c1, sizeof(char), 1, f);
-			fread(&c2, sizeof(char), 1, f);
-			if (c1 == 0xfe && c2 == 0xff) {
+			if (fread(&c1, sizeof(char), 1, f) == 1 && fread(&c2, sizeof(char), 1, f) == 1
+					&& c1 == 0xfe && c2 == 0xff) {
 				bom[2] = c1;
 				bom[3] = c2;
 				bom[4] = '\0';
@@ -1981,8 +2073,7 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 			return BOM_NONE;
 
 		case (unsigned short)0xefbb: /* UTF-8? */
-			fread(&c1, sizeof(char), 1, f);
-			if (c1 != 0xbf) { /* Not UTF-8 */
+			if (fread(&c1, sizeof(char), 1, f) != 1 || c1 != 0xbf) { /* Not UTF-8 */
 				fseek(f, pos, SEEK_SET);
 				if (bom != NULL)
 					bom[0] = '\0';
