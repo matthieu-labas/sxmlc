@@ -77,7 +77,7 @@ typedef struct _XMLSearch {
 	struct _XMLSearch* prev;
 
 	/*
-	 Internal use only. Must be initialized to '-1' prior to first search.
+	 Internal use only. Must be initialized to 'INVALID_XMLNODE_POINTER' prior to first search.
 	 */
 	XMLNode* stop_at;
 

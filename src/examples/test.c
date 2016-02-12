@@ -688,12 +688,42 @@ void test_xpath3(void)
 	XMLDoc_free(&doc);
 }
 
+void test_escape1(void)
+{
+	SXML_CHAR* str = C2SX("<valid att1=\">\" att2=\"'\" att3='\"'/>");
+	XMLNode node;
+	XMLDoc doc;
+	XMLNode_init(&node);
+	XMLDoc_init(&doc);
+	//XML_parse_1string(str, &node);
+	//XMLNode_print(&node, stdout, NULL, NULL, 1, 0, 0);
+	XMLDoc_parse_buffer_DOM(str, "toto", &doc);
+	XMLDoc_print(&doc, stdout, "\n", "\t", true, 0, 0);
+}
+
+void test_escape(void)
+{
+	XMLDoc doc;
+
+	XMLDoc_init(&doc);
+	XMLDoc_parse_buffer_DOM(C2SX(
+		"<?xml blah blah blah?>"
+		"<?process <\"'&> ?>"
+		"<root>"
+			"<valid att1=\">\" att2=\"'\" att3='\"'/>"
+			"<![CDATA[\"'<>&]]>"
+		"</root>"
+		), C2SX("simple"), &doc);
+
+	XMLDoc_print(&doc, stdout, "\n", "\t", true, 0, 0);
+}
+
 #if 1
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, C2SX("<#[MONTAG-"), C2SX("-]>"));
-	test_gen();
-	test_unicode();
+	//test_gen();
+	//test_unicode();
 	//test_DOM();
 	//test_SAX();
 	//test_SAX_buffer();
@@ -710,6 +740,8 @@ int main(int argc, char** argv)
 	//test_backslash();
 	//test_xpath3();
 	//test_text_node();
+	//test_escape1();
+	test_escape();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

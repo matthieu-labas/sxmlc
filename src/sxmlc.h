@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.0"
+#define SXMLC_VERSION "4.2.1"
 
 #ifdef __cplusplus
 extern "C" {
@@ -391,7 +391,9 @@ int SAX_Callbacks_init_DOM(SAX_Callbacks* sax);
         2 if last quote is missing in the attribute value.
         1 if 'xmlattr' was filled correctly.
  */
-int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr);
+int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr);
+
+#define XML_parse_attribute(str, xmlattr) XML_parse_attribute_to(str, -1, xmlattr)
 
 /*
  Reads a string that is supposed to be an xml tag like '<tag (attribName="attribValue")* [/]>' or '</tag>'.
@@ -782,13 +784,15 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom);
 SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str);
 
 /*
- Replace occurrences of special characters (e.g. '&') found in 'str' into their HTML escaped
- equivalent (e.g. '&amp;') into 'html'.
- 'html' is supposed allocated to the correct size (e.g. using 'malloc(strlen_html(str))') and
- different from 'str' (unlike 'html2str'), as string will expand.
- Return 'html' or NULL if 'str' or 'html' are NULL, or when 'html' is 'str'.
+ Replace occurrences of special characters (e.g. '&') found in 'str' into their XML escaped
+ equivalent (e.g. '&amp;') into 'xml'.
+ 'xml' is supposed allocated to the correct size (e.g. using 'malloc(strlen_html(str)+30)') and
+ different from 'str' (unlike 'html2str'), as string will expand. If it is NULL, 'str' will be
+ analyzed and a string will be allocated to the exact size, before being returned. In that case,
+ it is the responsibility of the caller to free() the result!
+ Return 'xml' or NULL if 'str' or 'xml' are NULL, or when 'xml' is 'str'.
 */
-SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html);
+SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* xml);
 
 /*
  Return the length of 'str' as if all its special character were replaced by their HTML
