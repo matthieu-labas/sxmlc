@@ -997,7 +997,7 @@ int XMLDoc_print_attr_sep(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, 
 
 /* --- */
 
-int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
+int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr)
 {
 	const SXML_CHAR *p;
 	int i, n0, n1, remQ = 0;
@@ -1006,21 +1006,24 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 	
 	if (str == NULL || xmlattr == NULL)
 		return 0;
+
+	if (to < 0)
+		to = sx_strlen(str) - 1;
 	
 	/* Search for the '=' */
 	/* 'n0' is where the attribute name stops, 'n1' is where the attribute value starts */
-	for (n0 = 0; str[n0] != NULC && str[n0] != C2SX('=') && !sx_isspace(str[n0]); n0++) ; /* Search for '=' or a space */
-	for (n1 = n0; str[n1] != NULC && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
+	for (n0 = 0; n0 != to && str[n0] != C2SX('=') && !sx_isspace(str[n0]); n0++) ; /* Search for '=' or a space */
+	for (n1 = n0; n1 != to && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
 	if (str[n1] != C2SX('='))
 		return 0; /* '=' not found: malformed string */
-	for (n1++; str[n1] != NULC && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
+	for (n1++; n1 != to && sx_isspace(str[n1]); n1++) ; /* Search for something not a space */
 	if (isquote(str[n1])) { /* Remove quotes */
 		quote = str[n1];
 		remQ = 1;
 	}
 	
 	xmlattr->name = (SXML_CHAR*)__malloc((n0+1)*sizeof(SXML_CHAR));
-	xmlattr->value = (SXML_CHAR*)__malloc((sx_strlen(str) - n1 - remQ + 1) * sizeof(SXML_CHAR));
+	xmlattr->value = (SXML_CHAR*)__malloc((to+1 - n1 - remQ + 1) * sizeof(SXML_CHAR));
 	xmlattr->active = true;
 	if (xmlattr->name != NULL && xmlattr->value != NULL) {
 		/* Copy name */
@@ -1029,12 +1032,12 @@ int XML_parse_attribute(const SXML_CHAR* str, XMLAttribute* xmlattr)
 		/* (void)str_unescape(xmlattr->name); do not unescape the name */
 		/* Copy value (p starts after the quote (if any) and stops at the end of 'str'
 		  (skipping the quote if any, hence the '*(p+remQ)') */
-		for (i = 0, p = str + n1 + remQ; *(p+remQ) != NULC; i++, p++)
+		for (i = 0, p = str + n1 + remQ; i + n1 + remQ < to && *(p+remQ) != NULC; i++, p++)
 			xmlattr->value[i] = *p;
 		xmlattr->value[i] = NULC;
 		(void)html2str(xmlattr->value, NULL); /* Convert HTML escape sequences, do not str_unescape(xmlattr->value) */
 		if (remQ && *p != quote)
-			ret = 2; /* Quote at the beginning but not at the end */
+			ret = 2; /* Quote at the beginning but not at the end: probable presence of '>' inside attribute value, so we need to read more data! */
 	} else
 		ret = 0;
 	
@@ -1075,9 +1078,9 @@ static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLN
  Fills the 'xmlnode' structure with the tag name and its attributes.
  Returns 'TAG_ERROR' if an error occurred (malformed 'str' or memory). 'TAG_*' when string is recognized.
  */
-TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
+TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 {
-	SXML_CHAR *p, c;
+	SXML_CHAR *p;
 	XMLAttribute* pt;
 	int n, nn, len, rc, tag_end = 0;
 	
@@ -1182,11 +1185,12 @@ TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode)
 		
 		/* Here 'str[nn]' is '>' */
 		/* the attribute definition ('attrName="attr val"') is between 'str[n]' and 'str[nn]' */
-		c = str[nn]; /* Backup character */
-		str[nn] = NULC; /* End string to call 'parse_XML_attribute' */
-		rc = XML_parse_attribute(&str[n], &xmlnode->attributes[xmlnode->n_attributes - 1]);
-		str[nn] = c;
+		rc = XML_parse_attribute_to(&str[n], nn-n-1, &xmlnode->attributes[xmlnode->n_attributes - 1]);
 		if (!rc) goto parse_err;
+		if (rc == 2) { /* Probable presence of '>' inside attribute value, which is legal XML. Remove attribute to re-parse it later */
+			XMLNode_remove_attribute(xmlnode, xmlnode->n_attributes - 1);
+			return TAG_PARTIAL;
+		}
 		
 		n = nn;
 	}
@@ -1741,6 +1745,7 @@ static struct _html_special_dict {
 	{ C2SX('<'), C2SX("&lt;"), 4 },
 	{ C2SX('>'), C2SX("&gt;"), 4 },
 	{ C2SX('"'), C2SX("&quot;"), 6 },
+	{ C2SX('\''), C2SX("&apos;"), 6 },
 	{ C2SX('&'), C2SX("&amp;"), 5 },
 	{ NULC, NULL, 0 }, /* Terminator */
 };
@@ -2137,17 +2142,32 @@ SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str)
 	return str;
 }
 
-/* TODO: Allocate 'str'? */
+/* TODO: Allocate 'html'? */
 SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 {
 	SXML_CHAR *ps, *pd;
 	int i;
 
-	if (str == NULL || html == NULL)
+	if (str == NULL)
 		return NULL;
 
 	if (html == str) /* Not handled yet */
 		return NULL;
+
+	if (html == NULL) { /* Allocate 'html' to the correct size */
+		int sz = 0;
+		for (ps = str; *ps; ps++, sz++) {
+			for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
+				if (*ps == HTML_SPECIAL_DICT[i].chr) {
+					sz += HTML_SPECIAL_DICT[i].html_len - 1; /* -1 to compensate for the 'sz++' in the for loop */
+					break;
+				}
+			}
+		}
+		html = __malloc(sz * sizeof(SXML_CHAR));
+		if (html == NULL)
+			return NULL;
+	}
 
 	for (ps = str, pd = html; *ps; ps++, pd++) {
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
@@ -2162,7 +2182,7 @@ SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 	}
 	*pd = NULC;
 
-	return str;
+	return html;
 }
 
 int strlen_html(SXML_CHAR* str)

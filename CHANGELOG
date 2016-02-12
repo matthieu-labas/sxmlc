@@ -1,3 +1,6 @@
+*** v4.2.1 - Better handling of XML escapable characters.
+	- str2html() can allocate output buffer is NULL is given.
+
 *** v4.2.0 - Many bug corrections (memory-related, error checks, consistency. Many many thanks to Harry Sintonen!!!)
 
 *** v4.1.2 - Fixed problem in char casting during line read(Thanks to Nicholai Benalal!).
