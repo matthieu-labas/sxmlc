@@ -2151,20 +2151,11 @@ SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 	if (str == NULL)
 		return NULL;
 
-	if (html == str) /* Not handled yet */
+	if (html == str) /* Not handled (yet) */
 		return NULL;
 
 	if (html == NULL) { /* Allocate 'html' to the correct size */
-		int sz = 0;
-		for (ps = str; *ps; ps++, sz++) {
-			for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
-				if (*ps == HTML_SPECIAL_DICT[i].chr) {
-					sz += HTML_SPECIAL_DICT[i].html_len - 1; /* -1 to compensate for the 'sz++' in the for loop */
-					break;
-				}
-			}
-		}
-		html = __malloc(sz * sizeof(SXML_CHAR));
+		html = __malloc(strlen_html(str) * sizeof(SXML_CHAR));
 		if (html == NULL)
 			return NULL;
 	}
@@ -2193,7 +2184,7 @@ int strlen_html(SXML_CHAR* str)
 		return 0;
 
 	n = 0;
-	for (i = 0; str[i]; i++) {
+	for (i = 0; str[i] != NULC; i++) {
 		for (j = 0; HTML_SPECIAL_DICT[j].chr; j++) {
 			if (str[i] == HTML_SPECIAL_DICT[j].chr) {
 				n += HTML_SPECIAL_DICT[j].html_len;
