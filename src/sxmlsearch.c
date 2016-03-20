@@ -96,6 +96,7 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 
 	if (free_next && search->next != NULL) {
 		(void)XMLSearch_free(search->next, true);
+		__free(search->next);
 		search->next = NULL;
 	}
 	search->init_value = 0; /* Something not XML_INIT_DONE, otherwise we'll go into 'XMLSearch_free' again */
@@ -394,7 +395,7 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 	tag = tag0 = sx_strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
 	while (*tag != NULC) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
-			search2 = (XMLSearch*)__malloc(sizeof(XMLSearch));
+			search2 = (XMLSearch*)__calloc(1, sizeof(XMLSearch));
 			if (search2 == NULL) {
 				__free(tag0);
 				(void)XMLSearch_free(search, true);
