@@ -81,7 +81,7 @@ extern "C" {
 	#define sx_sprintf sprintf
 	#define sx_fgetc fgetc
 	#define sx_fputc fputc
-	#define sx_isspace isspace
+	#define sx_isspace(ch) isspace((int)ch)
 	#define sx_fopen fopen
 	#define sx_fclose fclose
 #endif
@@ -219,7 +219,7 @@ typedef struct _XMLDoc {
  Return tag index in user tags table when successful, or '-1' if the 'tag_type' is invalid or
  the new tag could not be registered (e.g. when 'start' does not start with '<' or 'end' does not end with '>').
  */
-int XML_register_user_tag(int tag_type, SXML_CHAR* start, SXML_CHAR* end);
+int XML_register_user_tag(TagType tag_type, SXML_CHAR* start, SXML_CHAR* end);
 
 /*
  Remove a registered user tag.
@@ -400,7 +400,7 @@ int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr);
  Fills the 'xmlnode' structure with the tag name and its attributes.
  Returns 0 if an error occurred (malformed 'str' or memory). 'TAG_*' when string is recognized.
  */
-TagType XML_parse_1string(SXML_CHAR* str, XMLNode* xmlnode);
+TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode);
 
 /*
  Allocate and initialize XML nodes.
