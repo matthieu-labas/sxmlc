@@ -588,7 +588,7 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 		pt = NULL;
 	else {
 		pt = (XMLNode**)__malloc((node->n_children - 1) * sizeof(XMLNode*));
-		if (pt == NULL);
+		if (pt == NULL)
 			return -1;
 	}
 
@@ -1939,7 +1939,7 @@ SXML_CHAR* str_unescape(SXML_CHAR* str)
 int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes)
 {
 	int n0, n1, is;
-	SXML_CHAR quote;
+	SXML_CHAR quote = '\0';
 
 	if (str == NULL)
 		return false;
@@ -2264,4 +2264,6 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 				break;
 		}
 	}
+
+	return 0;
 }
