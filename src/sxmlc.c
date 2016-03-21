@@ -2265,5 +2265,5 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 		}
 	}
 
-	return 0;
+	return false;
 }

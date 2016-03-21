@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.2"
+#define SXMLC_VERSION "4.2.3"
 
 #ifdef __cplusplus
 extern "C" {
