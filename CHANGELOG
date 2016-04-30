@@ -1,3 +1,6 @@
+*** v4.2.4 - Correction on reading non-quoted attribute values, now returns proper TAG_SELF to SAX callbacks.
+	- Added XMLNode_get_attribute_count().
+
 *** v4.2.3 - Some corrections by Cliff Baumann.
 
 *** v4.2.2 - Corrected uninitialized alloc (thanks Harry Sintonen) and memory leak (thanks Cliff Baumann).

@@ -718,6 +718,15 @@ void test_escape(void)
 	XMLDoc_print(&doc, stdout, "\n", "\t", true, 0, 0);
 }
 
+void test1(void)
+{
+	const char* bug = "<System id=11/>";
+	XMLNode node;
+	XMLNode_init(&node);
+	XML_parse_1string(bug, &node);
+	XMLNode_print(&node, stdout, NULL, NULL, 0, 0, 0);
+}
+
 #if 1
 int main(int argc, char** argv)
 {
@@ -741,7 +750,8 @@ int main(int argc, char** argv)
 	//test_xpath3();
 	//test_text_node();
 	//test_escape1();
-	test_escape();
+	//test_escape();
+	test1();
 
 #if defined(WIN32) || defined(WIN64)
 	_getch();

@@ -430,6 +430,19 @@ int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name
 	return true;
 }
 
+int XMLNode_get_attribute_count(const XMLNode* node)
+{
+	int i, n;
+
+	if (node == NULL || node->init_value != XML_INIT_DONE)
+		return -1;
+
+	for (i = n = 0; i < node->n_attributes; i++)
+		if (node->attributes[i].active) n++;
+
+	return n;
+}
+
 int XMLNode_search_attribute(const XMLNode* node, const SXML_CHAR* attr_name, int i_search)
 {
 	int i;
@@ -1154,8 +1167,9 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 		
 		/* Check for XML end ('>' or '/>') */
 		if (str[n] == C2SX('>')) { /* Tag with children */
-			xmlnode->tag_type = TAG_FATHER;
-			return TAG_FATHER;
+			int type = (str[n-1] == '/' ? TAG_SELF : TAG_FATHER); // TODO: Find something better to cope with <tag attr=v/>
+			xmlnode->tag_type = type;
+			return type;
 		}
 		if (!sx_strcmp(str+n, C2SX("/>"))) { /* Tag without children */
 			xmlnode->tag_type = TAG_SELF;
