@@ -1238,7 +1238,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				else {
 					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd))
 						break;
-					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd))
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_MEMORY, sd))
 						break;
 				}
 				break; /* 'txt_end' is still NULL here so we'll display the syntax error below */
@@ -1274,7 +1274,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				else {
 					if (sax->on_error != NULL && (exit = !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd)))
 						break;
-					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_SYNTAX, sd)))
+					if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_MEMORY, sd)))
 						break;
 				}
 				break;
@@ -1317,7 +1317,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 						else {
 							if (sax->on_error != NULL && (exit = !sax->on_error(meos(in) ? PARSE_ERR_EOF : PARSE_ERR_MEMORY, sd->line_num, sd)))
 								break;
-							if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_SYNTAX, sd)))
+							if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, meos(in) ? PARSE_ERR_EOF : PARSE_ERR_MEMORY, sd)))
 								break;
 						}
 						break;
