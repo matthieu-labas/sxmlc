@@ -1178,21 +1178,20 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 			for (nn = p-str+1; str[nn] && str[nn] != *p; nn++) { // CHECK UNICODE "nn = p-str+1"
 				/* if (str[nn] == C2SX('\\')) nn++; [bugs:#7]: '\' is valid in values */
 			}
-			nn++;
 		} else { /* Attribute value stops at first space or end of XML string */
 			for (nn = p-str+1; str[nn] != NULC && !sx_isspace(str[nn]) && str[nn] != C2SX('/') && str[nn] != C2SX('>'); nn++) ; /* Go to the end of the attribute value */ // CHECK UNICODE
 		}
 		
-		/* Here 'str[nn]' is '>' */
-		/* the attribute definition ('attrName="attr val"') is between 'str[n]' and 'str[nn]' */
-		rc = XML_parse_attribute_to(&str[n], nn-n-1, &xmlnode->attributes[xmlnode->n_attributes - 1]);
+		/* Here 'str[nn]' is the character after value */
+		/* the attribute definition ('attrName="attrVal"') is between 'str[n]' and 'str[nn]' */
+		rc = XML_parse_attribute_to(&str[n], nn - n, &xmlnode->attributes[xmlnode->n_attributes - 1]);
 		if (!rc) goto parse_err;
 		if (rc == 2) { /* Probable presence of '>' inside attribute value, which is legal XML. Remove attribute to re-parse it later */
 			XMLNode_remove_attribute(xmlnode, xmlnode->n_attributes - 1);
 			return TAG_PARTIAL;
 		}
 		
-		n = nn;
+		n = nn + 1;
 	}
 	
 	sx_fprintf(stderr, C2SX("\nWE SHOULD NOT BE HERE!\n[%s]\n\n"), str);
