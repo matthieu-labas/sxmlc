@@ -70,7 +70,7 @@ extern "C" {
 	#define sx_strcmp strcmp
 	#define sx_strncmp strncmp
 	#define sx_strlen strlen
-	#define sx_strdup __strdup
+	#define sx_strdup __sx_strdup
 	#define sx_strchr strchr
 	#define sx_strrchr strrchr
 	#define sx_strcpy strcpy
@@ -91,13 +91,13 @@ extern "C" {
 	void* __calloc(size_t count, size_t sz);
 	void* __realloc(void* mem, size_t sz);
 	void __free(void* mem);
-	char* __strdup(const char* s);
+	char* __sx_strdup(const char* s);
 #else
 	#define __malloc malloc
 	#define __calloc calloc
 	#define __realloc realloc
 	#define __free free
-	#define __strdup strdup
+	#define __sx_strdup strdup
 #endif
 
 #ifndef MEM_INCR_RLA

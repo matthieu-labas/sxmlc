@@ -1002,7 +1002,7 @@ int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr)
 	const SXML_CHAR *p;
 	int i, n0, n1, remQ = 0;
 	int ret = 1;
-	SXML_CHAR quote;
+	SXML_CHAR quote = '\0';
 	
 	if (str == NULL || xmlattr == NULL)
 		return 0;
@@ -1720,7 +1720,7 @@ void __free(void* mem)
 	free(mem);
 }
 
-char* __strdup(const char* s)
+char* __sx_strdup(const char* s)
 {
 /* Mimic the behavior of sx_strdup(), as we can't use it directly here: DBG_MEM is defined
    and sx_strdup is this function! (bug #5) */
@@ -1786,9 +1786,10 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 		*interest_count = 0;
 	while (true) {
 		/* Reaching EOF before 'to' char is not an error but should trigger 'line' alloc and init to '' */
-		if ((c = mgetc(in)) == EOF)
-			break;
+		c = mgetc(in);
 		ch = (SXML_CHAR)c;
+		if (c == EOF)
+			break;
 		if (interest_count != NULL && ch == interest)
 			(*interest_count)++;
 		/* If 'from' is '\0', we stop here */
@@ -1805,7 +1806,8 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 		if (*line == NULL)
 			return 0;
 	}
-	if (i0 < 0) i0 = 0;
+	if (i0 < 0)
+		i0 = 0;
 	if (i0 > *sz_line)
 		return 0;
 	

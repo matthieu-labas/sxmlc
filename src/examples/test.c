@@ -5,7 +5,8 @@
 
 #include <stdio.h>
 #ifdef linux
-#include <curses.h>
+//#include <curses.h>
+#define _getch getchar
 #endif
 #include <ctype.h>
 #include <stdlib.h>
@@ -718,7 +719,7 @@ void test_escape(void)
 	XMLDoc_print(&doc, stdout, "\n", "\t", true, 0, 0);
 }
 
-#if 1
+#if 0
 int main(int argc, char** argv)
 {
 	XML_register_user_tag(TAG_USER+1, C2SX("<#[MONTAG-"), C2SX("-]>"));
@@ -751,3 +752,79 @@ int main(int argc, char** argv)
 	return 0;
 }
 #endif
+
+
+
+
+
+
+
+
+static const char* _tag_type_names[] = {
+	"TAG_NONE",
+	"TAG_PARTIAL",
+	"TAG_FATHER",
+	"TAG_SELF",
+	"TAG_INSTR",
+	"TAG_COMMENT",
+	"TAG_CDATA",
+	"TAG_DOCTYPE"
+	"TAG_END"
+	"TAG_TEXT"
+};
+
+const char* demoStart = "<?xml version=\"1.0\" standalone=\"no\"?><!-- Our to do list data --><ToDo><System id=1/></ToDo>";
+
+int _start_node(const XMLNode* node, SAX_Data* sd)
+{
+	int i;
+	printf("Start node %s <%s>\n", _tag_type_names[node->tag_type], node->tag);
+	for (i = 0; i < node->n_attributes; i++)
+		printf("\t%s=\"%s\"\n", node->attributes[i].name, node->attributes[i].value);
+	return true;
+}
+
+int _end_node(const XMLNode* node, SAX_Data* sd)
+{
+	printf("End node %s <%s>\n", _tag_type_names[node->tag_type], node->tag);
+	return true;
+}
+
+int _new_text(const SXML_CHAR* text, SAX_Data* sd)
+{
+	SXML_CHAR* p = (SXML_CHAR*)text;
+	while (*p && sx_isspace(*p++));
+	if (*p)
+		sx_printf(C2SX("Text: [%s]\n"), text);
+	return true;
+}
+
+int _allin1(XMLEvent event, const XMLNode* node, SXML_CHAR* text, const int n, SAX_Data* sd)
+{
+	switch (event) {
+	case XML_EVENT_START_DOC: printf("Document start\n\n"); return true;
+	case XML_EVENT_START_NODE: return start_node(node, sd);
+	case XML_EVENT_END_NODE: return end_node(node, sd);
+	case XML_EVENT_TEXT: return new_text(text, sd);
+	case XML_EVENT_ERROR: printf("%s:%d: ERROR %d\n", sd->name, sd->line_num, n); return true;
+	case XML_EVENT_END_DOC: printf("\nDocument end\n"); return true;
+	default: return true;
+	}
+}
+
+void main()
+{
+	XMLDoc doc;
+	XMLDoc_init(&doc);
+
+	SAX_Callbacks sax;
+
+	SAX_Callbacks_init(&sax);
+
+	sax.all_event = _allin1;
+	if (!XMLDoc_parse_buffer_SAX(C2SX(demoStart), C2SX("Buffer1"), &sax, NULL))
+		printf("Error while loading\n");
+
+	XMLDoc_free(&doc);
+	_getch();
+}
