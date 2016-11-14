@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.3"
+#define SXMLC_VERSION "4.2.5"
 
 #ifdef __cplusplus
 extern "C" {
@@ -476,6 +476,11 @@ int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name
  not exist.
  */
 #define XMLNode_get_attribute(node, attr_name, attr_value) XMLNode_get_attribute_with_default(node, attr_name, attr_value, C2SX(""))
+
+/*
+ Return the number of active attributes of 'node', or '-1' if 'node' is invalid.
+*/
+int XMLNode_get_attribute_count(const XMLNode* node);
 
 /*
  Search for the active attribute 'attr_name' in 'node', starting from index 'isearch'
