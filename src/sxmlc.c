@@ -29,6 +29,10 @@
 */
 #if defined(WIN32) || defined(WIN64)
 #pragma warning(disable : 4996)
+#else
+#ifndef strdup
+#define _GNU_SOURCE
+#endif
 #endif
 
 #include <stdio.h>
@@ -1218,7 +1222,7 @@ parse_err:
 
 static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Callbacks* sax, SAX_Data* sd)
 {
-	SXML_CHAR *line, *txt_end, *p;
+	SXML_CHAR *line = NULL, *txt_end, *p;
 	XMLNode node;
 	int ret, exit, sz, n0, ncr;
 	TagType tag_type;
@@ -1233,6 +1237,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 	exit = false;
 	sd->line_num = 1; /* Line counter, starts at 1 */
 	sz = 0; /* 'line' buffer size */
+	node.init_value = 0;
 	(void)XMLNode_init(&node);
 	while ((n0 = read_line_alloc(in, in_type, &line, &sz, 0, NULC, C2SX('>'), true, C2SX('\n'), &ncr)) != 0) {
 		(void)XMLNode_free(&node);
@@ -1243,9 +1248,9 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 
 		/* Get text for 'father' (i.e. what is before '<') */
 		while ((txt_end = sx_strchr(line, C2SX('<'))) == NULL) { /* '<' was not found, indicating a probable '>' inside text (should have been escaped with '&gt;' but we'll handle that ;) */
-			n0 = read_line_alloc(in, in_type, &line, &sz, n0, 0, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
+			int n1 = read_line_alloc(in, in_type, &line, &sz, n0, 0, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
 			sd->line_num += ncr;
-			if (!n0) {
+			if (n1 <= n0) {
 				ret = false;
 				if (sax->on_error == NULL && sax->all_event == NULL)
 					sx_fprintf(stderr, C2SX("%s:%d: MEMORY ERROR.\n"), sd->name, sd->line_num);
@@ -1257,6 +1262,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				}
 				break; /* 'txt_end' is still NULL here so we'll display the syntax error below */
 			}
+			n0 = n1;
 		}
 		if (txt_end == NULL) { /* Missing tag start */
 			ret = false;
@@ -1322,9 +1328,9 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 			default: /* Add 'node' to 'father' children */
 				/* If the line looks like a comment (or CDATA) but is not properly finished, loop until we find the end. */
 				while (tag_type == TAG_PARTIAL) {
-					n0 = read_line_alloc(in, in_type, &line, &sz, n0, NULC, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
+					int n1 = read_line_alloc(in, in_type, &line, &sz, n0, NULC, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
 					sd->line_num += ncr;
-					if (n0 == 0) {
+					if (n1 <= n0) {
 						ret = false;
 						if (sax->on_error == NULL && sax->all_event == NULL)
 							sx_fprintf(stderr, C2SX("%s:%d: SYNTAX ERROR.\n"), sd->name, sd->line_num);
@@ -1336,6 +1342,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 						}
 						break;
 					}
+					n0 = n1;
 					txt_end = sx_strchr(line, C2SX('<')); /* In case 'line' has been moved by the '__realloc' in 'read_line_alloc' */
 					tag_type = XML_parse_1string(txt_end, &node);
 					if (tag_type == TAG_ERROR) {
