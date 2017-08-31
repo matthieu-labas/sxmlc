@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.6"
+#define SXMLC_VERSION "4.2.7"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +63,7 @@ extern "C" {
 		#define sx_fopen fopen
 	#endif
 	#define sx_fclose fclose
+	#define sx_feof feof
 #else
 	typedef char SXML_CHAR;
 	#define C2SX(c) c
@@ -84,6 +85,7 @@ extern "C" {
 	#define sx_isspace(ch) isspace((int)ch)
 	#define sx_fopen fopen
 	#define sx_fclose fclose
+	#define sx_feof feof
 #endif
 
 #ifdef DBG_MEM

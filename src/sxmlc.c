@@ -1226,7 +1226,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 	XMLNode node;
 	int ret, exit, sz, n0, ncr;
 	TagType tag_type;
-	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
+	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))sx_feof);
 
 	if (sax->start_doc != NULL && !sax->start_doc(sd))
 		return true;
@@ -1611,7 +1611,7 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	   the file is "plain" text (i.e. 1 byte = 1 character). If opened in binary mode, 'fgetwc'
 	   would read 2 bytes for 1 character, which would not work on "plain" files. */
 	if (bom == BOM_NONE || bom == BOM_UTF_8) {
-		fclose(f);
+		sx_fclose(f);
 		f = sx_fopen(filename, C2SX("rt"));
 		if (f == NULL)
 			return false;
@@ -1620,7 +1620,7 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	}
 #endif
 	ret = _parse_data_SAX((void*)f, DATA_SOURCE_FILE, sax, &sd);
-	(void)fclose(f);
+	(void)sx_fclose(f);
 
 	return ret;
 }
@@ -1659,7 +1659,7 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 			//setvbuf(f, NULL, _IONBF, 0);
 			#endif
 			doc->bom_type = freadBOM(f, doc->bom, &doc->sz_bom);
-			fclose(f);
+			sx_fclose(f);
 		}
 	}
 #endif
@@ -1794,7 +1794,7 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 	int c;
 	int n, ret;
 	int (*mgetc)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_bgetc : (int(*)(void*))sx_fgetc);
-	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))feof);
+	int (*meos)(void* ds) = (in_type == DATA_SOURCE_BUFFER ? (int(*)(void*))_beob : (int(*)(void*))sx_feof);
 	
 	if (in == NULL || line == NULL)
 		return 0;
