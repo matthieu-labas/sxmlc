@@ -217,6 +217,22 @@ XMLNode* XMLNode_allocN(int n)
 	return p;
 }
 
+XMLNode* XMLNode_new(const TagType tag_type, const char* tag, const char* text)
+{
+	XMLNode* node = XMLNode_alloc();
+	if (node == NULL)
+		return NULL;
+	
+	if (!XMLNode_set_tag(node, tag) || text != NULL && !XMLNode_set_text(node, text)) {
+		__free(node);
+		return NULL;
+	}
+	
+	node->tag_type = tag_type;
+	
+	return node;
+}
+
 XMLNode* XMLNode_dup(const XMLNode* node, int copy_children)
 {
 	XMLNode* n;
@@ -2229,12 +2245,14 @@ int fprintHTML(FILE* f, SXML_CHAR* str)
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
 			if (*p != HTML_SPECIAL_DICT[i].chr)
 				continue;
-			sx_fprintf(f, HTML_SPECIAL_DICT[i].html);
+			if (f != NULL)
+				sx_fprintf(f, HTML_SPECIAL_DICT[i].html);
 			n += HTML_SPECIAL_DICT[i].html_len;
 			break;
 		}
 		if (HTML_SPECIAL_DICT[i].chr == NULC) {
-			(void)sx_fputc(*p, f);
+			if (f != NULL)
+				(void)sx_fputc(*p, f);
 			n++;
 		}
 	}

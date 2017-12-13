@@ -387,8 +387,9 @@ int SAX_Callbacks_init_DOM(SAX_Callbacks* sax);
 /* --- XMLNode methods --- */
 
 /*
- Fills 'xmlattr' with 'xmlattr->name' to 'attrName' and 'xmlattr->value' to 'attr Value'.
- 'str' is supposed to be like 'attrName[ ]=[ ]["]attr Value["]'.
+ From 'str' is supposed to be like 'attrName[ ]=[ ]["]attr Value["]',
+ fills 'xmlattr' with 'xmlattr->name' to 'attrName' and 'xmlattr->value' to 'attr Value'.
+ 'to' is the position in 'str' to stop at.
  Return 0 if not enough memory or bad parameters (NULL 'str' or 'xmlattr').
         2 if last quote is missing in the attribute value.
         1 if 'xmlattr' was filled correctly.
@@ -415,6 +416,23 @@ XMLNode* XMLNode_allocN(int n);
  Shortcut to allocate one node only.
  */
 #define XMLNode_alloc() XMLNode_allocN(1)
+
+/*
+ Allocate and initialize a new XMLNode of the given type, tag name and text.
+ Return 'NULL' if not enough memory, or the pointer to the elements otherwise.
+ */
+
+XMLNode* XMLNode_new(const TagType tag_type, const char* tag, const char* text);
+
+/*
+ Utility to create a comment: <!--tag-->
+ */
+#define XMLNode_new_node_comment(comment) XMLNode_new(TAG_COMMENT, (comment), NULL)
+
+/*
+ Utility to create a simple node with text: <tag>text</tag>
+ */
+#define XMLNode_new_node_text(tag, text) XMLNode_new(TAG_NONE, (tag), (text))
 
 /*
  Initialize an already-allocated XMLNode.
@@ -811,6 +829,8 @@ int strlen_html(SXML_CHAR* str);
 /*
  Print 'str' to 'f', transforming special characters into their HTML equivalent.
  Returns the number of output characters.
+ If 'f' is NULL, does not print 'str' but rather counts the number of characters that
+ would be printed.
  */
 int fprintHTML(FILE* f, SXML_CHAR* str);
 

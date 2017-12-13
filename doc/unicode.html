@@ -212,7 +212,7 @@ XMLNode_add_attribute(&node, <strong>C2SX(</strong>"name"<strong>)</strong>, <st
 </pre>
 </p>
 <p>
-The full list of <code>sx_*</code> function is available in <code>utils.h</code>.
+The full list of <code>sx_*</code> function is available in <code>sxmlc.h</code>.
 </p>
 
 <a name="WRITE"/><h3>Writing Unicode XML</h3>
@@ -233,7 +233,7 @@ int write_doc(XMLDoc* doc, SXML_CHAR* filename)
 	SXML_CHAR* mode;
 	FILE* f;
 	
-	if (doc->sz_bom > 0 && doc->bom_type != BOM_UTF_8) /* Use text mode for UTF-8 */
+	if (doc->sz_bom > 0 && doc->bom_type != BOM_UTF_8) /* Use text mode for UTF-8. SXMLC_UNICODE has to be defined for doc->sz_bom to be valid. */
 		mode = C2SX("w+b");
 	else
 		mode = C2SX("w+t");
