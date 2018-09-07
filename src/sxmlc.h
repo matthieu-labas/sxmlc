@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.7"
+#define SXMLC_VERSION "4.2.8"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,6 +123,7 @@ extern "C" {
  */
 typedef struct _DataSourceBuffer {
 	const SXML_CHAR* buf;
+	int buf_len;
 	int cur_pos;
 } DataSourceBuffer;
 
@@ -664,7 +665,7 @@ int XMLNode_print_attr_sep(const XMLNode* node, FILE* f, const SXML_CHAR* tag_se
 int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_tab);
 
 /*
- Prints the XML document using 'XMLNode_print' on all document root nodes.
+ Prints the XML document using 'XMLNode_print_attr_sep' on all document root nodes.
  */
 int XMLDoc_print_attr_sep(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
@@ -700,12 +701,14 @@ int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CH
 int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user);
 
 /*
- Parse an XML document from a memory buffer 'buffer' that can be given a name 'name',
+ Parse an XML document from a memory buffer 'buffer' of length 'buffer_len', that can be given a name 'name',
  calling SAX callbacks given in the 'sax' structure.
  'user' is a user-given pointer that will be given back to all callbacks.
  Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
  */
-int XMLDoc_parse_buffer_SAX(const SXML_CHAR* buffer, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user);
+int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user);
+
+#define XMLDoc_parse_buffer_SAX(buffer, name, sax, user) XMLDoc_parse_buffer_SAX_len(buffer, sx_strlen(buffer), name, sax, user)
 
 /*
  Parse an XML file using the DOM implementation.

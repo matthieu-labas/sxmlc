@@ -223,7 +223,7 @@ XMLNode* XMLNode_new(const TagType tag_type, const char* tag, const char* text)
 	if (node == NULL)
 		return NULL;
 	
-	if (!XMLNode_set_tag(node, tag) || text != NULL && !XMLNode_set_text(node, text)) {
+	if (!XMLNode_set_tag(node, tag) || (text != NULL && !XMLNode_set_text(node, text))) {
 		__free(node);
 		return NULL;
 	}
@@ -1641,9 +1641,9 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	return ret;
 }
 
-int XMLDoc_parse_buffer_SAX(const SXML_CHAR* buffer, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user)
+int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user)
 {
-	DataSourceBuffer dsb = { buffer, 0 };
+	DataSourceBuffer dsb = { buffer, buffer_len, 0 };
 	SAX_Data sd;
 
 	if (sax == NULL || buffer == NULL)
@@ -1786,21 +1786,20 @@ static struct _html_special_dict {
 	{ NULC, NULL, 0 }, /* Terminator */
 };
 
-int _bgetc(DataSourceBuffer* ds)
-{
-	if (ds == NULL || ds->buf[ds->cur_pos] == NULC)
-		return EOF;
-	
-	return (int)(ds->buf[ds->cur_pos++]);
-}
-
 int _beob(DataSourceBuffer* ds)
 {
-
-	if (ds == NULL || ds->buf[ds->cur_pos] == NULC)
+	if (ds == NULL || ds->buf[ds->cur_pos] == NULC || ds->cur_pos >= ds->buf_len)
 		return true;
 
 	return false;
+}
+
+int _bgetc(DataSourceBuffer* ds)
+{
+	if (_beob(ds))
+		return EOF;
+	
+	return (int)(ds->buf[ds->cur_pos++]);
 }
 
 int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_line, int i0, SXML_CHAR from, SXML_CHAR to, int keep_fromto, SXML_CHAR interest, int* interest_count)
