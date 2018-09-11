@@ -696,7 +696,8 @@ int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CH
 /*
  Parse an XML document from a given 'filename', calling SAX callbacks given in the 'sax' structure.
  'user' is a user-given pointer that will be given back to all callbacks.
- Return 'false' in case of error (memory or unavailable filename, malformed document), 'true' otherwise.
+ Return 'false' in case of error (memory or unavailable filename, malformed document) or when requested
+ by a SAX callback. 'true' otherwise.
  */
 int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user);
 
@@ -731,7 +732,7 @@ int _beob(DataSourceBuffer* ds);
  'read_line_alloc' on the same 'line' buffer without overwriting it at each call).
  'in_type' specifies the type of data source to be read: 'in' is 'FILE*' if 'in_type'
  'sz_line' is the size of the buffer 'line' if previously allocated. 'line' can point
- to NULL, in which case it will be allocated '*sz_line' bytes. After the function returns,
+ to NULL, in which case it will be allocated to '*sz_line' bytes. After the function returns,
  '*sz_line' is the actual buffer size. This allows multiple calls to this function using the
  same buffer (without re-allocating/freeing).
  If 'sz_line' is non NULL and non 0, it means that '*line' is a VALID pointer to a location

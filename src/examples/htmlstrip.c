@@ -47,15 +47,13 @@ int html_strip(XMLEvent evt, const XMLNode* node, SXML_CHAR* text, const int n, 
 			else if (!strcasecmp(node->tag, C2SX("pre"))) {
 				printf("\n");
 				ctx->in_pre = true;
-			}
-			else if (!strcasecmp(node->tag, C2SX("ul")) || !strcasecmp(node->tag, C2SX("ol"))) { /* (Un)ordered list */
+			} else if (!strcasecmp(node->tag, C2SX("ul")) || !strcasecmp(node->tag, C2SX("ol"))) { /* (Un)ordered list */
 				if (ctx->i_list < N_LIST_INTRIC-1) {
 					ctx->i_list++;
 					ctx->in_list_type[ctx->i_list] = (node->tag[0] == C2SX('u') || node->tag[0] == C2SX('U') ? 1 : 2);
 					ctx->next_list_item[ctx->i_list] = 1;
 				}
-			}
-			else if (!strcasecmp(node->tag, C2SX("li"))) { /* List item */
+			} else if (!strcasecmp(node->tag, C2SX("li"))) { /* List item */
 				printf("\n");
 				for (i = 0; i <= ctx->i_list; i++) printf("\t");
 				switch (ctx->in_list_type[ctx->i_list]) {
@@ -70,8 +68,7 @@ int html_strip(XMLEvent evt, const XMLNode* node, SXML_CHAR* text, const int n, 
 					default:
 						break;
 				}
-			}
-			else if ((node->tag[0] == C2SX('h') || node->tag[0] == C2SX('H')) && isdigit(node->tag[1])) printf("\n\n"); /* Header */
+			} else if ((node->tag[0] == C2SX('h') || node->tag[0] == C2SX('H')) && isdigit(node->tag[1])) printf("\n\n"); /* Header */
 			break;
 
 		case XML_EVENT_END_NODE:
@@ -126,7 +123,7 @@ int main(int argc, char** argv)
 	//if (argc <= 1) return usage(argv[0]);
 	// p = argv[1];
 
-	p = "/home/matth/Code/workspace/sxmlc/doc/howto.html";
+	p = "/tmp/crash1.html";
 	memset(&ctx, 0, sizeof(ctx));
 	SAX_Callbacks_init(&sax);
 	sax.all_event = html_strip;

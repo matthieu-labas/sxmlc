@@ -259,7 +259,7 @@ int start_node(const XMLNode* node, SAX_Data* sd)
 
 int end_node(const XMLNode* node, SAX_Data* sd)
 {
-	printf("End node %s <%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
+	printf("End node %s </%s>\n", node->tag_type == TAG_USER+1 ? "MONTAG" : tag_type_names[node->tag_type], node->tag);
 	return true;
 }
 
@@ -812,8 +812,10 @@ int _allin1(XMLEvent event, const XMLNode* node, SXML_CHAR* text, const int n, S
 	}
 }
 
-void main()
+#if 1
+int main()
 {
+	int ret;
 	XMLDoc doc;
 	XMLDoc_init(&doc);
 
@@ -822,9 +824,16 @@ void main()
 	SAX_Callbacks_init(&sax);
 
 	sax.all_event = _allin1;
-	if (!XMLDoc_parse_buffer_SAX(C2SX(demoStart), C2SX("Buffer1"), &sax, NULL))
+//	ret = XMLDoc_parse_buffer_SAX(C2SX("<FATHER>\n<x>\n</FATHER>"), C2SX("Buffer1"), &sax, NULL);
+	ret = XMLDoc_parse_buffer_DOM(C2SX("<FATHER>\n<x>\n</FATHER>"), C2SX("Buffer1"), &doc);
+	printf("return %d\n", ret);
+	if (!ret)
 		printf("Error while loading\n");
 
 	XMLDoc_free(&doc);
+	printf("Press key to finish...");
 	_getch();
+
+	return 0;
 }
+#endif
