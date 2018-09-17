@@ -1222,7 +1222,7 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 		if (!rc) goto parse_err;
 		if (rc == 2) { /* Probable presence of '>' inside attribute value, which is legal XML. Remove attribute to re-parse it later */
 			XMLNode_remove_attribute(xmlnode, xmlnode->n_attributes - 1);
-			return TAG_PARTIAL;
+			return TAG_ERROR; /* was TAG_PARTIAL */
 		}
 		
 		n = nn + 1;
@@ -1660,6 +1660,7 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 {
 	DOM_through_SAX dom;
 	SAX_Callbacks sax;
+	int ret;
 
 	if (doc == NULL || filename == NULL || filename[0] == NULC || doc->init_value != XML_INIT_DONE)
 		return false;
@@ -1687,13 +1688,15 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 	dom.text_as_nodes = text_as_nodes;
 	SAX_Callbacks_init_DOM(&sax);
 
-	if (!XMLDoc_parse_file_SAX(filename, &sax, &dom)) {
+	ret = XMLDoc_parse_file_SAX(filename, &sax, &dom);
+	if (!ret) {
 		(void)XMLDoc_free(doc);
 		dom.doc = NULL;
-		return false;
+		return ret;
 	}
 
-	return true;
+	// TODO: Check there is no unfinished root nodes
+	return ret;
 }
 
 int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLDoc* doc, int text_as_nodes)
@@ -1711,8 +1714,12 @@ int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CH
 	SAX_Callbacks_init_DOM(&sax);
 
 	ret = XMLDoc_parse_buffer_SAX(buffer, name, &sax, &dom);
-	if (!ret)
+	if (!ret) {
 		XMLDoc_free(doc);
+		return ret;
+	}
+
+	// TODO: Check there is no unfinished root nodes
 	return ret;
 }
 
