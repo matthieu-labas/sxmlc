@@ -380,7 +380,7 @@ void test_mem(void)
 		XMLDoc_free(&doc[i]);
 		if (i % 10 == 0) printf(".");
 	}
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 int DS(SAX_Data* sd)
@@ -437,10 +437,10 @@ void test_mem2(void)
 		if (i % 1000 == 0) printf(".");
 	}
 	free(p);
-	printf("\nFreeing...\n", N);
+	printf("\nFreeing...\n");
 	_getch();
 	XMLDoc_free(&doc);
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 void test_mem3(void)
@@ -457,13 +457,13 @@ void test_mem3(void)
 		if (i % 1000 == 0) printf(".");
 	}
 	free(p);
-	printf("\nFreeing...\n", N);
+	printf("\nFreeing...\n");
 	_getch();
 	for (i = 0; i < N; i++) {
 		XMLNode_free(&nodes[i]);
 		if (i % 1000 == 0) printf(".");
 	}
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 void test_search(void)
