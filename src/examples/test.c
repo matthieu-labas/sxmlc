@@ -1,13 +1,11 @@
 #if defined(WIN32) || defined(WIN64)
 #pragma warning(disable : 4996)
 #include <conio.h>
+#else
+#define _getch getchar
 #endif
 
 #include <stdio.h>
-#ifdef linux
-//#include <curses.h>
-#define _getch getchar
-#endif
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
