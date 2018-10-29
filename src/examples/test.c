@@ -599,7 +599,7 @@ void test_NodeXPath(void)
 	XMLNode_add_child(&node, &node1);
 
 	buf = NULL;
-	sx_printf(XMLNode_get_XPath(&node1, &buf, true));
+	sx_puts(XMLNode_get_XPath(&node1, &buf, true));
 	free(buf);
 }
 

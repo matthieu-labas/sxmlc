@@ -56,6 +56,8 @@ extern "C" {
 	#define sx_sprintf swprintf
 	#define sx_fgetc fgetwc
 	#define sx_fputc fputwc
+	#define sx_puts putws
+	#define sx_fputs fputws
 	#define sx_isspace iswspace
 	#if defined(WIN32) || defined(WIN64)
 		#define sx_fopen _wfopen
@@ -82,6 +84,8 @@ extern "C" {
 	#define sx_sprintf sprintf
 	#define sx_fgetc fgetc
 	#define sx_fputc fputc
+	#define sx_puts puts
+	#define sx_fputs fputs
 	#define sx_isspace(ch) isspace((int)ch)
 	#define sx_fopen fopen
 	#define sx_fclose fclose
