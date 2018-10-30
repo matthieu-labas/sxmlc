@@ -615,11 +615,11 @@ void test_search_attribute(void)
 	XMLNode_set_attribute(&node, C2SX("readonly"), C2SX("false"));
 	XMLNode_set_attribute(&node, C2SX("value"), C2SX("TBD"));
 
-	XMLNode_get_attribute(&node, C2SX("value"), &val);
+	XMLNode_get_attribute(&node, C2SX("value"), (const SXML_CHAR **)&val);
 	sx_printf(C2SX("'value' without default: [%s]\n"), val);
 	__free(val);
 
-	XMLNode_get_attribute_with_default(&node, C2SX("value2"), &val, C2SX("defval"));
+	XMLNode_get_attribute_with_default(&node, C2SX("value2"), (const SXML_CHAR **)&val, C2SX("defval"));
 	sx_printf(C2SX("'value2' with default 'defval' [%s]\n"), val);
 	__free(val);
 }
