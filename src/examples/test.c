@@ -378,7 +378,7 @@ void test_mem(void)
 		XMLDoc_free(&doc[i]);
 		if (i % 10 == 0) printf(".");
 	}
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 int DS(SAX_Data* sd)
@@ -435,10 +435,10 @@ void test_mem2(void)
 		if (i % 1000 == 0) printf(".");
 	}
 	free(p);
-	printf("\nFreeing...\n", N);
+	printf("\nFreeing...\n");
 	_getch();
 	XMLDoc_free(&doc);
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 void test_mem3(void)
@@ -455,13 +455,13 @@ void test_mem3(void)
 		if (i % 1000 == 0) printf(".");
 	}
 	free(p);
-	printf("\nFreeing...\n", N);
+	printf("\nFreeing...\n");
 	_getch();
 	for (i = 0; i < N; i++) {
 		XMLNode_free(&nodes[i]);
 		if (i % 1000 == 0) printf(".");
 	}
-	printf("\nDone!\n", N);
+	printf("\nDone!\n");
 }
 
 void test_search(void)
@@ -613,11 +613,11 @@ void test_search_attribute(void)
 	XMLNode_set_attribute(&node, C2SX("readonly"), C2SX("false"));
 	XMLNode_set_attribute(&node, C2SX("value"), C2SX("TBD"));
 
-	XMLNode_get_attribute(&node, C2SX("value"), &val);
+	XMLNode_get_attribute(&node, C2SX("value"), (const SXML_CHAR **)&val);
 	sx_printf(C2SX("'value' without default: [%s]\n"), val);
 	__free(val);
 
-	XMLNode_get_attribute_with_default(&node, C2SX("value2"), &val, C2SX("defval"));
+	XMLNode_get_attribute_with_default(&node, C2SX("value2"), (const SXML_CHAR **)&val, C2SX("defval"));
 	sx_printf(C2SX("'value2' with default 'defval' [%s]\n"), val);
 	__free(val);
 }
