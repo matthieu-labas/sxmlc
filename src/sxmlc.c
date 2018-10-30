@@ -856,12 +856,12 @@ static int _count_new_char_line(const SXML_CHAR* str, int nb_char_tab, int cur_s
 static int _print_formatting(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, int nb_char_tab, int cur_sz_line)
 {
 	if (tag_sep != NULL) {
-		sx_fprintf(f, tag_sep);
+		sx_fputs(tag_sep, f);
 		cur_sz_line = _count_new_char_line(tag_sep, nb_char_tab, cur_sz_line);
 	}
 	if (child_sep != NULL) {
 		for (node = node->father; node != NULL; node = node->father) {
-			sx_fprintf(f, child_sep);
+			sx_fputs(child_sep, f);
 			cur_sz_line = _count_new_char_line(child_sep, nb_char_tab, cur_sz_line);
 		}
 	}
@@ -915,13 +915,13 @@ static int _XMLNode_print_header(const XMLNode* node, FILE* f, const SXML_CHAR* 
 			cur_sz_line = _print_formatting(node, f, tag_sep, child_sep, nb_char_tab, cur_sz_line);
 			/* Add extra separator, as if new line was a child of the previous one */
 			if (child_sep != NULL) {
-				sx_fprintf(f, child_sep);
+				sx_fputs(child_sep, f);
 				cur_sz_line = _count_new_char_line(child_sep, nb_char_tab, cur_sz_line);
 			}
 		}
 		/* Attribute name */
 		if (attr_sep != NULL) {
-			sx_fprintf(f, attr_sep);
+			sx_fputs(attr_sep, f);
 			cur_sz_line = _count_new_char_line(attr_sep, nb_char_tab, cur_sz_line);
 			sx_fprintf(f, C2SX("%s="), node->attributes[i].name);
 		} else
@@ -2269,7 +2269,7 @@ int fprintHTML(FILE* f, SXML_CHAR* str)
 			if (*p != HTML_SPECIAL_DICT[i].chr)
 				continue;
 			if (f != NULL)
-				sx_fprintf(f, HTML_SPECIAL_DICT[i].html);
+				sx_fputs(HTML_SPECIAL_DICT[i].html, f);
 			n += HTML_SPECIAL_DICT[i].html_len;
 			break;
 		}
