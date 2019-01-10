@@ -125,6 +125,7 @@ margin-left: 2%;
 	</ul>
 </li>
 <li><a href="#CUSTOM">Handle new tags</a>
+<li><a href="#INACTIVE">Handle inactive nodes</a>
 </ul>
 
 <hr/>
@@ -174,9 +175,9 @@ callbacks. It can be a pointer to an <code>XMLDoc</code> structure or any other 
 There are only 6 callbacks that can be called when using the SAX parser (plus an additional one if needed):
 <ul>
 <li><code>start_doc</code> is called when document parsing starts, before parsing the first node.</li>
-<li><code>start_node</code> is called when a new node has been found (e.g. "<code>&lt;newNode param="val"&gt;</code>")</li>
+<li><code>start_node</code> is called when a new node has been found (e.g. "<code>&lt;newNode param="val"&gt;</code>"). <em>All node attributes are already read</em>.</li>
 <li><code>end_node</code> is called when a node is being closed. (e.g. "<code>&lt;/newNode&gt;</code>")</li>
-<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>")</li>
+<li><code>new_text</code> is called when text has been read from a node(e.g. "<code>&lt;newNode&gt;My text&lt;/newNode&gt;</code>" or "<code>&lt;newNode&gt;My text&lt;OtherNode&gt;...</code>")</li>
 <li><code>end_doc</code> is called when document parsing ends. No other callbacks will be called after.</li>
 <li><code>on_error</code> is called when an error occurs during parsing. Parsing stops after.</li>
 <li><code>all_event</code> is given for those who prefer to handle all such events in a single function instead of three
@@ -297,9 +298,15 @@ should be set to non-zero to switch to a new behavior: texts will be added as ex
 <ul>
 <li><code>node1.text</code> is <code>NULL</code></li>
 <li><code>node1.n_children</code> is 3</li>
-<li><code>node1.children[0]->tag_type</code> is <code>TAG_FATHER</code></li>
-<li><code>node1.children[0]->text</code> is <code>text1</code></li>
-<li><code>node1.children[2]->text</code> is <code>text3</code></li>
+<li><code>node1.children[0]</code>:<ul>
+	<li><code>.tag_type</code> is <code>TAG_TEXT</code></li>
+	<li><code>.text</code> is <code>text1</code></li></ul></li>
+<li><code>node1.children[1]</code>:<ul>
+	<li><code>.tag_type</code> is <code>TAG_FATHER</code></li>
+	<li><code>.text</code> is <code>NULL</code></li></ul></li>
+<li><code>node1.children[2]</code>:<ul>
+	<li><code>.tag_type</code> is <code>TAG_TEXT</code></li>
+	<li><code>.text</code> is <code>text3</code></li></ul></li>
 </ul>
 The previous behavior is kept if <code>DOM_through_SAX.text_as_nodes</code> is 0 (text concatenation).
 </p>
@@ -318,38 +325,22 @@ XMLNode* node;
 
 XMLDoc_init(&doc);
 
-node = XMLNode_alloc();
-XMLNode_set_tag(node, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"");
-XMLNode_set_type(node, TAG_INSTR);
+node = XMLNode_new(TAG_INSTR, "xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"", NULL);
 XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc();
-XMLNode_set_tag(node, " Pre-comment ");
-XMLNode_set_type(node, TAG_COMMENT);
-// Or since v4.3.0: node = XMLNode_new_node_comment(" Pre-comment ");
+node = XMLNode_new_node_comment(" Pre-comment ");
 XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc();
-XMLNode_set_tag(node, "\nAnother one\nMulti-line...\n");
-XMLNode_set_type(node, TAG_COMMENT);
-// Or since v4.3.0: node = XMLNode_new_node_comment("\nAnother one\nMulti-line...\n");
+node = XMLNode_new_node_comment("\nAnother one\nMulti-line...\n");
 XMLDoc_add_node(&doc, node);
 
-node = XMLNode_alloc();
-XMLNode_set_tag(node, "properties");
-XMLNode_set_type(node, TAG_FATHER);
+node = XMLNode_new(TAG_FATHER, "properties", NULL);
 XMLDoc_add_node(&doc, node); // Becomes root node because of 'TAG_FATHER'
 
-node = XMLNode_alloc();
-XMLNode_set_type(node, TAG_COMMENT);
-XMLNode_set_tag(node, "Hello World!");
-// Or since v4.3.0: node = XMLNode_new_node_comment("Hello World!");
+node = XMLNode_new_node_comment("Hello World!");
 XMLDoc_add_child_root(&doc, node);
 
-node = XMLNode_alloc();
-XMLNode_set_tag(node, "info");
-XMLNode_set_text(node, "This is my name");
-// Or since v4.3.0: node = XMLNode_new_node_text("info", "This is my name");
+node = XMLNode_new_node_text("info", "This is my name");
 XMLNode_set_attribute(node, "type", "Name");
 XMLDoc_add_child_root(&doc, node);
 </pre>
@@ -543,6 +534,55 @@ printf(node.tag); /* Will display "Hello, World!" */
 </pre>
 </p>
 
+<a name="INACTIVE"/>
+<p>
+<h4>Handle inactive nodes</h4>
+<p>
+Nodes marked "inactive" are made invisible by <code>XMLNode_*()</code> accessor functions. So
+once a node retrieved by <code>XMLNode_get_child()</code> is marked as inactive, <em>you can no longer
+get a reference to it</em>! Instead, you have to manually access their father's children list directly
+(which <code>sxmlc</code> lets you do simply, hence its name ;-)).
+</p>
+<p>
+Consider the following XML:
+<pre class="code">
+&lt;root&gt;
+    &lt;child0&gt;
+    &lt;child1&gt;
+    &lt;child2&gt;
+&lt;/root&gt;
+</pre>
+The following code:
+<pre class="code">
+XMLNode* node;
+
+node = XMLNode_get_child(father, 0); // Get first ACTIVE child (real index: 0)
+XMLNode_print_header(node, stdout, 0, 4);
+node->active = false;
+
+node = XMLNode_get_child(father, 0); // Get first ACTIVE child (real index: 1)
+XMLNode_print_header(node, stdout, 0, 4);
+node->active = false;
+
+node = XMLNode_get_child(father, 0); // Get first ACTIVE child (real index: 2)
+XMLNode_print_header(node, stdout, 0, 4);
+node->active = false;
+
+father->children[1]->active = true; // Re-activate node [1] by direct access to children list
+
+node = XMLNode_get_child(father, 0); // Get first ACTIVE child (real index: 1)
+printf("\n");
+XMLNode_print_header(node, stdout, 0, 4);
+</pre>
+Will print the following:
+<pre class="code">
+&lt;child0&gt;
+&lt;child1&gt;
+&lt;child2&gt;
+
+&lt;child1&gt;
+</pre>
+</p>
 </div>
 
 <div id="ft">

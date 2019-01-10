@@ -41,6 +41,8 @@
 #include <ctype.h>
 #include "sxmlc.h"
 
+#define CHECK_NODE(node,ret) if ((node) == NULL || (node)->init_value != XML_INIT_DONE) return (ret)
+
 /*
  Struct defining "special" tags such as "<? ?>" or "<![CDATA[ ]]/>".
  These tags are considered having a start and an end with some data in between that will
@@ -256,8 +258,7 @@ XMLNode* XMLNode_dup(const XMLNode* node, int copy_children)
 
 int XMLNode_free(XMLNode* node)
 {
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 	
 	if (node->tag != NULL) {
 		__free(node->tag);
@@ -336,8 +337,7 @@ copy_err:
 
 int XMLNode_set_active(XMLNode* node, int active)
 {
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 
 	node->active = active;
 
@@ -361,8 +361,7 @@ int XMLNode_set_tag(XMLNode* node, const SXML_CHAR* tag)
 
 int XMLNode_set_type(XMLNode* node, const TagType tag_type)
 {
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 
 	switch (tag_type) {
 		case TAG_ERROR:
@@ -454,8 +453,7 @@ int XMLNode_get_attribute_count(const XMLNode* node)
 {
 	int i, n;
 
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return -1;
+	CHECK_NODE(node, -1);
 
 	for (i = n = 0; i < node->n_attributes; i++)
 		if (node->attributes[i].active) n++;
@@ -512,8 +510,7 @@ int XMLNode_remove_all_attributes(XMLNode* node)
 {
 	int i;
 
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 
 	if (node->attributes != NULL) {
 		for (i = 0; i < node->n_attributes; i++) {
@@ -533,8 +530,7 @@ int XMLNode_remove_all_attributes(XMLNode* node)
 int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 {
 	SXML_CHAR* p;
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 
 	if (text == NULL) { /* We want to remove it => free node text */
 		if (node->text != NULL) {
@@ -568,17 +564,96 @@ int XMLNode_add_child(XMLNode* node, XMLNode* child)
 		return false;
 }
 
+int XMLNode_insert_child(XMLNode* node, XMLNode* child, int index)
+{
+	int i, j;
+
+	CHECK_NODE(node, -1);
+
+	/* We could process cases "first" and "last" in an optimized way, but we prefer readability to (micro-)optimization */
+	if (index < 0) /* Before first => first */
+		index = 0;
+	if (index >= node->n_children) /* After last => last */
+		index = node->n_children - 1;
+
+	for (i = 0; i < node->n_children; i++) {
+		if (!node->children[i]->active || index-- > 0)
+			continue;
+		/* Insert it here, at 'i' */
+		if (_add_node(&node->children, &node->n_children, child) >= 0) {
+			node->tag_type = TAG_FATHER;
+			child->father = node;
+			/* Erase 'child', which is the last node ('n_children' has been incremented by '_add_node()') */
+			for (j = node->n_children - 1; j >= i; j--)
+				node->children[j] = node->children[j-1];
+			node->children[i] = child; /* Set it */
+			return true;
+		} else
+			return false;
+	}
+
+	return false; /* Oops! */
+}
+
+int XMLNode_move_child(XMLNode* node, int from, int to)
+{
+	XMLNode* nfrom;
+
+	CHECK_NODE(node, false);
+	if (from < 0 || from >= node->n_children)
+		return false;
+	if (to < 0) /* Before first => first */
+		to = 0;
+	if (to >= node->n_children) /* After last => last */
+		to = node->n_children - 1;
+
+	nfrom = node->children[from];
+	if (to > from) { /* Move forward: bring following nodes (up to 'to') backward one position */
+		int i;
+		for (i = from; i < to; i++)
+			node->children[i] = node->children[i+1];
+	} else { /* Move backward: bring previous nodes (up to 'from') forward one position */
+		int i;
+		for (i = from - 1; i >= to; i--)
+			node->children[i+1] = node->children[i];
+	}
+	node->children[to] = nfrom;
+
+	return true;
+}
+
+
 int XMLNode_get_children_count(const XMLNode* node)
 {
 	int i, n;
 
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return -1;
+	CHECK_NODE(node, -1);
 
 	for (i = n = 0; i < node->n_children; i++)
-		if (node->children[i]->active) n++;
+		if (node->children[i]->active)
+			n++;
 	
 	return n;
+}
+
+int XMLNode_get_index(const XMLNode* node)
+{
+	int i, i_child;
+
+	CHECK_NODE(node, -1);
+
+	if (node->father == NULL)
+		return 0;
+
+	for (i = i_child = 0; i < node->father->n_children; i++) {
+		if (!node->father->children[i]->active)
+			continue;
+		i_child++;
+		if (node->father->children[i] == node)
+			return i_child;
+	}
+
+	return -2; /* Oops! */
 }
 
 XMLNode* XMLNode_get_child(const XMLNode* node, int i_child)
@@ -617,9 +692,9 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child)
 		return -1; /* Children is not found */
 
 	/* Before modifying first see if we run out of memory */
-	if (node->n_children == 1)
+	if (node->n_children == 1) {
 		pt = NULL;
-	else {
+	} else {
 		pt = __malloc((node->n_children - 1) * sizeof(XMLNode*));
 		if (pt == NULL)
 			return -1;
@@ -648,8 +723,7 @@ int XMLNode_remove_children(XMLNode* node)
 {
 	int i;
 
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return false;
+	CHECK_NODE(node, false);
 
 	if (node->children != NULL) {
 		for (i = 0; i < node->n_children; i++)
@@ -722,8 +796,7 @@ static XMLNode* _XMLNode_next(const XMLNode* node, int in_children)
 {
 	XMLNode* node2;
 
-	if (node == NULL || node->init_value != XML_INIT_DONE)
-		return NULL;
+	CHECK_NODE(node, NULL);
 
 	/* Check first child */
 	if (in_children && node->n_children > 0)
@@ -1187,7 +1260,7 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 		
 		/* Check for XML end ('>' or '/>') */
 		if (str[n] == C2SX('>')) { /* Tag with children */
-			int type = (str[n-1] == '/' ? TAG_SELF : TAG_FATHER); // TODO: Find something better to cope with <tag attr=v/>
+			int type = (str[n-1] == '/' ? TAG_SELF : TAG_FATHER); /* TODO: Find something better to cope with <tag attr=v/> */
 			xmlnode->tag_type = type;
 			return type;
 		}
@@ -1209,11 +1282,11 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 		xmlnode->attributes = pt;
 		while (*p != NULC && sx_isspace(*++p)) ; /* Skip spaces */
 		if (isquote(*p)) { /* Attribute value starts with a quote, look for next one, ignoring protected ones with '\' */
-			for (nn = p-str+1; str[nn] && str[nn] != *p; nn++) { // CHECK UNICODE "nn = p-str+1"
+			for (nn = p-str+1; str[nn] && str[nn] != *p; nn++) { /* CHECK UNICODE "nn = p-str+1" */
 				/* if (str[nn] == C2SX('\\')) nn++; [bugs:#7]: '\' is valid in values */
 			}
 		} else { /* Attribute value stops at first space or end of XML string */
-			for (nn = p-str+1; str[nn] != NULC && !sx_isspace(str[nn]) && str[nn] != C2SX('/') && str[nn] != C2SX('>'); nn++) ; /* Go to the end of the attribute value */ // CHECK UNICODE
+			for (nn = p-str+1; str[nn] != NULC && !sx_isspace(str[nn]) && str[nn] != C2SX('/') && str[nn] != C2SX('>'); nn++) ; /* Go to the end of the attribute value */ /* CHECK UNICODE */
 		}
 		
 		/* Here 'str[nn]' is the character after value */
@@ -1388,7 +1461,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				}
 			break;
 		}
-		if (exit == true) // Return false when exit is requested
+		if (exit == true) /* Return false when exit is requested */
 			ret = false;
 		if (ret == false || meos(in))
 			break;
@@ -1517,7 +1590,7 @@ int DOMXMLDoc_node_text(SXML_CHAR* text, SAX_Data* sd)
 		}
 		new_node->tag_type = TAG_TEXT;
 		new_node->father = dom->current;
-		//dom->current->tag_type = TAG_FATHER; // OS: should parent field be forced to be TAG_FATHER? now it has at least one TAG_TEXT child. I decided not to enforce this to enforce backward-compatibility related to tag_types
+		/*dom->current->tag_type = TAG_FATHER; // OS: should parent field be forced to be TAG_FATHER? now it has at least one TAG_TEXT child. I decided not to enforce this for backward-compatibility related to tag_types*/
 		return true;
 	} else { /* Old behaviour: concatenate text to the previous one */
 		/* 'p' will point at the new text */
@@ -1613,12 +1686,12 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	f = sx_fopen(filename, fmode);
 	if (f == NULL)
 		return false;
-	/* Microsoft' 'ftell' returns invalid position for Unicode text files
+	/* Microsoft's 'ftell' returns invalid position for Unicode text files
 	   (see http://connect.microsoft.com/VisualStudio/feedback/details/369265/ftell-ftell-nolock-incorrectly-handling-unicode-text-translation)
 	   However, we're opening the file as binary in Unicode so we don't fall into that case...
 	*/
 	#if defined(SXMLC_UNICODE) && (defined(WIN32) || defined(WIN64))
-	//setvbuf(f, NULL, _IONBF, 0);
+	/*setvbuf(f, NULL, _IONBF, 0);*/
 	#endif
 
 	sd.name = (SXML_CHAR*)filename;
@@ -1675,7 +1748,7 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 		FILE* f = sx_fopen(filename, C2SX("rb"));
 		if (f != NULL) {
 			#if defined(SXMLC_UNICODE) && (defined(WIN32) || defined(WIN64))
-			//setvbuf(f, NULL, _IONBF, 0);
+			/*setvbuf(f, NULL, _IONBF, 0);*/
 			#endif
 			doc->bom_type = freadBOM(f, doc->bom, &doc->sz_bom);
 			sx_fclose(f);
@@ -1695,7 +1768,7 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 		return ret;
 	}
 
-	// TODO: Check there is no unfinished root nodes
+	/* TODO: Check there is no unfinished root nodes */
 	return ret;
 }
 
@@ -1719,7 +1792,7 @@ int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CH
 		return ret;
 	}
 
-	// TODO: Check there is no unfinished root nodes
+	/* TODO: Check there is no unfinished root nodes */
 	return ret;
 }
 

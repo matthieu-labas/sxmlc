@@ -192,7 +192,7 @@ Hence, knowing the tag type eases its display:
 <li>
 	<code>TAG_TEXT</code> (since v4.1.0) is a special node which <code>text</code> field contains the text of its father node.
 	It is particularly useful when you want to DOM-parse a document and want to keep the text position in the
-	childrend, instead of merging all text pieces (default behavior before v4.1.0).<br/>
+	children, instead of merging all text pieces (default behavior before v4.1.0).<br/>
 	Thanks go to Olgierd Stankiewicz for that improvement! :)
 </li>
 </ul>
@@ -205,6 +205,17 @@ to a struct, ...).
 <code>XMLNode</code> struct HAS TO be initialized with <code>XMLNode_init</code>, and freed with
 <code>XMLNode_free</code>. Calling <code>XMLNode_init</code> several times without <code>XMLNode_free</code>
 in between can lead to memory leak.
+</p>
+
+<h5>Inactive Nodes</h5>
+<p>
+Nodes can be <em>inactive</em>: they are still in the list of their father node's children, but will <em>not</em> be
+displayed by <code>XMLDoc_print()</code> or taken into account by any <code>XMLNode_*()</code> functions!
+</p>
+<p>
+Marking a node "invalid" is equivalent to send it to the trash bin: it will be invisible to every accessor functions.<br/>
+If there is a need to access them, it should be done by manipulating the father's children list directly (see more at
+<a href="howto.html#INACTIVE">Inactive nodes HOW TO</a>).
 </p>
 
 </div>

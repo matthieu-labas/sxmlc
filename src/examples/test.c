@@ -810,7 +810,7 @@ int _allin1(XMLEvent event, const XMLNode* node, SXML_CHAR* text, const int n, S
 	}
 }
 
-#if 1
+#if 0
 int main()
 {
 	int ret;

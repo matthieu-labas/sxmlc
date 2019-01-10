@@ -30,7 +30,7 @@
 #ifndef _SXML_H_
 #define _SXML_H_
 
-#define SXMLC_VERSION "4.2.10"
+#define SXMLC_VERSION "4.3.0"
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,7 +164,8 @@ typedef enum _TagType {
 	TAG_USER = 100	/* User-defined tag start */
 } TagType;
 
-/* TODO: Performance improvement with some fixed-sized strings ??? (e.g. XMLAttribute.name[64], XMLNode.tag[64]) */
+/* TODO: Performance improvement with some fixed-sized strings ??? (e.g. XMLAttribute.name[64], XMLNode.tag[64]).
+ * Also better for platforms where allocations can be forbidden (e.g. embedded, space, ...). */
 
 typedef struct _XMLAttribute {
 	SXML_CHAR* name;
@@ -172,7 +173,8 @@ typedef struct _XMLAttribute {
 	int active;
 } XMLAttribute;
 
-/* Constant to know whether a struct has been initialized (XMLNode or XMLDoc) */
+/* Constant to know whether a struct has been initialized (XMLNode or XMLDoc)
+ * TODO: Find a better way. */
 #define XML_INIT_DONE 0x19770522 /* Happy Birthday ;) */
 
 /*
@@ -294,7 +296,7 @@ typedef struct _SAX_Callbacks {
 
 	/*
 	 Callback called when a new node starts (e.g. '<tag>' or '<tag/>').
-	 If any, attributes can be read from 'node->attributes'.
+	 Attributes are read and available from 'node->attributes'.
 	 N.B. '<tag/>' will trigger an immediate call to the 'end_node' callback
 	 after the 'start_node' callback.
 	 */
@@ -306,7 +308,7 @@ typedef struct _SAX_Callbacks {
 	int (*end_node)(const XMLNode* node, SAX_Data* sd);
 
 	/*
-	 Callback called when text has been found in the last node.
+	 Callback called when text has been found in the last node (e.g. <tag>text<...).
 	 */
 	int (*new_text)(SXML_CHAR* text, SAX_Data* sd);
 
@@ -433,11 +435,13 @@ XMLNode* XMLNode_new(const TagType tag_type, const char* tag, const char* text);
  Utility to create a comment: <!--tag-->
  */
 #define XMLNode_new_node_comment(comment) XMLNode_new(TAG_COMMENT, (comment), NULL)
+#define XMLNode_new_comment XMLNode_new_node_comment
 
 /*
  Utility to create a simple node with text: <tag>text</tag>
  */
 #define XMLNode_new_node_text(tag, text) XMLNode_new(TAG_NONE, (tag), (text))
+#define XMLNode_new_text XMLNode_new_node_text
 
 /*
  Initialize an already-allocated XMLNode.
@@ -542,9 +546,34 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text);
 int XMLNode_add_child(XMLNode* node, XMLNode* child);
 
 /*
+ Insert a node to position 'index': if 'index <= 0': will be the first child (0).
+ If 'index >= child->father->n_children': will be the last child.
+ Return 'false' if 'node' is not initialized, 'true' otherwise.
+ */
+int XMLNode_insert_child(XMLNode* node, XMLNode* child, int index);
+
+#define XMLNode_insert_before(node, child) XMLNode_insert_child(node, child, XMLNode_get_index(node))
+#define XMLNode_insert_after(node, child) XMLNode_insert_child(node, child, XMLNode_get_index(node)+1)
+
+/*
+ Move 'node' child from position 'from' to position 'to'. Moved to first position if 'to <= 0'
+ or last position if 'to >= node->n_children'.
+ Return 'false' if 'node' is not initialized or 'from' is invalid, 'true' otherwise.
+ */
+int XMLNode_move_child(XMLNode* node, int from, int to);
+
+/*
  Return the number of active children nodes of 'node', or '-1' if 'node' is invalid.
+ N.B. that it can be different from 'node->n_children' if some nodes are deactivated!
  */
 int XMLNode_get_children_count(const XMLNode* node);
+
+/*
+ Return 'node' position among its siblings ('0' if 'node' is the root node), '-1'
+ if 'node' is invalid or '-2' if 'node' could not be found in its father's children
+ (in which case I'd appreciate a bug report with the XML and steps that led to that situation!).
+ */
+int XMLNode_get_index(const XMLNode* node);
 
 /*
  Return a reference to the 'i_child'th active node.
@@ -718,7 +747,7 @@ int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const S
 /*
  Parse an XML file using the DOM implementation.
  */
-#define XMLDoc_parse_file XMLDOC_parse_file_DOM
+#define XMLDoc_parse_file XMLDoc_parse_file_DOM
 
 
 

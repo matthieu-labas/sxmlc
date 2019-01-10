@@ -1,3 +1,7 @@
+*** v4.3.0 - Added Github#9: "Support for XMLNode_add_sibling()".
+	- Documentation update.
+	- Rudimentary unit testing.
+
 *** v4.2.7 - Fixed #20 by Richard Minner (SXMLC_VERSION not updated), #21, #22 by George Makarov (sx_f* consistency).
 
 *** v4.2.6 - Fixed #17, #18, #19 by Andreas Neustifter (infinite loop and compilation messages).
