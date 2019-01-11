@@ -94,7 +94,7 @@ static test_result _test_not_implemented(char* msg)
 	return TEST_WARN;
 }
 
-/**
+/*
  * Generate XML, marking some nodes and attributes as inactive
  * Save it to a file on disk
  * Reads the file back and check content
@@ -129,7 +129,12 @@ Multi-line...
 
 #define INSTR C2SX("xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"")
 
-static test_result test_gen(char* msg)
+static test_result test_parse(char* msg)
+{
+	// TODO: Test basic cases: <tag/> <tag attrib/> <tag attrib=/> <tag attrib ='' /> <tag attrib attrib2=toto /> <tag attrib= attrib2 = long/> <tag attrib = "value" />
+}
+
+static test_result test_gen_file(char* msg)
 {
 	XMLNode *node, *node1;
 
@@ -254,7 +259,7 @@ static test_result test_gen(char* msg)
 	return TEST_OK;
 }
 
-static test_result test_parse(char* msg)
+static test_result test_parse_file(char* msg)
 {
 	// Open 'fic', parse it and check content
 	XMLDoc doc;
@@ -349,6 +354,12 @@ static test_result test_unicode(char* msg)
 }
 
 
+static test_result test_user(char* msg)
+{
+	return _test_not_implemented(msg); // TODO
+}
+
+
 static test_result test_move(char* msg)
 {
 	XMLDoc doc; // To ease freeing all nodes
@@ -365,6 +376,11 @@ static test_result test_move(char* msg)
 	XMLNode_add_child(root, nodes[0]);
 	XMLNode_add_child(root, nodes[1]);
 	XMLNode_add_child(root, nodes[2]);
+
+	assert_equals_i(1, XMLNode_get_index(nodes[1]), TEST_ERROR, "Bad index", NOP);
+	nodes[0]->active = 0;
+	assert_equals_i(1, XMLNode_get_index(nodes[2]), TEST_ERROR, "Bad index after inactive", NOP);
+	nodes[0]->active = 1;
 
 	assert_equals_i(3, root->n_children, TEST_ERROR, NULL, NOP);
 	XMLNode_move_child(root, 1, 0); // Move backward
@@ -402,10 +418,12 @@ struct _test {
 	char* name;
 	test_result (*test)(char* msg);
 } test_list[] = {
-		{ "GENERATION", test_gen },
-		{ "PARSE", test_parse },
+		{ "PARSE MEM", test_parse },
+		{ "GENERATION", test_gen_file },
+		{ "PARSE FILE", test_parse_file },
 		{ "TEXT NODE", test_text_node },
 		{ "MOVE", test_move },
+		{ "USER", test_user },
 		{ "UNICODE", test_unicode },
 		{ "SEARCH", test_search },
 };

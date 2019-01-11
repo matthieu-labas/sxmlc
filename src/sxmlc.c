@@ -41,7 +41,7 @@
 #include <ctype.h>
 #include "sxmlc.h"
 
-#define CHECK_NODE(node,ret) if ((node) == NULL || (node)->init_value != XML_INIT_DONE) return (ret)
+#define CHECK_NODE(node,ret) if (XMLNode_is_valid(node)) return (ret)
 
 /*
  Struct defining "special" tags such as "<? ?>" or "<![CDATA[ ]]/>".
@@ -541,12 +541,10 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 		return true;
 	}
 
-	p = __realloc(node->text, (sx_strlen(text) + 1)*sizeof(SXML_CHAR)); /* +1 for '\0' */
+	p = sx_strdup(text);
 	if (p == NULL)
 		return false;
 	node->text = p;
-
-	sx_strcpy(node->text, text);
 
 	return true;
 }
@@ -648,9 +646,9 @@ int XMLNode_get_index(const XMLNode* node)
 	for (i = i_child = 0; i < node->father->n_children; i++) {
 		if (!node->father->children[i]->active)
 			continue;
-		i_child++;
 		if (node->father->children[i] == node)
 			return i_child;
+		i_child++;
 	}
 
 	return -2; /* Oops! */
@@ -980,6 +978,8 @@ static int _XMLNode_print_header(const XMLNode* node, FILE* f, const SXML_CHAR* 
 	cur_sz_line += sx_fprintf(f, C2SX("<%s"), node->tag);
 
 	/* Print attributes */
+	if (attr_sep == NULL)
+		attr_sep = C2SX(" ");
 	for (i = 0; i < node->n_attributes; i++) {
 		if (!node->attributes[i].active)
 			continue;
@@ -993,12 +993,8 @@ static int _XMLNode_print_header(const XMLNode* node, FILE* f, const SXML_CHAR* 
 			}
 		}
 		/* Attribute name */
-		if (attr_sep != NULL) {
-			sx_fputs(attr_sep, f);
-			cur_sz_line = _count_new_char_line(attr_sep, nb_char_tab, cur_sz_line);
-			sx_fprintf(f, C2SX("%s="), node->attributes[i].name);
-		} else
-			sx_fprintf(f, C2SX(" %s="), node->attributes[i].name);
+		cur_sz_line = _count_new_char_line(attr_sep, nb_char_tab, cur_sz_line);
+		sx_fprintf(f, C2SX("%s%s="), attr_sep, node->attributes[i].name);
 		
 		/* Attribute value */
 		(void)sx_fputc(XML_DEFAULT_QUOTE, f);
@@ -1171,7 +1167,7 @@ static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLN
 
 	node->tag = __malloc((len - tag->len_start - tag->len_end + 1)*sizeof(SXML_CHAR));
 	if (node->tag == NULL)
-		return TAG_NONE;
+		return TAG_ERROR;
 	sx_strncpy(node->tag, str + tag->len_start, len - tag->len_start - tag->len_end);
 	node->tag[len - tag->len_start - tag->len_end] = NULC;
 	node->tag_type = tag->tag_type;
@@ -1196,7 +1192,7 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 	
 	/* Check for malformed string */
 	if (str[0] != C2SX('<') || str[len-1] != C2SX('>'))
-		return TAG_ERROR;
+		return TAG_NONE; /* Syntax error */
 
 	for (nn = 0; nn < NB_SPECIAL_TAGS; nn++) {
 		n = (int)_parse_special_tag(str, len, &_spec[nn], xmlnode);
@@ -1232,8 +1228,8 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 	for (nn = 0; nn < _user_tags.n_tags; nn++) {
 		n = _parse_special_tag(str, len, &_user_tags.tags[nn], xmlnode);
 		switch (n) {
-			case TAG_ERROR:	return TAG_NONE;	/* Error => exit */
-			case TAG_NONE:	break;				/* Nothing found => do nothing */
+			case TAG_ERROR:	return TAG_ERROR;	/* Error => exit */
+			case TAG_NONE:	break;				/* Not this one */
 			default:		return (TagType)n;	/* Tag found => return it */
 		}
 	}
@@ -1888,6 +1884,32 @@ int _bgetc(DataSourceBuffer* ds)
 	return (int)(ds->buf[ds->cur_pos++]);
 }
 
+/*
+ * \brief Read a "line" from data source, eventually (re-)allocating a given buffer. A "line" is defined
+ * as a portion starting with character `from` (usually `<`) ending at character `to` (usually `>`).
+ *
+ * Characters read will be stored in `line` starting at `i0` (this allows multiple calls to
+ * `read_line_alloc()` on the same `line` buffer without overwriting it at each call).
+ * Searches for character `from` until character `to`. If `from` is 0, starts from
+ * current position in the data source. If `to` is 0, it is replaced by `\n`.
+ *
+ * \param in The data source (either `FILE*` if `in_type` is `DATA_SOURCE_FILE` or `SXML_CHAR*`
+ * 		if `in_type` is `DATA_SOURCE_BUFFER`).
+ * \param in_type specifies the type of data source to be read.
+ * \param line can be `NULL`, in which case it will be allocated to `*sz_line` bytes. After the function
+ * 		returns, `*sz_line` is the actual buffer size. This allows multiple calls to this function using
+ * 		the same buffer (without re-allocating/freeing).
+ * \param sz_line is the size of the buffer `line` if previously allocated (in `SXML_CHAR`, not byte!).
+ * 		If `NULL` or 0, an internal value of `MEM_INCR_RLA` is used.
+ * \param i0 The position where read characters are stored in `line`.
+ * \param from The character indicating a start of line.
+ * \param to The character indicating an end of line.
+ * \param keep_fromto if 0, removes characters `from` and `to` from the line (stripping).
+ * \param interest is a special character of interest, usually `'\n'` so we can count line numbers in the
+ * 		data source (valid only if `interest_count` is not `NULL`).
+ * \param interest_count if not `NULL`, will receive the count of `interest` characters while searching.
+ * \returns the number of characters in the line or 0 if an error occurred.
+ */
 int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_line, int i0, SXML_CHAR from, SXML_CHAR to, int keep_fromto, SXML_CHAR interest, int* interest_count)
 {
 	int init_sz = 0;
@@ -2100,8 +2122,6 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	} else {
 		n0 = 0;
 		for (n1 = 0; str[n1] != NULC && str[n1] != sep; n1++) ; /* Search for separator only */
-		if (str[n1] != sep) /* Separator not found: malformed string */
-			return false;
 		is = n1;
 	}
 
@@ -2151,6 +2171,7 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
 	return true;
 }
 
+#ifdef SXMLC_UNICODE
 BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 {
 	unsigned char c1, c2;
@@ -2235,6 +2256,7 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 			return BOM_NONE;
 	}
 }
+#endif
 
 /* --- */
 

@@ -1,3 +1,6 @@
+*** v4.3.1 - Correction on XMLNode_get_index().
+	- Doxygen documentation.
+
 *** v4.3.0 - Added Github#9: "Support for XMLNode_add_sibling()".
 	- Documentation update.
 	- Rudimentary unit testing.
