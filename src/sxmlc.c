@@ -43,25 +43,21 @@
 
 #define CHECK_NODE(node,ret) if (XMLNode_is_valid(node)) return (ret)
 
-/*
- Struct defining "special" tags such as "<? ?>" or "<![CDATA[ ]]/>".
- These tags are considered having a start and an end with some data in between that will
- be stored in the 'tag' member of an XMLNode.
- The 'tag_type' member is a constant that is associated to such tag.
- All 'len_*' members are basically the "sx_strlen()" of 'start' and 'end' members.
+/**
+ * \brief Definition of "special" tags such as "&lt;? ?&gt;" or "&lt;![CDATA[ ]]/&gt;".
+ *
+ * These tags are considered having a start and an end with some data in between that will
+ * be stored in the 'tag' member of an XMLNode.
+ * The `tag_type` member is a constant that is associated to such tag.
+ * All `len_*` members are basically the "sx_strlen()" of 'start' and 'end' members.
  */
 typedef struct _Tag {
-	TagType tag_type;
-	SXML_CHAR* start;
-	int len_start;
-	SXML_CHAR* end;
-	int len_end;
+	TagType tag_type;	/**< The tag type. */
+	SXML_CHAR* start;	/**< The string representing the tag "opening". *Must start with &lt;*. */
+	int len_start;		/**< The `strlen(start)`. */
+	SXML_CHAR* end;		/**< The string representing the tag "closing". *Must end with &gt;*. */
+	int len_end;		/**< The `strlen(end)`. */
 } _TAG;
-
-typedef struct _SpecialTag {
-	_TAG *tags;
-	int n_tags;
-} SPECIAL_TAG;
 
 /*
  List of "special" tags handled by sxmlc.
@@ -78,7 +74,10 @@ static int NB_SPECIAL_TAGS = (int)(sizeof(_spec) / sizeof(_TAG)); /* Auto comput
 /*
  User-registered tags.
  */
-static SPECIAL_TAG _user_tags = { NULL, 0 };
+static struct _SpecialTag {
+	_TAG *tags;
+	int n_tags;
+} _user_tags = { NULL, 0 };
 
 int XML_register_user_tag(TagType tag_type, SXML_CHAR* start, SXML_CHAR* end)
 {
@@ -544,6 +543,8 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 	p = sx_strdup(text);
 	if (p == NULL)
 		return false;
+	if (node->text != NULL)
+		__free(node->text);
 	node->text = p;
 
 	return true;

@@ -1,3 +1,6 @@
+*** v4.3.2 - Fixed GitHub#11 by Damián M. González (missing free() on XMLNode_set_text()).
+	- Doxygen documentation update.
+
 *** v4.3.1 - Correction on XMLNode_get_index().
 	- Doxygen documentation.
 

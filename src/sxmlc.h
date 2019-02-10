@@ -31,10 +31,9 @@
 #define _SXML_H_
 
 /**
- * \def SXMLC_VERSION
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.3.1"
+#define SXMLC_VERSION "4.3.2"
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,7 +113,6 @@ extern "C" {
 #endif
 
 /**
- * \def MEM_INCR_RLA
  * \brief The number of bytes to add to currently allocated buffer for line reading. Default to 256 characters (=512
  * 		bytes with unicode support).
  */
@@ -134,7 +132,6 @@ extern "C" {
 #define isquote(c) (((c) == C2SX('"')) || ((c) == C2SX('\'')))
 
 /**
- * \typedef DataSourceBuffer
  * \brief Buffer data source used by 'read_line_alloc' when required. 'buf' should be 0-terminated.
  */
 typedef struct _DataSourceBuffer {
@@ -146,7 +143,6 @@ typedef struct _DataSourceBuffer {
 typedef FILE* DataSourceFile;
 
 /**
- * \typedef DataSourceType
  * \brief Describes the type of data source used for parsing.
  */
 typedef enum _DataSourceType {
@@ -182,7 +178,6 @@ typedef enum _TagType {
  * Also better for platforms where allocations can be forbidden (e.g. embedded, space, ...). */
 
 /**
- * \typedef XMLAttribute
  * \brief An XML attribute in the form `name="value"`.
  *
  * An attribute can be *deactivated*, in which case it will not be taken into account in functions
@@ -199,7 +194,6 @@ typedef struct _XMLAttribute {
 #define XML_INIT_DONE 0x19770522 /* Happy Birthday ;) */
 
 /**
- * \typedef XMLNode
  * \brief An XML node.
  *
  * For tag types `TAG_INSTR`, `TAG_COMMENT`, `TAG_CDATA` and `TAG_DOCTYPE`, the text is
@@ -241,7 +235,6 @@ typedef struct _XMLNode {
 #define SXMLC_MAX_PATH 256
 #endif
 /**
- * \typedef XMLDoc.
  * \brief An XML document, basically an array of `XMLNode`.
  *
  * An sxmlc XML document can have several root nodes. It actually usually have a prolog `<?xml version="1.0" ...?>`
@@ -327,7 +320,6 @@ typedef enum _XMLEvent {
 } XMLEvent;
 
 /**
- * \typedef SAX_Data
  * \brief Structure given as an argument for SAX callbacks to retrieve information about parsing status.
  */
 typedef struct _SAX_Data {
@@ -337,7 +329,6 @@ typedef struct _SAX_Data {
 } SAX_Data;
 
 /**
- * \typedef SAX_Callbacks
  * \brief User callbacks used for SAX parsing.
  *
  * Return values of these callbacks should be 0 to stop parsing. Some callbacks can be set to `NULL`
@@ -433,11 +424,13 @@ typedef struct _SAX_Callbacks {
 int SAX_Callbacks_init(SAX_Callbacks* sax);
 
 /**
- * Set of SAX callbacks used by `XMLDoc_parse_file_DOM()`.
+ * \brief Set of SAX callbacks used by `XMLDoc_parse_file_DOM()`.
+ *
  * These are made available to be able to load an XML document using DOM implementation
  * with user-defined code at some point (e.g. counting nodes, running search, ...).
+ *
  * In this case, the `XMLDoc_parse_file_SAX()` has to be called instead of the `XMLDoc_parse_file_DOM()`,
- * providing either these callbacks directly, or a functions calling these callbacks.
+ * providing either these callbacks directly, or a functions calling these callbacks.<br>
  * To do that, you should initialize the `doc` member of the `DOM_through_SAX` struct and call the
  * `XMLDoc_parse_file_SAX()` giving this struct as a the `user` data pointer.
  */

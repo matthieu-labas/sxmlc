@@ -81,8 +81,8 @@ typedef int (*REGEXPR_COMPARE)(SXML_CHAR* str, SXML_CHAR* pattern);
 /**
  * \brief Set a new comparison function to evaluate whether a string matches a given pattern.
  *
- * The default one is `regstrcmp()` which handles limited regular expressions (`'?'` and `'*'`
- * wildcards).
+ * The default one is `regstrcmp()` which handles limited regular expressions (<code>'?'</code>
+ * and <code>'*'</code> wildcards).
  *
  * \return The previous function used for matching.
  */
@@ -187,7 +187,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  * \param search The search parameters. NULL will return an empty string.
  * \param xpath is a pointer to a string that will be allocated by the function and should
  *		be freed after use.
- * \param quote is the quote character to be used (e.g. `"` or `'`). If `'\0'`,
+ * \param quote is the quote character to be used (e.g. `"` or `'`). If <code>'\0'</code>,
  * 		`XML_DEFAULT_QUOTE` will be used.
  *
  * \return `false` for a memory problem, `true` otherwise.
@@ -198,7 +198,7 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
  * \brief Initialize a search struct from an XPath-like query. "XPath-like" means that
  * it does not fully comply to XPath standard.
  *
- * \param xpath should be like `"tag[.=text, @attrib="value", @attrib!='value']/tag..."`.
+ * \param xpath should be like <code>"tag[.=text, @attrib="value", @attrib!='value', ...]/tag..."</code>.
  * 		*Warning*: the XPath query on node text like `father[child="text"]` should be
  * 		re-written `father/child[.="text"]` instead (which should be XPath-compliant as well).
  * \param search The search parameters.
