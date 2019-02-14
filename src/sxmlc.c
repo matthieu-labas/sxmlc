@@ -41,7 +41,7 @@
 #include <ctype.h>
 #include "sxmlc.h"
 
-#define CHECK_NODE(node,ret) if (XMLNode_is_valid(node)) return (ret)
+#define CHECK_NODE(node,ret) if (!XMLNode_is_valid(node)) return (ret)
 
 /**
  * \brief Definition of "special" tags such as "&lt;? ?&gt;" or "&lt;![CDATA[ ]]/&gt;".
