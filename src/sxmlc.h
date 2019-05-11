@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.3.2"
+#define SXMLC_VERSION "4.3.3"
 
 #ifdef __cplusplus
 extern "C" {
@@ -326,6 +326,8 @@ typedef struct _SAX_Data {
 	const SXML_CHAR* name;	/**< Document name (file name or buffer name). */
 	int line_num;			/**< Current line number being processed. */
 	void* user;				/**< User-given data. */
+	DataSourceType type;	/**< Data source type [DATA_SOURCE_FILE|DATA_SOURCE_BUFFER]. */
+	void* src;				/**< Data source [DataSourceFile|DataSourceBuffer]. Depends on type. */
 } SAX_Data;
 
 /**

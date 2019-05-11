@@ -1693,6 +1693,8 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 
 	sd.name = (SXML_CHAR*)filename;
 	sd.user = user;
+	sd.type = DATA_SOURCE_FILE;
+	sd.src  = (void*)f;
 #ifdef SXMLC_UNICODE
 	bom = freadBOM(f, NULL, NULL); /* Skip BOM, if any */
 	/* In Unicode, re-open the file in text-mode if there is no BOM (or UTF-8) as we assume that
@@ -1723,6 +1725,8 @@ int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const S
 
 	sd.name = name;
 	sd.user = user;
+	sd.type = DATA_SOURCE_BUFFER;
+	sd.src  = (void*)buffer;
 	return _parse_data_SAX((void*)&dsb, DATA_SOURCE_BUFFER, sax, &sd);
 }
 
