@@ -1,3 +1,5 @@
+*** v4.3.4 - Test for i_root validity in macro XMLDoc_root.
+
 *** v4.3.3 - Added Sourceforge#12 by Alexander Goomenyuk (expose data source context to user).
 	- Added search unitest.
 

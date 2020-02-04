@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.3.3"
+#define SXMLC_VERSION "4.3.4"
 
 #ifdef __cplusplus
 extern "C" {
@@ -794,9 +794,10 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
 #define XMLDoc_remove_root_node XMLDoc_remove_node
 
 /**
- * \brief Shortcut macro to retrieve root node from a document. Equivalent to `doc->nodes[doc->i_root]`.
+ * \brief Shortcut macro to retrieve root node from a document. Equivalent to `doc->nodes[doc->i_root]`,
+ *		or `NULL` if there is no root node.
  */
-#define XMLDoc_root(doc) ((doc)->nodes[(doc)->i_root])
+#define XMLDoc_root(doc) (((doc)->i_root) < 0 ? NULL : ((doc)->nodes[(doc)->i_root]))
 
 /**
  * \brief Shortcut macro to add a node to 'doc' root node. Equivalent to `XMLDoc_add_child_root(XMLDoc* doc, XMLNode* child)`.
