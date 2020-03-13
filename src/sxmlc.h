@@ -64,13 +64,13 @@ extern "C" {
 	#define sx_fputc fputwc
 	#define sx_puts putws
 	#define sx_fputs fputws
-	#define sx_isspace iswspace
+    #define sx_isspace iswspace
 	#if defined(WIN32) || defined(WIN64)
 		#define sx_fopen _wfopen
 	#else
 		#define sx_fopen fopen
 	#endif
-	#define sx_fclose fclose
+    #define sx_fclose fclose
 	#define sx_feof feof
 #else
 	typedef char SXML_CHAR;
@@ -92,8 +92,12 @@ extern "C" {
 	#define sx_fputc fputc
 	#define sx_puts puts
 	#define sx_fputs fputs
-	#define sx_isspace(ch) isspace((int)ch)
-	#define sx_fopen fopen
+	#define sx_isspace(c) ((int)c >= 0 && (int)c <= 127 && isspace((int)c))
+	#if defined(WIN32) || defined(WIN64) // On Windows, if the filename has unicode characters in it, assume them to be UTF8 and convert it to wide char before calling _wfopen()
+		FILE* sx_fopen(const SXML_CHAR* filename, const SXML_CHAR* mode);
+	#else // On Linux, simply call fopen()
+		#define sx_fopen fopen
+	#endif
 	#define sx_fclose fclose
 	#define sx_feof feof
 #endif
@@ -232,24 +236,37 @@ typedef struct _XMLNode {
 } XMLNode;
 
 #ifndef SXMLC_MAX_PATH
+#ifdef _MAX_PATH
+#define SXMLC_MAX_PATH _MAX_PATH
+#else
 #define SXMLC_MAX_PATH 256
 #endif
+#endif
+
+/**
+ * \brief Describe the types of BOM detected while reading an XML buffer.
+ */
+typedef enum _BOM_TYPE {
+	BOM_NONE = 0x00,
+	BOM_UTF_8 = 0xefbbbf,
+	BOM_UTF_16BE = 0xfeff,
+	BOM_UTF_16LE = 0xfffe,
+	BOM_UTF_32BE = 0x0000feff,
+	BOM_UTF_32LE = 0xfffe0000
+} BOM_TYPE;
+    
 /**
  * \brief An XML document, basically an array of `XMLNode`.
  *
  * An sxmlc XML document can have several root nodes. It actually usually have a prolog `<?xml version="1.0" ...?>`
  * as the first node, then maybe a few comment nodes, then the first root node, which is the last node in
  * correctly-formed XML, but there can also be some other nodes after it.
- *
- * N.B. that when compiled with `SXMLC_UNICODE` there are additional fields for BOM (Byte Order Mark) handling.
  */
 typedef struct _XMLDoc {
 	SXML_CHAR filename[SXMLC_MAX_PATH];
-#ifdef SXMLC_UNICODE
 	BOM_TYPE bom_type;		/**< BOM type (UTF-8, UTF-16*). */
 	unsigned char bom[5];	/**< First characters read that might be a BOM when unicode is used. */
 	int sz_bom;				/**< Number of bytes in BOM. */
-#endif
 	XMLNode** nodes;		/* Nodes of the document, including prolog, comments and root nodes */
 	int n_nodes;			/* Number of nodes in 'nodes' */
 	int i_root;				/* Index of first root node in 'nodes', -1 if document is empty */
@@ -503,7 +520,7 @@ XMLNode* XMLNode_allocN(int n);
  * \return `NULL` if not enough memory, or the pointer to the node otherwise.
  */
 
-XMLNode* XMLNode_new(const TagType tag_type, const char* tag, const char* text);
+XMLNode* XMLNode_new(const TagType tag_type, const SXML_CHAR* tag, const SXML_CHAR* text);
 
 /**
  * \fn XMLNode_new_node_comment
@@ -1005,18 +1022,6 @@ SXML_CHAR* str_unescape(SXML_CHAR* str);
  */
 int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
 
-#ifdef SXMLC_UNICODE
-/**
- * \brief Describe the types of BOM detected while reading an XML buffer.
- */
-typedef enum _BOM_TYPE {
-	BOM_NONE = 0x00,
-	BOM_UTF_8 = 0xefbbbf,
-	BOM_UTF_16BE = 0xfeff,
-	BOM_UTF_16LE = 0xfffe,
-	BOM_UTF_32BE = 0x0000feff,
-	BOM_UTF_32LE = 0xfffe0000
-} BOM_TYPE;
 /**
  Detect a potential BOM at the current file position and read it into 'bom' (if not NULL,
  'bom' should be at least 5 bytes). It also moves the 'f' beyond the BOM so it's possible to
@@ -1026,7 +1031,6 @@ typedef enum _BOM_TYPE {
  Return the BOM type or BOM_NONE if none found (empty 'bom' in this case).
  */
 BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom);
-#endif
 
 /**
  * \brief Replace occurrences of special HTML characters escape sequences (e.g. `"&amp;"`)

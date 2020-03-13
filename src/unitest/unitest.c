@@ -27,35 +27,6 @@ typedef enum {
 
 #define NOP ;
 
-#define UTEST(test, fmt) do { if (test) { sprintf(msg, fmt, value, expected, error_message == NULL || !error_message[0] ? "" : error_message, at); return false; } return true; } while(0)
-
-// FIXME: Use snprintf(msg) for asserts
-static int _assert_true(int value, char* error_message, char* at, char* msg)
-{
-#define expected true // For sprintf
-	UTEST(!value, "%3$s\t(@%4$s)");
-#undef expected
-}
-static int _assert_equals_i(int expected, int value, char* error_message, char* at, char* msg)
-{
-	UTEST(value != expected, "%d != %d: %s\t(@%s)");
-}
-static int _assert_equals_f(double expected, double value, char* error_message, char* at, char* msg)
-{
-	UTEST(value != expected, "%g != %g: %s\t(@%s)");
-}
-static int _assert_equals_s(char* expected, char* value, char* error_message, char* at, char* msg)
-{
-	UTEST(strcmp(expected, value), "[%s] != [%s]: %s\t(@%s)");
-}
-
-#define assert_true(value, ret, message, clean) do { if (!_assert_true((value), (message), AT, msg)) { clean; return (ret); } } while(0)
-#define assert_equals_i(expected, value, ret, message, clean) do { if (!_assert_equals_i((expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
-#define assert_equals_f(expected, value, ret, message, clean) do { if (!_assert_equals_f((expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
-#define assert_equals_s(expected, value, ret, message, clean) do { if (!_assert_equals_s((expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
-
-static int max_len_name = 0;
-
 #ifndef NO_VTCOLORS // For normal OS
 #define NORM	"\e[0m"
 #define BOLD	"\e[1m"
@@ -72,21 +43,58 @@ static int max_len_name = 0;
 #define ORANGE
 #endif
 
-static void print_result(char* test, test_result res, char* descr)
+static int max_len_name = 0; // Max length for test names
+
+static void print_result(char* test_name, test_result res, char* descr)
 {
 	char* tres = "???";
 	switch (res) { // TODO: Terminal colors
-		case TEST_ERROR: tres = RED"ERROR"DEF; break;
-		case TEST_OK: tres = GREEN" OK  "DEF; break;
-		case TEST_WARN: tres = ORANGE"WARN "DEF; break;
+		case TEST_ERROR: tres = RED"FAIL"DEF; break;
+		case TEST_OK: tres = GREEN"PASS"DEF; break;
+		case TEST_WARN: tres = ORANGE"WARN"DEF; break;
 	}
-	printf(BOLD"%*s"NORM" [%5s]", max_len_name, test, tres);
+	printf(BOLD"%*s"NORM" [%4s]", max_len_name, test_name, tres);
 	if (descr == NULL || descr[0] == 0) {
 		printf("\n");
 	} else {
 		printf(" %s\n", descr);
 	}
 }
+
+// Remove '0' in first 'if' to enable intermediate checks (TODO: make it look better)
+#define UTEST(test_name, test_fail, fmt) do { \
+		if (0 && (test_name) && *(test_name)) print_result(test_name, test_fail ? TEST_ERROR : TEST_OK, NULL); \
+		if (test_fail) { \
+			sprintf(msg, fmt, value, expected, error_message == NULL || !error_message[0] ? "" : error_message, at); \
+			return false; \
+		} \
+		return true; \
+	} while(0)
+
+// FIXME: Use snprintf(msg) for asserts
+static int _assert_true(char* test_name, int value, char* error_message, char* at, char* msg)
+{
+#define expected true // For sprintf
+	UTEST(test_name, !value, "%3$s\t(@%4$s)");
+#undef expected
+}
+static int _assert_equals_i(char* test_name, int expected, int value, char* error_message, char* at, char* msg)
+{
+	UTEST(test_name, value != expected, "%d != %d: %s\t(@%s)");
+}
+static int _assert_equals_f(char* test_name, double expected, double value, char* error_message, char* at, char* msg)
+{
+	UTEST(test_name, value != expected, "%g != %g: %s\t(@%s)");
+}
+static int _assert_equals_s(char* test_name, char* expected, char* value, char* error_message, char* at, char* msg)
+{
+	UTEST(test_name, strcmp(expected, value), "[%s] != [%s]: %s\t(@%s)");
+}
+
+#define assert_true(test_name, value, ret, message, clean) do { if (!_assert_true((test_name), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
+#define assert_equals_i(test_name, expected, value, ret, message, clean) do { if (!_assert_equals_i((test_name), (expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
+#define assert_equals_f(test_name, expected, value, ret, message, clean) do { if (!_assert_equals_f((test_name), (expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
+#define assert_equals_s(test_name, expected, value, ret, message, clean) do { if (!_assert_equals_s((test_name), (expected), (value), (message), AT, msg)) { clean; return (ret); } } while(0)
 
 static test_result _test_not_implemented(char* msg)
 {
@@ -129,9 +137,65 @@ Multi-line...
 
 #define INSTR C2SX("xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"")
 
-static test_result test_parse(char* msg)
+#define test_unit_basic(test_name, str, xpect_type) do { \
+	type = XML_parse_1string(str, node); \
+	assert_equals_i("Tag type " test_name, xpect_type, type, TEST_ERROR, "Wrong tag type " test_name, NOP); \
+	assert_equals_i("Tag type consistency " test_name, type, node->tag_type, TEST_ERROR, "Inconsistent tag type " test_name, NOP); \
+	assert_equals_s("Tag " test_name, "data", node->tag, TEST_ERROR, "Wrong tag " test_name, NOP); \
+	assert_equals_i(test_name " numbers of attributes", 1, node->n_attributes, TEST_ERROR, "Wrong number of attributes " test_name, NOP); \
+	assert_equals_s(test_name " attribute name", "type", node->attributes[0].name, TEST_ERROR, "Wrong attribute name " test_name, NOP); \
+	assert_equals_s(test_name " attribute value", "code", node->attributes[0].value, TEST_ERROR, "Wrong attribute value " test_name, NOP); \
+	} while(0)
+
+static test_result test_parse_1string(char* msg)
 {
-	// TODO: Test basic cases: <tag/> <tag attrib/> <tag attrib=/> <tag attrib ='' /> <tag attrib attrib2=toto /> <tag attrib= attrib2 = long/> <tag attrib = "value" />
+	TagType type;
+	XMLNode* node = XMLNode_alloc();
+
+	// DOCTYPE
+	type = XML_parse_1string("<!DOCTYPE chapter [<!ELEMENT chapter (title,para+)>]>", node);
+	assert_equals_i("DOCTYPE type", TAG_DOCTYPE, type, TEST_ERROR, C2SX("Wrong type tag DOCTYPE"), NOP);
+	assert_equals_i("DOCTYPE consistency", type, node->tag_type, TEST_ERROR, C2SX("Inconsistent type tag DOCTYPE"), NOP);
+	XMLNode_free(node);
+
+	// Unquoted attribute value, no space between end of value and '>' marker
+	node = XMLNode_alloc();
+	test_unit_basic("FATHER unquoted", "<data type=code>", TAG_FATHER);
+	XMLNode_free(node);
+	// Unquoted attribute value, with space between end of value and '>' marker
+	node = XMLNode_alloc();
+	test_unit_basic("FATHER unquoted end space", "<data type=code >", TAG_FATHER);
+	XMLNode_free(node);
+	// Quoted attribute value, no space between end of value and '>' marker
+	node = XMLNode_alloc();
+	test_unit_basic("FATHER quoted", "<data type=\"code\">", TAG_FATHER);
+	XMLNode_free(node);
+	// Quoted attribute value, with space between end of value and '>' marker
+	node = XMLNode_alloc();
+	test_unit_basic("FATHER quoted end space", "<data type=\"code\" >", TAG_FATHER);
+	XMLNode_free(node);
+
+	node = XMLNode_alloc();
+	test_unit_basic("SELF unquoted", "<data type=code/>", TAG_SELF);
+	XMLNode_free(node);
+
+	node = XMLNode_alloc();
+	test_unit_basic("SELF unquoted end space", "<data type=code />", TAG_SELF);
+	XMLNode_free(node);
+
+	node = XMLNode_alloc();
+	test_unit_basic("SELF quoted", "<data type=\"code\"/>", TAG_SELF);
+	XMLNode_free(node);
+
+	node = XMLNode_alloc();
+	test_unit_basic("SELF quoted end space", "<data type=\"code\" />", TAG_SELF);
+	XMLNode_free(node);
+
+	node = XMLNode_alloc();
+	type = XML_parse_1string("<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" mc:Ignorable=\"x14ac\" xmlns:x14ac=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac\">", node);
+	XMLNode_free(node);
+
+	return TEST_OK;
 }
 
 static test_result test_gen_file(char* msg)
@@ -183,20 +247,20 @@ static test_result test_gen_file(char* msg)
 	XMLNode_set_attribute(node, C2SX("name"), C2SX("bbb"));
 	XMLNode_set_attribute(node, C2SX("readonly"), C2SX("true"));
 	XMLNode_set_attribute(node, C2SX("value"), C2SX("txt"));
-	assert_equals_i(3, node->n_attributes, TEST_ERROR, C2SX("Wrong number of attributes #1"), NOP);
+	assert_equals_i("Attribute numbers #1", 3, node->n_attributes, TEST_ERROR, C2SX("Wrong number of attributes #1"), NOP);
 	XMLNode_remove_attribute(node, XMLNode_search_attribute(node, C2SX("readonly"), 0));
-	assert_equals_i(2, node->n_attributes, TEST_ERROR, C2SX("Wrong number of attributes #2"), NOP);
+	assert_equals_i("Attribute numbers #2", 2, node->n_attributes, TEST_ERROR, C2SX("Wrong number of attributes #2"), NOP);
 	XMLNode_add_child(node1, node);
 	node->attributes[1].active = false;
-	assert_equals_i(1, XMLNode_get_attribute_count(node), TEST_ERROR, C2SX("Wrong number of attributes #3"), NOP);
+	assert_equals_i("Attribute numbers #3", 1, XMLNode_get_attribute_count(node), TEST_ERROR, C2SX("Wrong number of attributes #3"), NOP);
 
 	node = XMLNode_alloc();
 	XMLNode_set_tag(node, C2SX("structure5"));
 	XMLNode_set_attribute(node, C2SX("name"), C2SX("conf2"));
 	XMLDoc_add_child_root(&doc, node);
-	assert_equals_i(4, XMLNode_get_children_count(XMLDoc_root(&doc)), TEST_ERROR, C2SX("Wrong number of children nodes #1"), NOP);
+	assert_equals_i("Children nodes number #1", 4, XMLNode_get_children_count(XMLDoc_root(&doc)), TEST_ERROR, C2SX("Wrong number of children nodes #1"), NOP);
 	node->active = false;
-	assert_equals_i(3, XMLNode_get_children_count(XMLDoc_root(&doc)), TEST_ERROR, C2SX("Wrong number of children nodes #2"), NOP);
+	assert_equals_i("Children nodes number #2", 3, XMLNode_get_children_count(XMLDoc_root(&doc)), TEST_ERROR, C2SX("Wrong number of children nodes #2"), NOP);
 
 	node1 = XMLNode_alloc();
 	XMLNode_set_tag(node1, C2SX("property6"));
@@ -212,15 +276,15 @@ static test_result test_gen_file(char* msg)
 	XMLDoc_add_child_root(&doc, node);
 
 	FILE* f = fopen(FIC_NAME, "w+t");
-	assert_true(f != NULL, TEST_WARN, "Cannot create file", NOP);
+	assert_true(NULL, f != NULL, TEST_WARN, "Cannot create file", NOP);
 	XMLDoc_print(&doc, f, C2SX("\n"), C2SX("    "), false, 0, 4);
 	fclose(f);
 
-	assert_true(XMLDoc_free(&doc), TEST_ERROR, C2SX("Cannot free document #1"), NOP);
+	assert_true(NULL, XMLDoc_free(&doc), TEST_ERROR, C2SX("Cannot free document #1"), NOP);
 
 	// Read back raw file
 	f = fopen(FIC_NAME, "rt");
-	assert_true(f != NULL, TEST_WARN, C2SX("Cannot open file for reading"), NOP);
+	assert_true(NULL, f != NULL, TEST_WARN, C2SX("Cannot open file for reading"), NOP);
 
 	char* lines[] = {
 		"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
@@ -247,14 +311,13 @@ static test_result test_gen_file(char* msg)
 		// Remove '\r' and '\n'
 		for (l--; l >= 0 && (line[l] == '\n' || line[l] == '\r'); l--)
 			line[l] = 0;
-		char b[3];
-		sprintf(b, "%d", i+1);
-		assert_equals_s(lines[i], line, TEST_ERROR, b, fclose(f));
+		char b[8];
+		sprintf(b, "line %d", i+1);
+		assert_equals_s(NULL, lines[i], line, TEST_ERROR, b, fclose(f));
 	}
 	fclose(f);
-	if (line != NULL) {
+	if (line != NULL)
 		free(line);
-	}
 
 	return TEST_OK;
 }
@@ -265,78 +328,78 @@ static test_result test_parse_file(char* msg)
 	XMLDoc doc;
 
 	XMLDoc_init(&doc);
-	assert_true(XMLDoc_parse_file(FIC_NAME, &doc), TEST_ERROR, "Parse", NOP);
-	assert_equals_i(4, doc.n_nodes, TEST_ERROR, "Wrong number of root nodes", NOP);
-	assert_equals_i(3, doc.i_root, TEST_ERROR, "Bad root node", NOP);
-	assert_equals_s(INSTR, doc.nodes[0]->tag, TEST_ERROR, "Wrong instruction tag", NOP);
-	assert_equals_s(" Pre-comment ", doc.nodes[1]->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_s("\nAnother one\nMulti-line...\n", doc.nodes[2]->tag, TEST_ERROR, NULL, NOP);
+	assert_true("Parse", XMLDoc_parse_file(FIC_NAME, &doc), TEST_ERROR, "Parse", NOP);
+	assert_equals_i("Number of root nodes", 4, doc.n_nodes, TEST_ERROR, "Wrong number of root nodes", NOP);
+	assert_equals_i("Root node type", 3, doc.i_root, TEST_ERROR, "Bad root node", NOP);
+	assert_equals_s("Instruction tag", INSTR, doc.nodes[0]->tag, TEST_ERROR, "Wrong instruction tag", NOP);
+	assert_equals_s("Comment #1", " Pre-comment ", doc.nodes[1]->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_s("Multi-line comment", "\nAnother one\nMulti-line...\n", doc.nodes[2]->tag, TEST_ERROR, NULL, NOP);
 
 	XMLNode* node1 = XMLDoc_root(&doc);
-	assert_equals_s("properties", node1->tag, TEST_ERROR, "Wrong root tag", NOP);
-	assert_equals_i(4, node1->n_children, TEST_ERROR, NULL, NOP);
+	assert_equals_s("Root tag", "properties", node1->tag, TEST_ERROR, "Wrong root tag", NOP);
+	assert_equals_i("Number of children", 4, node1->n_children, TEST_ERROR, NULL, NOP);
 
 	// <!--Hello World!-->
 	XMLNode* node = XMLNode_next(node1);
-	assert_equals_s("Hello World!", node1->children[0]->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "Hello World!", node1->children[0]->tag, TEST_ERROR, NULL, NOP);
 
 	// <data type="code">a &gt;= b &amp;&amp; b &lt;= c</data>
 	node = XMLNode_next(node);
-	assert_equals_s("data", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_s("a &gt;= b &amp;&amp; b &lt;= c", node->text, TEST_ERROR, NULL, NOP);
-	assert_equals_i(1, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("type", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("code", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "data", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_s("Node text", "a &gt;= b &amp;&amp; b &lt;= c", node->text, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 1, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "type", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "code", node->attributes[0].value, TEST_ERROR, NULL, NOP);
 
 	// <structure1 name="spatioconf">
 	node = XMLNode_next(node);
-	assert_equals_s("structure1", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_i(1, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("spatioconf", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "structure1", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 1, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "spatioconf", node->attributes[0].value, TEST_ERROR, NULL, NOP);
 
 	// <structure2 name="files">
 	node1 = XMLNode_next(node);
-	assert_true(node1->father == node, TEST_ERROR, C2SX("Wrong father node #1"), NOP);
+	assert_true("Father node", node1->father == node, TEST_ERROR, C2SX("Wrong father node #1"), NOP);
 	node = node1;
-	assert_equals_s("structure2", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_i(1, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("files", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "structure2", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 1, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "files", node->attributes[0].value, TEST_ERROR, NULL, NOP);
 
 	// <property3 name="aaa" value="&lt;truc&gt;"/>
 	node1 = XMLNode_next(node);
-	assert_true(node1->father == node, TEST_ERROR, C2SX("Wrong father node #2"), NOP);
+	assert_true(NULL, node1->father == node, TEST_ERROR, C2SX("Wrong father node #2"), NOP);
 	node = node1;
-	assert_equals_s("property3", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_i(2, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("aaa", node->attributes[0].value, TEST_ERROR, NULL, NOP);
-	assert_equals_s("value", node->attributes[1].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("<truc>", node->attributes[1].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "property3", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 2, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "aaa", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "value", node->attributes[1].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "<truc>", node->attributes[1].value, TEST_ERROR, NULL, NOP);
 
 	// <property4 name="bbb">
 	node1 = XMLNode_next(node);
-	assert_true(node1->father == node->father, TEST_ERROR, C2SX("Wrong father node #3"), NOP);
+	assert_true(NULL, node1->father == node->father, TEST_ERROR, C2SX("Wrong father node #3"), NOP);
 	node = node1;
-	assert_equals_s("property4", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_i(1, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("bbb", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "property4", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 1, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "bbb", node->attributes[0].value, TEST_ERROR, NULL, NOP);
 
 	// <property7 name="eee" value="machin3"/>
 	node = XMLNode_next(node);
-	assert_true(node->father == XMLDoc_root(&doc), TEST_ERROR, C2SX("Wrong father node #4"), NOP);
-	assert_equals_s("property7", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_i(2, node->n_attributes, TEST_ERROR, NULL, NOP);
-	assert_equals_s("name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("eee", node->attributes[0].value, TEST_ERROR, NULL, NOP);
-	assert_equals_s("value", node->attributes[1].name, TEST_ERROR, NULL, NOP);
-	assert_equals_s("machin3", node->attributes[1].value, TEST_ERROR, NULL, NOP);
+	assert_true(NULL, node->father == XMLDoc_root(&doc), TEST_ERROR, C2SX("Wrong father node #4"), NOP);
+	assert_equals_s(NULL, "property7", node->tag, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 2, node->n_attributes, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "name", node->attributes[0].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "eee", node->attributes[0].value, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "value", node->attributes[1].name, TEST_ERROR, NULL, NOP);
+	assert_equals_s(NULL, "machin3", node->attributes[1].value, TEST_ERROR, NULL, NOP);
 
-	assert_true(XMLNode_next(node) == NULL, TEST_ERROR, C2SX("Unfinished document"), NOP);
+	assert_true("Document end", XMLNode_next(node) == NULL, TEST_ERROR, C2SX("Unfinished document"), NOP);
 
-	assert_true(XMLDoc_free(&doc), TEST_ERROR, "Cannot free document #2", NOP);
+	assert_true(NULL, XMLDoc_free(&doc), TEST_ERROR, "Cannot free document #2", NOP);
 
 	return TEST_OK;
 }
@@ -344,19 +407,22 @@ static test_result test_parse_file(char* msg)
 
 static test_result test_text_node(char* msg)
 {
-	return _test_not_implemented(msg); // TODO
+	// TODO: Test TAG_TEXT nodes
+	return _test_not_implemented(msg);
 }
 
 
 static test_result test_unicode(char* msg)
 {
-	return _test_not_implemented(msg); // TODO
+	// TODO: Test Unicode nodes
+	return _test_not_implemented(msg);
 }
 
 
 static test_result test_user(char* msg)
 {
-	return _test_not_implemented(msg); // TODO
+	// TODO: Test user tags
+	return _test_not_implemented(msg);
 }
 
 
@@ -377,29 +443,29 @@ static test_result test_move(char* msg)
 	XMLNode_add_child(root, nodes[1]);
 	XMLNode_add_child(root, nodes[2]);
 
-	assert_equals_i(1, XMLNode_get_index(nodes[1]), TEST_ERROR, "Bad index", NOP);
+	assert_equals_i(NULL, 1, XMLNode_get_index(nodes[1]), TEST_ERROR, "Bad index", NOP);
 	nodes[0]->active = 0;
-	assert_equals_i(1, XMLNode_get_index(nodes[2]), TEST_ERROR, "Bad index after inactive", NOP);
+	assert_equals_i(NULL, 1, XMLNode_get_index(nodes[2]), TEST_ERROR, "Bad index after inactive", NOP);
 	nodes[0]->active = 1;
 
-	assert_equals_i(3, root->n_children, TEST_ERROR, NULL, NOP);
+	assert_equals_i(NULL, 3, root->n_children, TEST_ERROR, NULL, NOP);
 	XMLNode_move_child(root, 1, 0); // Move backward
-	assert_equals_s("node2", root->children[0]->tag, TEST_ERROR, "Backward #0", NOP);
-	assert_equals_s("node1", root->children[1]->tag, TEST_ERROR, "Backward #1", NOP);
-	assert_equals_s("node3", root->children[2]->tag, TEST_ERROR, "Backward #2", NOP);
+	assert_equals_s(NULL, "node2", root->children[0]->tag, TEST_ERROR, "Backward #0", NOP);
+	assert_equals_s(NULL, "node1", root->children[1]->tag, TEST_ERROR, "Backward #1", NOP);
+	assert_equals_s(NULL, "node3", root->children[2]->tag, TEST_ERROR, "Backward #2", NOP);
 	XMLNode_move_child(root, 0, 2); // Move forward
-	assert_equals_s("node1", root->children[0]->tag, TEST_ERROR, "Forward #0", NOP);
-	assert_equals_s("node3", root->children[1]->tag, TEST_ERROR, "Forward #1", NOP);
-	assert_equals_s("node2", root->children[2]->tag, TEST_ERROR, "Forward #2", NOP);
+	assert_equals_s(NULL, "node1", root->children[0]->tag, TEST_ERROR, "Forward #0", NOP);
+	assert_equals_s(NULL, "node3", root->children[1]->tag, TEST_ERROR, "Forward #1", NOP);
+	assert_equals_s(NULL, "node2", root->children[2]->tag, TEST_ERROR, "Forward #2", NOP);
 	XMLNode_move_child(root, 1, 2); // Back to original
-	assert_equals_s("node1", root->children[0]->tag, TEST_ERROR, "Original #0", NOP);
-	assert_equals_s("node2", root->children[1]->tag, TEST_ERROR, "Original #1", NOP);
-	assert_equals_s("node3", root->children[2]->tag, TEST_ERROR, "Original #2", NOP);
+	assert_equals_s(NULL, "node1", root->children[0]->tag, TEST_ERROR, "Original #0", NOP);
+	assert_equals_s(NULL, "node2", root->children[1]->tag, TEST_ERROR, "Original #1", NOP);
+	assert_equals_s(NULL, "node3", root->children[2]->tag, TEST_ERROR, "Original #2", NOP);
 	XMLNode_insert_child(root, XMLNode_new_comment("nodeins"), 1);
-	assert_equals_s("node1", root->children[0]->tag, TEST_ERROR, "Insert #0", NOP);
-	assert_equals_s("nodeins", root->children[1]->tag, TEST_ERROR, "Insert #1", NOP);
-	assert_equals_s("node2", root->children[2]->tag, TEST_ERROR, "Insert #2", NOP);
-	assert_equals_s("node3", root->children[3]->tag, TEST_ERROR, "Insert #3", NOP);
+	assert_equals_s(NULL, "node1", root->children[0]->tag, TEST_ERROR, "Insert #0", NOP);
+	assert_equals_s(NULL, "nodeins", root->children[1]->tag, TEST_ERROR, "Insert #1", NOP);
+	assert_equals_s(NULL, "node2", root->children[2]->tag, TEST_ERROR, "Insert #2", NOP);
+	assert_equals_s(NULL, "node3", root->children[3]->tag, TEST_ERROR, "Insert #3", NOP);
 
 	XMLDoc_free(&doc);
 
@@ -449,15 +515,19 @@ static test_result test_search(char* msg)
 			"</styleSheet>";
 	XMLDoc styles_xml;
 	XMLDoc_init(&styles_xml);
-	XMLDoc_parse_buffer_DOM(buf_stylesxml, "styles.xml", &styles_xml);
+	assert_equals_i("Parse", true, XMLDoc_parse_buffer_DOM(buf_stylesxml, "styles.xml", &styles_xml), TEST_ERROR, "Cannot parse XML", NOP);
 
 	// start the search for cellXfs
 	XMLSearch search_engine;
 	XMLSearch_init(&search_engine);
 	XMLSearch_search_set_tag(&search_engine, "cellXfs");
 	XMLNode *cell_xfs_node = XMLSearch_next(styles_xml.nodes[styles_xml.i_root], &search_engine);
-
-	assert_true(cell_xfs_node != NULL, TEST_ERROR, "Node cellXfs not found", NOP);
+	assert_true("Node search", cell_xfs_node != NULL, TEST_ERROR, "Node cellXfs not found", NOP);
+	assert_equals_s("Found node tag", "cellXfs", cell_xfs_node->tag, TEST_ERROR, "Invalid cellXfs tag name", NOP);
+	assert_equals_i("Found node attributes", 1, cell_xfs_node->n_attributes, TEST_ERROR, "Invalid number of cellXfs attributes", NOP);
+	assert_equals_s("Found node attribute name", "count", cell_xfs_node->attributes[0].name, TEST_ERROR, "Invalid cellXfs attribute name", NOP);
+	assert_equals_s("Found node attributes value", "1", cell_xfs_node->attributes[0].value, TEST_ERROR, "Invalid cellXfs attribute value", NOP);
+	XMLDoc_free(&styles_xml);
 
 	// TODO: More tests
 
@@ -470,7 +540,7 @@ struct _test {
 	char* name;
 	test_result (*test)(char* msg);
 } test_list[] = {
-		{ "PARSE MEM", test_parse },
+		{ "UNIT PARSE", test_parse_1string },
 		{ "GENERATION", test_gen_file },
 		{ "PARSE FILE", test_parse_file },
 		{ "TEXT NODE", test_text_node },
