@@ -414,8 +414,43 @@ static test_result test_text_node(char* msg)
 
 static test_result test_unicode(char* msg)
 {
-	// TODO: Test Unicode nodes
+	// TODO: Test UTF16
 	return _test_not_implemented(msg);
+}
+
+static test_result test_UTF8(char* msg)
+{
+	// Chinese characters for "zhong wen": 中文 : "\xe4\xb8\xad\xe6\x96\x87"
+	XMLNode* node;
+
+	// UTF8 in attribute value
+	node = XMLNode_alloc();
+	XML_parse_1string("<unicode cn=\"\xe4\xb8\xad\xe6\x96\x87\"/>", node);
+	assert_equals_s("Tag name", "unicode", node->tag, TEST_ERROR, "Wrong tag name", NOP);
+	assert_equals_i("Attribute number", 1, node->n_attributes, TEST_ERROR, "Wrong number of attributes", NOP);
+	assert_equals_s("Attribute name", "cn", node->attributes[0].name, TEST_ERROR, "Wrong attribute name", NOP);
+	assert_equals_s("Attribute value", "\xe4\xb8\xad\xe6\x96\x87", node->attributes[0].value, TEST_ERROR, "Wrong attribute value", NOP);
+	XMLNode_free(node);
+
+	// UTF8 in attribute name
+	node = XMLNode_alloc();
+	XML_parse_1string("<unicode \xe4\xb8\xad\xe6\x96\x87=\"cn\"/>", node);
+	assert_equals_s("Tag name", "unicode", node->tag, TEST_ERROR, "Wrong tag name", NOP);
+	assert_equals_i("Attribute number", 1, node->n_attributes, TEST_ERROR, "Wrong number of attributes", NOP);
+	assert_equals_s("Attribute name", "\xe4\xb8\xad\xe6\x96\x87", node->attributes[0].name, TEST_ERROR, "Wrong attribute name", NOP);
+	assert_equals_s("Attribute value", "cn", node->attributes[0].value, TEST_ERROR, "Wrong attribute value", NOP);
+	XMLNode_free(node);
+
+	// UTF8 in tag name
+	node = XMLNode_alloc();
+	XML_parse_1string("<\xe4\xb8\xad\xe6\x96\x87 unicode=\"cn\"/>", node);
+	assert_equals_s("Tag name", "\xe4\xb8\xad\xe6\x96\x87", node->tag, TEST_ERROR, "Wrong tag name", NOP);
+	assert_equals_i("Attribute number", 1, node->n_attributes, TEST_ERROR, "Wrong number of attributes", NOP);
+	assert_equals_s("Attribute name", "unicode", node->attributes[0].name, TEST_ERROR, "Wrong attribute name", NOP);
+	assert_equals_s("Attribute value", "cn", node->attributes[0].value, TEST_ERROR, "Wrong attribute value", NOP);
+	XMLNode_free(node);
+
+	return TEST_OK;
 }
 
 
@@ -546,6 +581,7 @@ struct _test {
 		{ "TEXT NODE", test_text_node },
 		{ "MOVE", test_move },
 		{ "USER", test_user },
+		{ "UTF8", test_UTF8 },
 		{ "UNICODE", test_unicode },
 		{ "SEARCH", test_search },
 };
