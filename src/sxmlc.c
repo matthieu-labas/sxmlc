@@ -869,6 +869,7 @@ int XMLDoc_init(XMLDoc* doc)
 
 	doc->filename[0] = NULC;
 	memset(&doc->bom, 0, sizeof(doc->bom));
+	doc->sz_bom = 0;
 	doc->nodes = NULL;
 	doc->n_nodes = 0;
 	doc->i_root = -1;
@@ -1381,7 +1382,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		sd->line_num += ncr;
 
 		/* Get text for 'father' (i.e. what is before '<') */
-		while ((txt_end = sx_strchr(line, C2SX('<'))) == NULL) { /* '<' was not found, indicating a probable '>' inside text (should have been escaped with '&gt;' but we'll handle that ;) */
+		while ((txt_end = sx_strchr(line, C2SX('<'))) == NULL) { /* '<' was not found, indicating a probable '>' inside text (should have been escaped with '&gt;' but we'll handle that ;)) */
 			int n1 = read_line_alloc(in, in_type, &line, &sz, n0, 0, C2SX('>'), true, C2SX('\n'), &ncr); /* Go on reading the file from current position until next '>' */
 			sd->line_num += ncr;
 			if (n1 <= n0) {
@@ -1413,9 +1414,20 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		/* First part of 'line' (before '<') is to be added to 'father->text' */
 		*txt_end = NULC; /* Have 'line' be the text for 'father' */
 		if (*line != NULC && (sax->new_text != NULL || sax->all_event != NULL)) {
-			if (sax->new_text != NULL && (exit = !sax->new_text(line, sd))) /* no str_unescape(line) */
+			SXML_CHAR* unhtml = line;
+			if (has_html(line)) {
+				unhtml = __malloc(sx_strlen(line) * sizeof(SXML_CHAR)); /* Allocate for HTML escaping */
+				if (unhtml == NULL) {
+					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd))
+						break;
+					if (sax->all_event != NULL && !sax->all_event(XML_EVENT_ERROR, NULL, (SXML_CHAR*)sd->name, PARSE_ERR_MEMORY, sd))
+						break;
+				}
+				html2str(line, unhtml);
+			}
+			if (sax->new_text != NULL && (exit = !sax->new_text(unhtml, sd))) /* no str_unescape(line) */
 				break;
-			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, line, sd->line_num, sd)))
+			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, unhtml, sd->line_num, sd)))
 				break;
 		}
 		*txt_end = '<'; /* Restores tag start */
@@ -2314,6 +2326,19 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 }
 
 /* --- */
+
+int has_html(SXML_CHAR* html)
+{
+	if (html == NULL || *html == NULC)
+		return false;
+
+	do {
+		if (*html++ == C2SX('&'))
+			return true;
+	} while (*html);
+	
+	return false;
+}
 
 SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str)
 {

@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.4.0"
+#define SXMLC_VERSION "4.5.0"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1031,6 +1031,18 @@ int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep
  Return the BOM type or BOM_NONE if none found (empty 'bom' in this case).
  */
 BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom);
+
+/**
+ * \brief Checks if the given string contains HTML escape character (`&`).
+ *
+ * It can be useful to know whether `html2str()` would need to be called on
+ * `html`.
+ *
+ * \param html The string to check.
+ *
+ * \returns `false` if `html` does not contain the HTML escape character.
+ */
+int has_html(SXML_CHAR* html);
 
 /**
  * \brief Replace occurrences of special HTML characters escape sequences (e.g. `"&amp;"`)

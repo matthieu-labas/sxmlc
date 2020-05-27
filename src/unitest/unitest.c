@@ -346,7 +346,7 @@ static test_result test_parse_file(char* msg)
 	// <data type="code">a &gt;= b &amp;&amp; b &lt;= c</data>
 	node = XMLNode_next(node);
 	assert_equals_s(NULL, "data", node->tag, TEST_ERROR, NULL, NOP);
-	assert_equals_s("Node text", "a &gt;= b &amp;&amp; b &lt;= c", node->text, TEST_ERROR, NULL, NOP);
+	assert_equals_s("Node text", "a >= b && b <= c", node->text, TEST_ERROR, NULL, NOP);
 	assert_equals_i(NULL, 1, node->n_attributes, TEST_ERROR, NULL, NOP);
 	assert_equals_s(NULL, "type", node->attributes[0].name, TEST_ERROR, NULL, NOP);
 	assert_equals_s(NULL, "code", node->attributes[0].value, TEST_ERROR, NULL, NOP);
