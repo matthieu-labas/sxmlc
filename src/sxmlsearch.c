@@ -91,6 +91,11 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 		search->attributes = NULL;
 	}
 
+	if (search->text != NULL) {
+		__free(search->text);
+		search->text = NULL;
+	}
+
 	if (free_next && search->next != NULL) {
 		(void)XMLSearch_free(search->next, true);
 		__free(search->next);

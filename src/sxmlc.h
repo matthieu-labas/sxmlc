@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.5.0"
+#define SXMLC_VERSION "4.5.1"
 
 #ifdef __cplusplus
 extern "C" {

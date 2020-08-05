@@ -1,3 +1,5 @@
+*** v4.5.1 - Added missing free() in XMLSearch_free() (thanks @yogibe4r!).
+
 *** v4.5.0 - HTML decoding on node text.
 	- Corrected uninitialized BOM size in XMLDOC_init().
 
