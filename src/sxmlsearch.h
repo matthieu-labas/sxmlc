@@ -51,8 +51,8 @@ typedef struct _XMLSearch {
 								/**< `attribute->name`, no matter what its value is. */
 								/**< If `attribute->value` is not NULL, a matching node should have an attribute */
 								/**< `attribute->name` with the corresponding value `attribute->value`. */
-								/**< When `attribute->value` is not NULL, the `attribute->active` should be `true` */
-								/**< to specify that values should be equal, or `false` to specify that values should */
+								/**< When `attribute->value` is not NULL, the `attribute->active` should be `TRUE` */
+								/**< to specify that values should be equal, or `FALSE` to specify that values should */
 								/**< be different. */
 	int n_attributes;	/**< The size of `attributes`array. */
 
@@ -74,7 +74,7 @@ typedef struct _XMLSearch {
  * The default regex function can be overriden by user code through `XMLSearch_set_regexpr_compare()`.
  * \param str The string to match on `pattern`.
  * \param pattern The pattern to match `str` to.
- * \return `true` if `str` matches `pattern`.
+ * \return `TRUE` if `str` matches `pattern`.
  */
 typedef int (*REGEXPR_COMPARE)(SXML_CHAR* str, SXML_CHAR* pattern);
 
@@ -91,22 +91,22 @@ REGEXPR_COMPARE XMLSearch_set_regexpr_compare(REGEXPR_COMPARE fct);
 /**
  * \brief Initialize an empty search. No memory freeing is performed.
  * \param search The search parameters.
- * \return `false` when `search` is NULL.
+ * \return `FALSE` when `search` is NULL.
  */
 int XMLSearch_init(XMLSearch* search);
 
 /**
  * \brief Free all search members except for the `search->next` member that should be freed
- * by its creator, unless `free_next` is `true`.
+ * by its creator, unless `free_next` is `TRUE`.
  *
- * It is recommended that `free_next` is positioned to `true` only when the creator did not
+ * It is recommended that `free_next` is positioned to `TRUE` only when the creator did not
  * handle the whole memory allocation chain, e.g. when using `XMLSearch_init_from_XPath()`
  * that allocates all search structs.
  *
  * \param search The search parameters.
- * \param free_next `false` in order *not* to free the `search->next` structures.
+ * \param free_next `FALSE` in order *not* to free the `search->next` structures.
  *
- * \return `false` when `search` is NULL.
+ * \return `FALSE` when `search` is NULL.
  */
 int XMLSearch_free(XMLSearch* search, int free_next);
 
@@ -115,7 +115,7 @@ int XMLSearch_free(XMLSearch* search, int free_next);
  * \param search The search parameters.
  * \param tag should be NULL or empty to search for any node (e.g. search based on attributes
  * only). In this case, the previous tag is freed.
- * \return `true` upon successful completion, `false` for memory error.
+ * \return `TRUE` upon successful completion, `FALSE` for memory error.
  */
 int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag);
 
@@ -126,8 +126,8 @@ int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag);
  * \param attr_value should be NULL to test for attribute presence only
  * 		(no test on value). An empty string means the attribute should exist
  * 		with an empty value.
- * \param value_equal should be specified to test for attribute value equality (`true`) or
- *		difference (`false`).
+ * \param value_equal should be specified to test for attribute value equality (`TRUE`) or
+ *		difference (`FALSE`).
  * \return the index of the new attribute, or -1 for memory error.
  */
 int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name, const SXML_CHAR* attr_value, int value_equal);
@@ -154,7 +154,7 @@ int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr);
  * \param text should be NULL or empty to search for any node (e.g. search based on attributes
  * 		only). In this case, the previous text is freed.
  *
- * \return `true` upon successful completion, `false` for memory error.
+ * \return `TRUE` upon successful completion, `FALSE` for memory error.
  */
 int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text);
 
@@ -177,7 +177,7 @@ int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text);
  * \param children_search The search parameters to be applied to children of nodes
  * 		matching `search`.
  *
- * \return `true` when association has been made, `false` when an error occurred.
+ * \return `TRUE` when association has been made, `FALSE` when an error occurred.
  */
 int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_search);
 
@@ -190,7 +190,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  * \param quote is the quote character to be used (e.g. `"` or `'`). If <code>'\0'</code>,
  * 		`XML_DEFAULT_QUOTE` will be used.
  *
- * \return `false` for a memory problem, `true` otherwise.
+ * \return `FALSE` for a memory problem, `TRUE` otherwise.
  */
 SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath, SXML_CHAR quote);
 
@@ -204,7 +204,7 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
  * \param search The search parameters.
  *
  *
- * \return `true` when `search` was correctly initialized, `false` in case of memory
+ * \return `TRUE` when `search` was correctly initialized, `FALSE` in case of memory
  * 		problem or malformed `xpath`.
  */
 int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search);
@@ -218,7 +218,7 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search);
  * \param node The node to test. `tag_type` should be `TAG_FATHER` or `TAG_SELF` only.
  * \param search The search parameters.
  *
- * \return `false` when `node` does not match or for invalid arguments, `true`
+ * \return `FALSE` when `node` does not match or for invalid arguments, `TRUE`
  * 		if `node` is a match.
  */
 int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search);
@@ -263,7 +263,7 @@ SXML_CHAR* XMLNode_get_XPath(XMLNode* node, SXML_CHAR** xpath, int incl_parents)
  * \param str The string to check.
  * \param pattern can use wildcads such as `*` (any potentially empty string) or
  * 		`?` (any character) and use `\` as an escape character.
- * \returns `true` when `str` matches `pattern`, `false` otherwise.
+ * \returns `TRUE` when `str` matches `pattern`, `FALSE` otherwise.
  */
 int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern);
 
