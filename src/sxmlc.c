@@ -334,13 +334,21 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 
 	/* Tag */
 	if (src->tag != NULL) {
+	#ifdef _MSC_VER
+		dst->tag = _strdup(src->tag);
+	#else
 		dst->tag = sx_strdup(src->tag);
+	#endif
 		if (dst->tag == NULL) goto copy_err;
 	}
 
 	/* Text */
 	if (dst->text != NULL) {
+	#ifdef _MSC_VER
+		dst->text = _strdup(src->text);
+	#else
 		dst->text = sx_strdup(src->text);
+	#endif
 		if (dst->text == NULL) goto copy_err;
 	}
 
@@ -350,8 +358,13 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 		if (dst->attributes== NULL) goto copy_err;
 		dst->n_attributes = src->n_attributes;
 		for (i = 0; i < src->n_attributes; i++) {
+		#ifdef _MSC_VER
+			dst->attributes[i].name = _strdup(src->attributes[i].name);
+			dst->attributes[i].value = _strdup(src->attributes[i].value);
+		#else
 			dst->attributes[i].name = sx_strdup(src->attributes[i].name);
 			dst->attributes[i].value = sx_strdup(src->attributes[i].value);
+		#endif
 			if (dst->attributes[i].name == NULL || dst->attributes[i].value == NULL) goto copy_err;
 			dst->attributes[i].active = src->attributes[i].active;
 		}
@@ -395,7 +408,11 @@ int XMLNode_set_tag(XMLNode* node, const SXML_CHAR* tag)
 	if (node == NULL || tag == NULL || node->init_value != XML_INIT_DONE)
 		return FALSE;
 
+#ifdef _MSC_VER
+	newtag = _strdup(tag);
+#else
 	newtag = sx_strdup(tag);
+#endif
 	if (newtag == NULL)
 		return FALSE;
 	if (node->tag != NULL) __free(node->tag);
@@ -432,15 +449,24 @@ int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_
 	i = XMLNode_search_attribute(node, attr_name, 0);
 	if (i >= 0) { /* Attribute found: update it */
 		SXML_CHAR* value = NULL;
+	#ifdef _MSC_VER
+		if (attr_value != NULL && (value = _strdup(attr_value)) == NULL)
+	#else
 		if (attr_value != NULL && (value = sx_strdup(attr_value)) == NULL)
+	#endif
 			return -1;
 		pt = node->attributes;
 		if (pt[i].value != NULL)
 			__free(pt[i].value);
 		pt[i].value = value;
 	} else { /* Attribute not found: add it */
+	#ifdef _MSC_VER
+		SXML_CHAR* name = _strdup(attr_name);
+        SXML_CHAR* value = (attr_value == NULL ? NULL : _strdup(attr_value));
+	#else
 		SXML_CHAR* name = sx_strdup(attr_name);
-		SXML_CHAR* value = (attr_value == NULL ? NULL : sx_strdup(attr_value));
+        SXML_CHAR* value = (attr_value == NULL ? NULL : sx_strdup(attr_value));
+	#endif
 		if (name == NULL || (value == NULL && attr_value != NULL)) {
 			if (value != NULL)
 				__free(value);
@@ -479,13 +505,21 @@ int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name
 	if (i >= 0) {
 		pt = node->attributes;
 		if (pt[i].value != NULL) {
+		#ifdef _MSC_VER
+			*attr_value = _strdup(pt[i].value);
+		#else
 			*attr_value = sx_strdup(pt[i].value);
+		#endif
 			if (*attr_value == NULL)
 				return FALSE;
 		} else
 			*attr_value = NULL; /* NULL but returns 'TRUE' as 'NULL' is the actual attribute value */
 	} else if (default_attr_value != NULL) {
+	#ifdef _MSC_VER
+		*attr_value = _strdup(default_attr_value);
+	#else
 		*attr_value = sx_strdup(default_attr_value);
+	#endif
 		if (*attr_value == NULL)
 			return FALSE;
 	} else
@@ -586,7 +620,11 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text)
 		return TRUE;
 	}
 
+#ifdef _MSC_VER
+	p = _strdup(text);
+#else
 	p = sx_strdup(text);
+#endif
 	if (p == NULL)
 		return FALSE;
 	if (node->text != NULL)
@@ -1173,7 +1211,11 @@ int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr)
 	xmlattr->active = TRUE;
 	if (xmlattr->name != NULL && xmlattr->value != NULL) {
 		/* Copy name */
+	#ifdef _MSC_VER
+		strncpy_s(xmlattr->name, (size_t)(n0 + 1) * sizeof(SXML_CHAR), str, n0);
+	#else
 		sx_strncpy(xmlattr->name, str, n0);
+	#endif
 		xmlattr->name[n0] = NULC;
 		/* (void)str_unescape(xmlattr->name); do not unescape the name */
 		/* Copy value (p starts after the quote (if any) and stops at the end of 'str'
@@ -1212,7 +1254,12 @@ static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLN
 	node->tag = __malloc((size_t)(len - tag->len_start - tag->len_end + 1)*sizeof(SXML_CHAR));
 	if (node->tag == NULL)
 		return TAG_ERROR;
+#ifdef _MSC_VER
+	strncpy_s(node->tag, (size_t)(len - tag->len_start - tag->len_end + 1) * sizeof(SXML_CHAR),
+			str + tag->len_start, (size_t)(len - tag->len_start - tag->len_end));
+#else
 	sx_strncpy(node->tag, str + tag->len_start, (size_t)(len - tag->len_start - tag->len_end));
+#endif
 	node->tag[len - tag->len_start - tag->len_end] = NULC;
 	node->tag_type = tag->tag_type;
 
@@ -1260,7 +1307,11 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 			xmlnode->tag = __malloc((size_t)(len - 9 - nn)*sizeof(SXML_CHAR)); /* 'len' - "<!DOCTYPE" and ">" + '\0' */
 			if (xmlnode->tag == NULL)
 				return TAG_ERROR;
+		#ifdef _MSC_VER
+			strncpy_s(xmlnode->tag, (size_t)(len - 9 - nn) * sizeof(SXML_CHAR), &str[9], (size_t)(len - 10 - nn));
+		#else
 			sx_strncpy(xmlnode->tag, &str[9], (size_t)(len - 10 - nn));
+		#endif
 			xmlnode->tag[len - 10 - nn] = NULC;
 			xmlnode->tag_type = TAG_DOCTYPE;
 
@@ -1286,7 +1337,11 @@ TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 	xmlnode->tag = __malloc((size_t)(n - tag_end)*sizeof(SXML_CHAR));
 	if (xmlnode->tag == NULL)
 		return TAG_ERROR;
+#ifdef _MSC_VER
+	strncpy_s(xmlnode->tag, (size_t)(n - tag_end) * sizeof(SXML_CHAR), &str[1 + tag_end], (size_t)(n - 1 - tag_end));
+#else
 	sx_strncpy(xmlnode->tag, &str[1 + tag_end], (size_t)(n - 1 - tag_end));
+#endif
 	xmlnode->tag[n - 1 - tag_end] = NULC;
 	if (tag_end) {
 		xmlnode->tag_type = TAG_END;
@@ -1645,7 +1700,11 @@ int DOMXMLDoc_node_text(SXML_CHAR* text, SAX_Data* sd)
 
 	if (dom->text_as_nodes) {
 		XMLNode* new_node = XMLNode_allocN(1);
+	#ifdef _MSC_VER
+		if (new_node == NULL || (new_node->text = _strdup(text)) == NULL
+	#else
 		if (new_node == NULL || (new_node->text = sx_strdup(text)) == NULL
+	#endif
 			|| _add_node(&dom->current->children, &dom->current->n_children, new_node) < 0) {
 			dom->error = PARSE_ERR_MEMORY;
 			dom->line_error = sd->line_num;
@@ -1660,11 +1719,22 @@ int DOMXMLDoc_node_text(SXML_CHAR* text, SAX_Data* sd)
 	} else { /* Old behaviour: concatenate text to the previous one */
 		/* 'p' will point at the new text */
 		if (dom->current->text == NULL) {
+		#ifdef _MSC_VER
+			p = _strdup(text);
+		#else
 			p = sx_strdup(text);
+		#endif
 		} else {
-			p = __realloc(dom->current->text, (sx_strlen(dom->current->text) + sx_strlen(text) + 1)*sizeof(SXML_CHAR));
+		#ifdef _MSC_VER
+			const size_t len = (sx_strlen(dom->current->text) + sx_strlen(text) + 1) * sizeof(SXML_CHAR);
+			p = __realloc(dom->current->text, len);
+			if (p != NULL)
+				strcat_s(p, len, text);
+		#else
+			p = __realloc(dom->current->text, (sx_strlen(dom->current->text) + sx_strlen(text) + 1) * sizeof(SXML_CHAR));
 			if (p != NULL)
 				sx_strcat(p, text);
+		#endif
 		}
 		if (p == NULL) {
 			dom->error = PARSE_ERR_MEMORY;
@@ -1733,7 +1803,11 @@ int SAX_Callbacks_init_DOM(SAX_Callbacks* sax)
 
 int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user)
 {
+#ifdef _MSC_VER
+	FILE* f = NULL;
+#else
 	FILE* f;
+#endif
 	int ret;
 #ifdef _MSC_VER
 	SAX_Data sd = {0};
@@ -1752,7 +1826,11 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	if (sax == NULL || filename == NULL || filename[0] == NULC)
 		return FALSE;
 
+#ifdef _MSC_VER
+	fopen_s(&f, filename, fmode);
+#else
 	f = sx_fopen(filename, fmode);
+#endif
 	if (f == NULL)
 		return FALSE;
 	/* Microsoft's 'ftell' returns invalid position for Unicode text files
@@ -1773,7 +1851,11 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	   would read 2 bytes for 1 character, which would not work on "plain" files. */
 	if (bom == BOM_NONE || bom == BOM_UTF_8) {
 		sx_fclose(f);
+	#ifdef _MSC_VER
+		fopen_s(&f, filename, C2SX("rt"));
+	#else
 		f = sx_fopen(filename, C2SX("rt"));
+	#endif
 		if (f == NULL)
 			return FALSE;
 		if (bom == BOM_UTF_8)
@@ -1825,13 +1907,22 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
 	if (doc == NULL || filename == NULL || filename[0] == NULC || doc->init_value != XML_INIT_DONE)
 		return FALSE;
 
+#ifdef _MSC_VER
+	strncpy_s(doc->filename, SXMLC_MAX_PATH - 1, filename, SXMLC_MAX_PATH - 1);
+#else
 	sx_strncpy(doc->filename, filename, SXMLC_MAX_PATH - 1);
+#endif
 	doc->filename[SXMLC_MAX_PATH - 1] = NULC;
 
 	/* Read potential BOM on file */
 	{
 		/* In Unicode, open the file as binary so that further 'fgetwc' read all bytes */
+	#ifdef _MSC_VER
+		FILE* f = NULL;
+		fopen_s(&f, filename, C2SX("rb"));
+	#else
 		FILE* f = sx_fopen(filename, C2SX("rb"));
+	#endif
 		if (f != NULL) {
 			#if defined(SXMLC_UNICODE) && (defined(WIN32) || defined(WIN64))
 			/*setvbuf(f, NULL, _IONBF, 0);*/
@@ -2127,7 +2218,11 @@ SXML_CHAR* strcat_alloc(SXML_CHAR** src1, const SXML_CHAR* src2)
 	if (*src1 == NULL)
 		*cat = NULC;
 	*src1 = cat;
+#ifdef _MSC_VER
+	strcat_s(*src1, n * sizeof(SXML_CHAR), src2);
+#else
 	sx_strcat(*src1, src2);
+#endif
 
 	return *src1;
 }
@@ -2425,7 +2520,11 @@ SXML_CHAR* str2html(SXML_CHAR* str, SXML_CHAR* html)
 	for (ps = str, pd = html; *ps; ps++, pd++) {
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
 			if (*ps == HTML_SPECIAL_DICT[i].chr) {
+			#ifdef _MSC_VER
+				strcpy_s(pd, strlen(pd), HTML_SPECIAL_DICT[i].html);
+			#else
 				sx_strcpy(pd, HTML_SPECIAL_DICT[i].html);
+			#endif
 				pd += HTML_SPECIAL_DICT[i].html_len - 1;
 				break;
 			}

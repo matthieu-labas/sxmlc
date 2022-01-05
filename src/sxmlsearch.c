@@ -120,7 +120,11 @@ int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag)
 		return TRUE;
 	}
 
+#ifdef _MSC_VER
+	search->tag = _strdup(tag);
+#else
 	search->tag = sx_strdup(tag);
+#endif
 	return (search->tag != NULL);
 }
 
@@ -137,7 +141,11 @@ int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text)
 		return TRUE;
 	}
 
+#ifdef _MSC_VER
+	search->text = _strdup(text);
+#else
 	search->text = sx_strdup(text);
+#endif
 	return (search->text != NULL);
 }
 
@@ -154,8 +162,13 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name
 	if (attr_name == NULL || attr_name[0] == NULC)
 		return -1;
 
+#ifdef _MSC_VER
+	name = _strdup(attr_name);
+	value = (attr_value == NULL ? NULL : _strdup(attr_value));
+#else
 	name = sx_strdup(attr_name);
 	value = (attr_value == NULL ? NULL : sx_strdup(attr_value));
+#endif
 	if (name == NULL || (attr_value && value == NULL)) {
 		if (value != NULL)
 			__free(value);
@@ -254,7 +267,11 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
 
 	/* NULL 'search' is an empty string */
 	if (search == NULL) {
+	#ifdef _MSC_VER
+		*xpath = _strdup(C2SX(""));
+	#else
 		*xpath = sx_strdup(C2SX(""));
+	#endif
 		if (*xpath == NULL)
 			return NULL;
 
@@ -394,7 +411,11 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 	search1 = NULL;		/* Search struct to add the xpath portion to */
 	search2 = search;	/* Search struct to be filled from xpath portion */
 
+#ifdef _MSC_VER
+	tag = tag0 = _strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
+#else
 	tag = tag0 = sx_strdup(xpath); /* Create a copy of 'xpath' to be able to patch it (or segfault if 'xpath' is const, cnacu6o Sergey@sourceforge!) */
+#endif
 	while (*tag != NULC) {
 		if (search2 != search) { /* Allocate a new search when the original one (i.e. 'search') has already been filled */
 			search2 = (XMLSearch*)__calloc(1, sizeof(XMLSearch));
@@ -564,11 +585,23 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 	if (*xpath == NULL)
 		return NULL;
 
+#ifdef _MSC_VER
+	strcpy_s(*xpath, sz_xpath * sizeof(SXML_CHAR), node->tag);
+#else
 	sx_strcpy(*xpath, node->tag);
+#endif
 	if (node->text != NULL) {
+	#ifdef _MSC_VER
+		strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX("[.=\""));
+	#else
 		sx_strcat(*xpath, C2SX("[.=\""));
+	#endif
 		(void)str2html(node->text, &(*xpath[sx_strlen(*xpath)]));
+	#ifdef _MSC_VER
+		strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX("\""));
+	#else
 		sx_strcat(*xpath, C2SX("\""));
+	#endif
 		n = 1; /* Indicates '[' has been put */
 	} else
 		n = 0;
@@ -578,24 +611,46 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 			continue;
 
 		if (n == 0) {
+		#ifdef _MSC_VER
+			strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX("["));
+		#else
 			sx_strcat(*xpath, C2SX("["));
+		#endif
 			n = 1;
 		} else
+		#ifdef _MSC_VER
+			strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX(", "));
+	        p = &(*xpath)[strlen(*xpath)];
+		#else
 			sx_strcat(*xpath, C2SX(", "));
-		p = &(*xpath)[sx_strlen(*xpath)];
+			p = &(*xpath)[sx_strlen(*xpath)];
+	    #endif
 
 		/* Standard and Unicode versions of 'sprintf' do not have the same signature! :( */
+	#ifdef _MSC_VER
+		sprintf_s(p,
+				  strlen(p),
+	#else
 		sx_sprintf(p,
+	#endif
 #ifdef SXMLC_UNICODE
 			sz_xpath,
 #endif
 			C2SX("@%s=%c"), node->attributes[i].name, XML_DEFAULT_QUOTE);
 
 		(void)str2html(node->attributes[i].value, p);
+	#ifdef _MSC_VER
+		strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX("\""));
+	#else
 		sx_strcat(*xpath, C2SX("\""));
+	#endif
 	}
 	if (n > 0)
+	#ifdef _MSC_VER
+		strcat_s(*xpath, sz_xpath * sizeof(SXML_CHAR), C2SX("]"));
+	#else
 		sx_strcat(*xpath, C2SX("]"));
+	#endif
 
 	return *xpath;
 }
@@ -629,7 +684,11 @@ SXML_CHAR* XMLNode_get_XPath(XMLNode* node, SXML_CHAR** xpath, int incl_parents)
 		xp = xparent;
 		parent = parent->father;
 	} while (parent != NULL);
+#ifdef _MSC_VER
+	if ((*xpath = _strdup(C2SX("/"))) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
+#else
 	if ((*xpath = sx_strdup(C2SX("/"))) == NULL || strcat_alloc(xpath, xp) == NULL) goto xp_err;
+#endif
 
 	return *xpath;
 
