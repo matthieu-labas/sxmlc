@@ -1877,11 +1877,20 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 
 int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user)
 {
-	DataSourceBuffer dsb = { buffer, buffer_len, 0 };
-#ifdef _MSC_VER
-	SAX_Data sd = {0};
-#else
+#ifdef __CODEGEARC__
 	SAX_Data sd;
+	DataSourceBuffer dsb;
+	dsb.buf = buffer;
+	dsb.buf_len = buffer_len;
+	dsb.cur_pos = 0;
+#else
+	DataSourceBuffer dsb = { buffer, buffer_len, 0 };
+
+	#ifdef _MSC_VER
+		SAX_Data sd = {0};
+	#else
+		SAX_Data sd;
+	#endif
 #endif
 
 	if (sax == NULL || buffer == NULL)
@@ -2178,7 +2187,7 @@ int read_line_alloc(void* in, DataSourceType in_type, SXML_CHAR** line, int* sz_
 			} else
 				*line = pt;
 		}
-		if (sz_line && n < *sz_line)
+		if (line && sz_line && n < *sz_line)
 			(*line)[n] = NULC; /* If we reached the 'to' character and we want to strip it, 'n' hasn't changed and 'line[n]' (which is 'to') will be replaced by '\0' */
 		if (ch == to) {
 			ret = n;
@@ -2627,6 +2636,4 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 				break;
 		}
 	}
-
-	return FALSE;
 }
