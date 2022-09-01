@@ -1416,7 +1416,7 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		if (*line != NULC && (sax->new_text != NULL || sax->all_event != NULL)) {
 			SXML_CHAR* unhtml = line;
 			if (has_html(line)) {
-				unhtml = __malloc(sx_strlen(line) * sizeof(SXML_CHAR)); /* Allocate for HTML escaping */
+				unhtml = __malloc((sx_strlen(line)+1) * sizeof(SXML_CHAR)); /* Allocate for HTML escaping */
 				if (unhtml == NULL) {
 					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd))
 						break;
