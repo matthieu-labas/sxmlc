@@ -33,13 +33,33 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.5.1"
+#define SXMLC_VERSION "4.5.2"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stdio.h>
+
+
+#ifdef DBG_MEM
+	void* __malloc(size_t sz);
+	void* __calloc(size_t count, size_t sz);
+	void* __realloc(void* mem, size_t sz);
+	void __free(void* mem);
+	char* __sx_strdup(const char* s);
+#else
+	#define __malloc malloc
+	#define __calloc calloc
+	#define __realloc realloc
+	#define __free free
+	/* MS Visual Studio doesn't like strdup and produces warnings when used. */
+	#ifdef _MSC_VER
+		#define __sx_strdup _strdup
+	#else
+		#define __sx_strdup strdup
+	#endif
+#endif
 
 /**
  * \brief Define this to compile unicode support.
@@ -83,8 +103,11 @@ extern "C" {
 	#define sx_strchr strchr
 	#define sx_strrchr strrchr
 	#define sx_strcpy strcpy
+	
+	/* TODO use safer strncpy_s and strcat_s */
 	#define sx_strncpy strncpy
 	#define sx_strcat strcat
+	
 	#define sx_printf printf
 	#define sx_fprintf fprintf
 	#define sx_sprintf sprintf
@@ -102,20 +125,6 @@ extern "C" {
 	#define sx_feof feof
 #endif
 
-#ifdef DBG_MEM
-	void* __malloc(size_t sz);
-	void* __calloc(size_t count, size_t sz);
-	void* __realloc(void* mem, size_t sz);
-	void __free(void* mem);
-	char* __sx_strdup(const char* s);
-#else
-	#define __malloc malloc
-	#define __calloc calloc
-	#define __realloc realloc
-	#define __free free
-	#define __sx_strdup strdup
-#endif
-
 /**
  * \brief The number of bytes to add to currently allocated buffer for line reading. Default to 256 characters (=512
  * 		bytes with unicode support).
@@ -127,9 +136,15 @@ extern "C" {
 #ifndef false
 #define false 0
 #endif
+#ifndef FALSE
+#define FALSE 0
+#endif
 
 #ifndef true
 #define true 1
+#endif
+#ifndef TRUE
+#define TRUE 1
 #endif
 
 #define NULC ((SXML_CHAR)C2SX('\0'))

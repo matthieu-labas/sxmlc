@@ -1,3 +1,7 @@
+*** v4.5.2 - Corrected buffer overrun on unhtml() (thanks @gvollant!).
+	- Changed true/false to uppercase (MS Visual Studio).
+	- Added some first) specifics for MS Visual Studio complaints.
+
 *** v4.5.1 - Added missing free() in XMLSearch_free() (thanks @yogibe4r!).
 
 *** v4.5.0 - HTML decoding on node text.

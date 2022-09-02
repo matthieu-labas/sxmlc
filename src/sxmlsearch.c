@@ -53,7 +53,7 @@ REGEXPR_COMPARE XMLSearch_set_regexpr_compare(REGEXPR_COMPARE fct)
 int XMLSearch_init(XMLSearch* search)
 {
 	if (search == NULL)
-		return false;
+		return FALSE;
 
 	search->tag = NULL;
 	search->text = NULL;
@@ -64,7 +64,7 @@ int XMLSearch_init(XMLSearch* search)
 	search->stop_at = INVALID_XMLNODE_POINTER; /* Because 'NULL' can be a valid value */
 	search->init_value = XML_INIT_DONE;
 	
-	return true;
+	return TRUE;
 }
 
 int XMLSearch_free(XMLSearch* search, int free_next)
@@ -72,7 +72,7 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 	int i;
 
 	if (search == NULL || search->init_value != XML_INIT_DONE)
-		return false;
+		return FALSE;
 
 	if (search->tag != NULL) {
 		__free(search->tag);
@@ -97,27 +97,27 @@ int XMLSearch_free(XMLSearch* search, int free_next)
 	}
 
 	if (free_next && search->next != NULL) {
-		(void)XMLSearch_free(search->next, true);
+		(void)XMLSearch_free(search->next, TRUE);
 		__free(search->next);
 		search->next = NULL;
 	}
 	search->init_value = 0; /* Something not XML_INIT_DONE, otherwise we'll go into 'XMLSearch_free' again */
 	(void)XMLSearch_init(search);
 
-	return true;
+	return TRUE;
 }
 
 int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag)
 {
 	if (search == NULL)
-		return false;
+		return FALSE;
 
 	if (tag == NULL) {
 		if (search->tag != NULL) {
 			__free(search->tag);
 			search->tag = NULL;
 		}
-		return true;
+		return TRUE;
 	}
 
 	search->tag = sx_strdup(tag);
@@ -127,14 +127,14 @@ int XMLSearch_search_set_tag(XMLSearch* search, const SXML_CHAR* tag)
 int XMLSearch_search_set_text(XMLSearch* search, const SXML_CHAR* text)
 {
 	if (search == NULL)
-		return false;
+		return FALSE;
 
 	if (text == NULL) {
 		if (search->text != NULL) {
 			__free(search->text);
 			search->text = NULL;
 		}
-		return true;
+		return TRUE;
 	}
 
 	search->text = sx_strdup(text);
@@ -232,15 +232,15 @@ int XMLSearch_search_remove_attribute(XMLSearch* search, int i_attr)
 int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_search)
 {
 	if (search == NULL)
-		return false;
+		return FALSE;
 
 	if (search->next != NULL)
-		XMLSearch_free(search->next, true);
+		XMLSearch_free(search->next, TRUE);
 
 	search->next = children_search;
 	children_search->prev = search;
 
-	return true;
+	return TRUE;
 }
 
 SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath, SXML_CHAR quote)
@@ -270,20 +270,20 @@ SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath
 		if (s->n_attributes > 0 || (s->text != NULL && s->text[0] != NULC))
 			if (strcat_alloc(xpath, C2SX("[")) == NULL) goto err;
 
-		fill = false; /* '[' has not been filled with text yet, no ", " separator should be added */
+		fill = FALSE; /* '[' has not been filled with text yet, no ", " separator should be added */
 		if (s->text != NULL && s->text[0] != NULC) {
 			if (strcat_alloc(xpath, C2SX(".=")) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
 			if (strcat_alloc(xpath, s->text) == NULL) goto err;
 			if (strcat_alloc(xpath, squote) == NULL) goto err;
-			fill = true;
+			fill = TRUE;
 		}
 
 		for (i = 0; i < s->n_attributes; i++) {
 			if (fill) {
 				if (strcat_alloc(xpath, C2SX(", ")) == NULL) goto err;
 			} else
-				fill = true; /* filling is being performed */
+				fill = TRUE; /* filling is being performed */
 			if (strcat_alloc(xpath, C2SX("@")) == NULL) goto err;
 			if (strcat_alloc(xpath, s->attributes[i].name) == NULL) goto err;
 			if (s->attributes[i].value == NULL) continue;
@@ -330,10 +330,10 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 	ret = XMLSearch_search_set_tag(search, xpath);
 	*p = c;
 	if (!ret)
-		return false;
+		return FALSE;
 
 	if (*p == NULC)
-		return true;
+		return TRUE;
 
 	/* Here, '*p' is '[', we have to parse either text or attribute names/values until ']' */
 	for (p++; *p && *p != C2SX(']'); p++) {
@@ -341,11 +341,11 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 		cc = *q;
 		if (*q == C2SX(',') || *q == C2SX(']'))
 			*q = NULC;
-		ret = true;
+		ret = TRUE;
 		switch (*p) {
 			case C2SX('.'): /* '.[ ]=[ ]["']...["']' to search for text */
-				if (!split_left_right(p, C2SX('='), &l0, &l1, &is, &r0, &r1, true, true))
-					return false;
+				if (!split_left_right(p, C2SX('='), &l0, &l1, &is, &r0, &r1, TRUE, TRUE))
+					return FALSE;
 				c = p[r1+1];
 				p[r1+1] = NULC;
 				ret = XMLSearch_search_set_text(search, &p[r0]);
@@ -355,13 +355,13 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 
 			/* Attribute name, possibly '@attrib[[ ]=[ ]"value"]' */
 			case C2SX('@'):
-				if (!split_left_right(++p, '=', &l0, &l1, &is, &r0, &r1, true, true))
-					return false;
+				if (!split_left_right(++p, '=', &l0, &l1, &is, &r0, &r1, TRUE, TRUE))
+					return FALSE;
 				c = p[l1+1];
 				c1 = p[r1+1];
 				p[l1+1] = NULC;
 				p[r1+1] = NULC;
-				ret = (XMLSearch_search_add_attribute(search, &p[l0], (is < 0 ? NULL : &p[r0]), true) < 0 ? false : true); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
+				ret = (XMLSearch_search_add_attribute(search, &p[l0], (is < 0 ? NULL : &p[r0]), TRUE) < 0 ? FALSE : TRUE); /* 'is' < 0 when there is no '=' (i.e. check for attribute presence only */
 				p[l1+1] = c;
 				p[r1+1] = c1;
 				p += r1-1; /* Jump to next value */
@@ -372,10 +372,10 @@ static int _init_search_from_1XPath(SXML_CHAR* xpath, XMLSearch* search)
 		}
 		*q = cc; /* Restore ',' separator if any */
 		if (!ret)
-			return false;
+			return FALSE;
 	}
 
-	return true;
+	return TRUE;
 }
 
 int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
@@ -385,11 +385,11 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 	SXML_CHAR c;
 
 	if (!XMLSearch_init(search))
-		return false;
+		return FALSE;
 
 	/* NULL or empty xpath is an empty (initialized only) search */
 	if (xpath == NULL || *xpath == NULC)
-		return true;
+		return TRUE;
 
 	search1 = NULL;		/* Search struct to add the xpath portion to */
 	search2 = search;	/* Search struct to be filled from xpath portion */
@@ -400,15 +400,15 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 			search2 = (XMLSearch*)__calloc(1, sizeof(XMLSearch));
 			if (search2 == NULL) {
 				__free(tag0);
-				(void)XMLSearch_free(search, true);
-				return false;
+				(void)XMLSearch_free(search, TRUE);
+				return FALSE;
 			}
 		}
 		/* Skip all first '/' */
 		for (; *tag != NULC && *tag == C2SX('/'); tag++) ;
 		if (*tag == NULC) {
 			__free(tag0);
-			return false;
+			return FALSE;
 		}
 
 		/* Look for the end of tag name: after '/' (to get another tag) or end of string */
@@ -420,8 +420,8 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 		*p = NULC;
 		if (!_init_search_from_1XPath(tag, search2)) {
 			__free(tag0);
-			(void)XMLSearch_free(search, true);
-			return false;
+			(void)XMLSearch_free(search, TRUE);
+			return FALSE;
 		}
 		*p = c;
 
@@ -435,31 +435,31 @@ int XMLSearch_init_from_XPath(const SXML_CHAR* xpath, XMLSearch* search)
 	}
 
 	__free(tag0);
-	return true;
+	return TRUE;
 }
 
 static int _attribute_matches(XMLAttribute* to_test, XMLAttribute* pattern)
 {
 	if (to_test == NULL && pattern == NULL)
-		return true;
+		return TRUE;
 
 	if (to_test == NULL || pattern == NULL)
-		return false;
+		return FALSE;
 	
 	/* No test on name => match */
 	if (pattern->name == NULL || pattern->name[0] == NULC)
-		return true;
+		return TRUE;
 
 	/* Test on name fails => no match */
 	if (!regstrcmp_search(to_test->name, pattern->name))
-		return false;
+		return FALSE;
 
 	/* No test on value => match */
 	if (pattern->value == NULL)
-		return true;
+		return TRUE;
 
 	/* Test on value according to pattern "equal" attribute */
-	return regstrcmp_search(to_test->value, pattern->value) == pattern->active ? true : false;
+	return regstrcmp_search(to_test->value, pattern->value) == pattern->active ? TRUE : FALSE;
 }
 
 int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
@@ -467,22 +467,22 @@ int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
 	int i, j;
 
 	if (node == NULL)
-		return false;
+		return FALSE;
 
 	if (search == NULL)
-		return true;
+		return TRUE;
 
 	/* No comments, prolog, or such type of nodes are tested */
 	if (node->tag_type != TAG_FATHER && node->tag_type != TAG_SELF)
-		return false;
+		return FALSE;
 
 	/* Check tag */
 	if (search->tag != NULL && !regstrcmp_search(node->tag, search->tag))
-		return false;
+		return FALSE;
 
 	/* Check text */
 	if (search->text != NULL && !regstrcmp_search(node->text, search->text))
-		return false;
+		return FALSE;
 
 	/* Check attributes */
 	if (search->attributes != NULL) {
@@ -494,7 +494,7 @@ int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
 					break;
 			}
 			if (j >= node->n_attributes) /* All attributes where scanned without a successful match */
-				return false;
+				return FALSE;
 		}
 	}
 
@@ -504,9 +504,9 @@ int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
 
 	/* TODO: Should a node match if search has no more 'prev' search and node father is still below the initial search ?
 	 Depends if XPath started with "//" (=> yes) or "/" (=> no).
-	 if (search->prev == NULL && node->father != search->from) return false; ? */
+	 if (search->prev == NULL && node->father != search->from) return FALSE; ? */
 		
-	return true;
+	return TRUE;
 }
 
 XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search)
