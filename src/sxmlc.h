@@ -124,12 +124,12 @@ extern "C" {
 #define MEM_INCR_RLA (256*sizeof(SXML_CHAR)) /* Initial buffer size and increment for memory reallocations */
 #endif
 
-#ifndef false
-#define false 0
+#ifndef FALSE
+#define FALSE 0
 #endif
 
-#ifndef true
-#define true 1
+#ifndef TRUE
+#define TRUE 1
 #endif
 
 #define NULC ((SXML_CHAR)C2SX('\0'))
@@ -190,7 +190,7 @@ typedef enum _TagType {
 typedef struct _XMLAttribute {
 	SXML_CHAR* name;	/**< The attribute name. */
 	SXML_CHAR* value;	/**< The attribute value. */
-	int active;			/**< `true` if the attribute is active. */
+	int active;			/**< `TRUE` if the attribute is active. */
 } XMLAttribute;
 
 /* Constant to know whether a struct has been initialized (XMLNode or XMLDoc)
@@ -221,13 +221,13 @@ typedef struct _XMLNode {
 	SXML_CHAR* text;			/**< Text inside the node, or `NULL` if empty. */
 	XMLAttribute* attributes;	/**< Array of attributes. */
 	int n_attributes;			/**< Number of attributes *in `attributes` array* (might not be the number of *active* attributes). */
-	
+
 	struct _XMLNode* father;	/**< Pointer to father node. `NULL` if root. */
 	struct _XMLNode** children; /**< Array of children nodes. */
 	int n_children;				/**< Number of nodes *in `children` array* (might not be the number of *active* children). */
-	
+
 	TagType tag_type;			/**< Node type. */
-	int active;					/**< 'true' to tell that node is active and should be displayed by 'XMLDoc_print_*()'. */
+	int active;					/**< 'TRUE' to tell that node is active and should be displayed by 'XMLDoc_print_*()'. */
 
 	void* user;	/**< Pointer for user data associated to the node. */
 
@@ -254,7 +254,7 @@ typedef enum _BOM_TYPE {
 	BOM_UTF_32BE = 0x0000feff,
 	BOM_UTF_32LE = 0xfffe0000
 } BOM_TYPE;
-    
+
 /**
  * \brief An XML document, basically an array of `XMLNode`.
  *
@@ -438,7 +438,7 @@ typedef struct _SAX_Callbacks {
 /**
  * \brief Helper function to initialize all `sax` members to `NULL`.
  * \param sax The callbacks structure to initialize.
- * \return `false` is `sax` is NULL.
+ * \return `FALSE` is `sax` is NULL.
  */
 int SAX_Callbacks_init(SAX_Callbacks* sax);
 
@@ -561,15 +561,15 @@ int XMLNode_free(XMLNode* node);
  * \brief Copy a node to another one, optionally including its children.
  * \param dst The node receiving the copy. N.B. thtat the node is freed first!
  * \param src The node to duplicate. If `NULL`, `dst` is freed and initialized.
- * \param copy_children `true` to include `src` children (recursive copy).
- * \return `false` in case of memory error or if `dst` is `NULL` or `src` uninitialized.
+ * \param copy_children `TRUE` to include `src` children (recursive copy).
+ * \return `FALSE` in case of memory error or if `dst` is `NULL` or `src` uninitialized.
  */
 int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children);
 
 /**
  * \brief Duplicate a node, potentially with its children.
  * \param node The node to duplicate.
- * \param copy_children `true` to include `src` children (recursive copy).
+ * \param copy_children `TRUE` to include `src` children (recursive copy).
  * \return `NULL` if not enough memory, or a pointer to the new node otherwise.
  */
 XMLNode* XMLNode_dup(const XMLNode* node, int copy_children);
@@ -577,7 +577,7 @@ XMLNode* XMLNode_dup(const XMLNode* node, int copy_children);
 /**
  * \brief Set the active/inactive state of `node`.
  *
- * Set `active` to `true` to activate `node` and all its children, and enable its use
+ * Set `active` to `TRUE` to activate `node` and all its children, and enable its use
  * in other functions (e.g. `XMLDoc_print()`, ...).
  */
 int XMLNode_set_active(XMLNode* node, int active);
@@ -586,13 +586,13 @@ int XMLNode_set_active(XMLNode* node, int active);
  * \brief Set node tag.
  * \param node The node to set.
  * \param tag The tag to set in `node`. A *copy* of `tag` will be assigned to `node->tag`, using `strdup()`.
- * \return `false` for memory error, `true` otherwise.
+ * \return `FALSE` for memory error, `TRUE` otherwise.
  */
 int XMLNode_set_tag(XMLNode* node, const SXML_CHAR* tag);
 
 /**
  * \brief Set the node type to one of `TagType` or any user-registered tag.
- * \return 'false' when the node or the 'tag_type' is invalid.
+ * \return 'FALSE' when the node or the 'tag_type' is invalid.
  */
 int XMLNode_set_type(XMLNode* node, const TagType tag_type);
 
@@ -613,7 +613,7 @@ int XMLNode_set_attribute(XMLNode* node, const SXML_CHAR* attr_name, const SXML_
  * \param attr_value A pointer receiving a *copy* of the attribute value (from `strdup()`).
  * \param default_attr_value If `attr_name` does not exist in `node`, a *copy* (from `strdup()`)
  * 		of this string will be stored in `attr_value`.
- * \return `false` when the `node` is invalid, `attr_name` is NULL or empty, or `attr_value` is NULL.
+ * \return `FALSE` when the `node` is invalid, `attr_name` is NULL or empty, or `attr_value` is NULL.
  */
 int XMLNode_get_attribute_with_default(XMLNode* node, const SXML_CHAR* attr_name, const SXML_CHAR** attr_value, const SXML_CHAR* default_attr_value);
 
@@ -647,7 +647,7 @@ int XMLNode_remove_all_attributes(XMLNode* node);
 
 /**
  * Set node text to a copy of `text` (from `strdup()`), or remove text if set to `NULL`.
- * \return `true` when successful, `false` on error.
+ * \return `TRUE` when successful, `FALSE` on error.
  */
 int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text);
 
@@ -659,7 +659,7 @@ int XMLNode_set_text(XMLNode* node, const SXML_CHAR* text);
 
 /**
  * \brief Add a child to a node.
- * \return `false` for memory problem, `true` otherwise.
+ * \return `FALSE` for memory problem, `TRUE` otherwise.
  */
 int XMLNode_add_child(XMLNode* node, XMLNode* child);
 
@@ -669,7 +669,7 @@ int XMLNode_add_child(XMLNode* node, XMLNode* child);
  * \param child The node to insert.
  * \param index The insert position: if `index <= 0`: will be the first child (0).
  * 		If `index >= child->father->n_children`: will be the last child.
- * \return 'false' if 'node' is not initialized, 'true' otherwise.
+ * \return 'FALSE' if 'node' is not initialized, 'TRUE' otherwise.
  */
 int XMLNode_insert_child(XMLNode* node, XMLNode* child, int index);
 
@@ -690,7 +690,7 @@ int XMLNode_insert_child(XMLNode* node, XMLNode* child, int index);
  * \param from Position of the node to move.
  * \param to Position to move to. Moved to first position if `to <= 0` or last position
  * 		if `to >= node->n_children`.
- * \return `false` if `node` is not initialized or `from` is invalid. `true` otherwise.
+ * \return `FALSE` if `node` is not initialized or `from` is invalid. `TRUE` otherwise.
  */
 int XMLNode_move_child(XMLNode* node, int from, int to);
 
@@ -723,8 +723,8 @@ XMLNode* XMLNode_get_child(const XMLNode* node, int i_child);
  * \brief Remove the `i_child`th *active* child of the node.
  * \param node The node.
  * \param i_child The active node index to retrieve.
- * \param free_child if `true`, free the child node itself (and its children, recursively).
- * 		This parameter is usually `true` but should be `false` when child nodes are pointers
+ * \param free_child if `TRUE`, free the child node itself (and its children, recursively).
+ * 		This parameter is usually `TRUE` but should be `FALSE` when child nodes are pointers
  * 		to local or global variables instead of user-allocated memory.
  * \return the new number of children or -1 on invalid arguments.
  */
@@ -733,14 +733,14 @@ int XMLNode_remove_child(XMLNode* node, int i_child, int free_child);
 /**
  * \brief Remove (and frees) all children from the node.
  * \param node The node.
- * \return `true`.
+ * \return `TRUE`.
  */
 int XMLNode_remove_children(XMLNode* node);
 
 /**
  * \param node1 The first node to test.
  * \param node2 The second node to test.
- * \return `true` if `node1` is the same as `node2` (i.e. same tag, same active attributes)
+ * \return `TRUE` if `node1` is the same as `node2` (i.e. same tag, same active attributes)
  * 		but *not necessarily* the same children.
  */
 int XMLNode_equal(const XMLNode* node1, const XMLNode* node2);
@@ -768,14 +768,14 @@ XMLNode* XMLNode_next(const XMLNode* node);
 /**
  * \brief Initializes an already-allocated XML document.
  * \param doc The document to initialize.
- * \return `false` if `doc` is NULL.
+ * \return `FALSE` if `doc` is NULL.
  */
 int XMLDoc_init(XMLDoc* doc);
 
 /**
  * \brief Free an XML document, including all of its nodes, recursively.
  * \param doc The document to initialize.
- * \return `false` if `doc` was not initialized.
+ * \return `FALSE` if `doc` was not initialized.
  */
 int XMLDoc_free(XMLDoc* doc);
 
@@ -783,7 +783,7 @@ int XMLDoc_free(XMLDoc* doc);
  * \brief Set the new document root node.
  * \param doc The document to initialize.
  * \param i_root The element index to set as root.
- * \return `false` if `doc` is not initialized or `i_root` is invalid, `true` otherwise.
+ * \return `FALSE` if `doc` is not initialized or `i_root` is invalid, `TRUE` otherwise.
  */
 int XMLDoc_set_root(XMLDoc* doc, int i_root);
 
@@ -801,10 +801,10 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node);
  * \brief Remove a node from the document root nodes. Inactive nodes can be removed like this.
  * \param doc The XML document.
  * \param i_node The node index to remove
- * \param free_node if `true`, free the node itself. This parameter is usually `true`
- * 		but should be 'false' when the node is a pointer to local or global variable instead of
+ * \param free_node if `TRUE`, free the node itself. This parameter is usually `TRUE`
+ * 		but should be 'FALSE' when the node is a pointer to local or global variable instead of
  * 		user-allocated memory.
- * \return `true` if node was removed or `false` if `doc` or `i_node` is invalid.
+ * \return `TRUE` if node was removed or `FALSE` if `doc` or `i_node` is invalid.
  */
 int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
 
@@ -845,7 +845,7 @@ int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node);
  * 		node remainder will be output to extra lines.
  * \param nb_char_tab How many characters should be counted for a tab when counting characters
  * 		in the line. It usually is 8 or 4, but at least 1.
- * \return `false` on invalid arguments (`NULL` `node` or `f`), `true` otherwise.
+ * \return `FALSE` on invalid arguments (`NULL` `node` or `f`), `TRUE` otherwise.
  */
 int XMLNode_print_attr_sep(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab);
 
@@ -856,7 +856,7 @@ int XMLNode_print_attr_sep(const XMLNode* node, FILE* f, const SXML_CHAR* tag_se
 
 /**
  * \brief Print the node "header": `<tagname attribname="attibval" ...[/]>`, spanning it on several lines if needed.
- * \return `false` on invalid arguments (`NULL` `node` or `f`), `true` otherwise.
+ * \return `FALSE` on invalid arguments (`NULL` `node` or `f`), `TRUE` otherwise.
  */
 int XMLNode_print_header(const XMLNode* node, FILE* f, int sz_line, int nb_char_tab);
 
@@ -873,7 +873,7 @@ int XMLDoc_print_attr_sep(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, 
  * \param filename The file to parse.
  * \param doc The document to parse into.
  * \param text_as_nodes should be non-zero to put text into separate TAG_TEXT nodes.
- * \return `false` in case of error (memory or unavailable filename, malformed document), `true` otherwise.
+ * \return `FALSE` in case of error (memory or unavailable filename, malformed document), `TRUE` otherwise.
  */
 int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, int text_as_nodes);
 
@@ -888,7 +888,7 @@ int XMLDoc_parse_file_DOM_text_as_nodes(const SXML_CHAR* filename, XMLDoc* doc, 
  * \param name The buffer name (to identify several buffers if run concurrently).
  * \param doc The document to parse into.
  * \param text_as_nodes should be non-zero to put text into separate TAG_TEXT nodes.
- * \return `false` in case of error (memory or unavailable filename, malformed document), `true` otherwise.
+ * \return `FALSE` in case of error (memory or unavailable filename, malformed document), `TRUE` otherwise.
  */
 int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CHAR* name, XMLDoc* doc, int text_as_nodes);
 
@@ -902,8 +902,8 @@ int XMLDoc_parse_buffer_DOM_text_as_nodes(const SXML_CHAR* buffer, const SXML_CH
  * \param filename The file to parse.
  * \param sax The SAX callbacks that will be called by the parser on each XML event.
  * \param user A user-given pointer that will be given back to all callbacks.
- * \return `false` in case of error (memory or unavailable filename, malformed document) or when requested
- * 		by a SAX callback. `true` otherwise.
+ * \return `FALSE` in case of error (memory or unavailable filename, malformed document) or when requested
+ * 		by a SAX callback. `TRUE` otherwise.
  */
 int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, void* user);
 
@@ -914,15 +914,15 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
  * \param name An optional buffer name.
  * \param sax The SAX callbacks that will be called by the parser on each XML event.
  * \param user A user-given pointer that will be given back to all callbacks.
- * \return `false` in case of error (memory or unavailable filename, malformed document) or when requested
- * 		by a SAX callback. `true` otherwise.
+ * \return `FALSE` in case of error (memory or unavailable filename, malformed document) or when requested
+ * 		by a SAX callback. `TRUE` otherwise.
  */
 int XMLDoc_parse_buffer_SAX_len(const SXML_CHAR* buffer, int buffer_len, const SXML_CHAR* name, const SAX_Callbacks* sax, void* user);
 
 /**
  * \brief For backward compatibility (buffer length is `strlen(buffer)`).
  */
-#define XMLDoc_parse_buffer_SAX(buffer, name, sax, user) XMLDoc_parse_buffer_SAX_len(buffer, sx_strlen(buffer), name, sax, user)
+#define XMLDoc_parse_buffer_SAX(buffer, name, sax, user) XMLDoc_parse_buffer_SAX_len(buffer, (int)sx_strlen(buffer), name, sax, user)
 
 /**
  * \brief Parse an XML file using the DOM implementation.
@@ -1012,13 +1012,13 @@ SXML_CHAR* str_unescape(SXML_CHAR* str);
  * \param i_sep will contain the index of the separator in `str`, or -1 if not found.
  * \param r0 will contain the index of the left part first character in `str`.
  * \param r1 will contain the index of left part last character in `str`.
- * \param ignore_spaces Is `true`, computed indexes will not take into account potential
+ * \param ignore_spaces Is `TRUE`, computed indexes will not take into account potential
  *		spaces around the separator as well as before left part and after right part, so
  *		`&quot;name=val&quot;` will be equivalent to `&quot;name = val&quot;`.
- * \param ignore_quotes If `true`, quotes (`&quot;` or `&apos;`) will not be taken into account when parsing left
+ * \param ignore_quotes If `TRUE`, quotes (`&quot;` or `&apos;`) will not be taken into account when parsing left
  * 		and right members, so `&quot;name = 'val'&quot;` will be equivalent to `&quot;name = val&quot;`.
  *
- * \return `false` when `str` is malformed, `true` when splitting was successful.
+ * \return `FALSE` when `str` is malformed, `TRUE` when splitting was successful.
  */
 int split_left_right(SXML_CHAR* str, SXML_CHAR sep, int* l0, int* l1, int* i_sep, int* r0, int* r1, int ignore_spaces, int ignore_quotes);
 
@@ -1040,7 +1040,7 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom);
  *
  * \param html The string to check.
  *
- * \returns `false` if `html` does not contain the HTML escape character.
+ * \returns `FALSE` if `html` does not contain the HTML escape character.
  */
 int has_html(SXML_CHAR* html);
 
