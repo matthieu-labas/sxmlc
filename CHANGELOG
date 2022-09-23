@@ -1,3 +1,6 @@
+*** v4.5.3 - Corrected write on NULL for not-XML files (thanks @bladchan!).
+	- Added NULL check when reading BOM.
+
 *** v4.5.2 - Corrected buffer overrun on unhtml() (thanks @gvollant!).
 	- Changed true/false to uppercase (MS Visual Studio).
 	- Added some first) specifics for MS Visual Studio complaints.
@@ -14,7 +17,7 @@
 *** v4.3.3 - Added Sourceforge#12 by Alexander Goomenyuk (expose data source context to user).
 	- Added search unitest.
 
-*** v4.3.2 - Fixed GitHub#11 by Damián M. González (missing free() on XMLNode_set_text()).
+*** v4.3.2 - Fixed GitHub#11 by Damiï¿½n M. Gonzï¿½lez (missing free() on XMLNode_set_text()).
 	- Doxygen documentation update.
 	- Correction of CHECK_NODE macro that returned false on valid nodes!
 
@@ -53,7 +56,7 @@
 	- Corrected missing +1 in attribute value char allocation.
 	- Changed constant name 'MAX_PATH' to 'SXMLC_MAX_PATH' to prevent potential conflicts with OS includes.
 
-*** v4.0.10 - Corrected backslash were not allowed in values (Thanks to Jörg Singendonk (singendonk@users.sf.net)!).
+*** v4.0.10 - Corrected backslash were not allowed in values (Thanks to Jï¿½rg Singendonk (singendonk@users.sf.net)!).
 	- Corrected root node was not set when it is a "self-contained" node.
 
 *** v4.0.9 - Corrected SAX callbacks return value not taken into account (Thanks to Logan (nslogan@users.sf.net)!).

@@ -1597,8 +1597,8 @@ int DOMXMLDoc_node_end(const XMLNode* node, SAX_Data* sd)
 {
 	DOM_through_SAX* dom = (DOM_through_SAX*)sd->user;
 
-	if (dom->current == NULL || sx_strcmp(dom->current->tag, node->tag)) {
-		sx_fprintf(stderr, C2SX("%s:%d: ERROR - End tag </%s> was unexpected"), sd->name, sd->line_num, node->tag);
+	if (dom->current == NULL || dom->current->tag == NULL || node->tag == NULL || sx_strcmp(dom->current->tag, node->tag)) {
+		sx_fprintf(stderr, C2SX("%s:%d: ERROR - End tag </%s> was unexpected"), sd->name, sd->line_num, node->tag ? node->tag : "(null)");
 		if (dom->current != NULL)
 			sx_fprintf(stderr, C2SX(" (</%s> was expected)\n"), dom->current->tag);
 		else
@@ -2291,9 +2291,11 @@ BOM_TYPE freadBOM(FILE* f, unsigned char* bom, int* sz_bom)
 		case (unsigned short)0x0000:
 			if (fread(&c1, sizeof(char), 1, f) == 1 && fread(&c2, sizeof(char), 1, f) == 1
 					&& c1 == 0xfe && c2 == 0xff) {
-				bom[2] = c1;
-				bom[3] = c2;
-				bom[4] = '\0';
+				if (bom != NULL) {
+					bom[2] = c1;
+					bom[3] = c2;
+					bom[4] = '\0';
+				}
 				if (sz_bom != NULL)
 					*sz_bom = 4;
 				return BOM_UTF_32BE;
