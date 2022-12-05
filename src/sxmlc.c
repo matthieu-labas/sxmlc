@@ -1416,7 +1416,8 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 		*txt_end = NULC; /* Have 'line' be the text for 'father' */
 		if (*line != NULC && (sax->new_text != NULL || sax->all_event != NULL)) {
 			SXML_CHAR* unhtml = line;
-			if (has_html(line)) {
+			int line_has_html = has_html(line);
+			if (line_has_html) {
 				unhtml = __malloc((sx_strlen(line)+1) * sizeof(SXML_CHAR)); /* Allocate for HTML escaping */
 				if (unhtml == NULL) {
 					if (sax->on_error != NULL && !sax->on_error(PARSE_ERR_MEMORY, sd->line_num, sd))
@@ -1426,10 +1427,15 @@ static int _parse_data_SAX(void* in, const DataSourceType in_type, const SAX_Cal
 				}
 				html2str(line, unhtml);
 			}
-			if (sax->new_text != NULL && (exit = !sax->new_text(unhtml, sd))) /* no str_unescape(line) */
+			if (sax->new_text != NULL && (exit = !sax->new_text(unhtml, sd))) { /* no str_unescape(line) */
+				if (line_has_html) __free(unhtml);
 				break;
-			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, unhtml, sd->line_num, sd)))
+			}
+			if (sax->all_event != NULL && (exit = !sax->all_event(XML_EVENT_TEXT, NULL, unhtml, sd->line_num, sd))) {
+				if (line_has_html) __free(unhtml);
 				break;
+			}
+			if (line_has_html) __free(unhtml);
 		}
 		*txt_end = '<'; /* Restores tag start */
 
