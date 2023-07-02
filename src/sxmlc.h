@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.5.4"
+#define SXMLC_VERSION "4.5.5"
 
 #ifdef __cplusplus
 extern "C" {
@@ -111,19 +111,34 @@ extern "C" {
 	#define sx_printf printf
 	#define sx_fprintf fprintf
 	#define sx_sprintf sprintf
+
+#if !defined(sx_fgetc)
 	#define sx_fgetc fgetc
+#endif /* sx_getc */
+
 	#define sx_fputc fputc
 	#define sx_puts puts
 	#define sx_fputs fputs
 	#define sx_isspace(c) ((int)c >= 0 && (int)c <= 127 && isspace((int)c))
+
+#if !defined(sx_fopen)
+	#define sx_fopen fopen
+
 	#if defined(WIN32) || defined(WIN64) // On Windows, if the filename has unicode characters in it, assume them to be UTF8 and convert it to wide char before calling _wfopen()
 		FILE* sx_fopen(const SXML_CHAR* filename, const SXML_CHAR* mode);
 	#else // On Linux, simply call fopen()
 		#define sx_fopen fopen
 	#endif
+#endif /* sx_fopen */
+#endif /* SXMLC_UNICODE */
+
+#if !defined(sx_fclose)
 	#define sx_fclose fclose
+#endif /* sx_fclose */
+
+#if !defined(sx_feof)
 	#define sx_feof feof
-#endif
+#endif /* sx_feof */
 
 /**
  * \brief The number of bytes to add to currently allocated buffer for line reading. Default to 256 characters (=512
