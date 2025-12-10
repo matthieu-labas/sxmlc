@@ -1209,6 +1209,9 @@ static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLN
 
 	if (sx_strncmp(str + len - tag->len_end, tag->end, tag->len_end)) /* There probably is a '>' inside the tag */
 		return TAG_PARTIAL;
+	
+	if (len - tag->len_start - tag->len_end < 0)
+		return TAG_ERROR;
 
 	node->tag = __malloc((len - tag->len_start - tag->len_end + 1)*sizeof(SXML_CHAR));
 	if (node->tag == NULL)
@@ -2516,3 +2519,4 @@ int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
 
 	return FALSE;
 }
+
