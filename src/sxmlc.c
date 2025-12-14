@@ -1204,19 +1204,20 @@ int XML_parse_attribute_to(const SXML_CHAR* str, int to, XMLAttribute* xmlattr)
 
 static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLNode* node)
 {
+	int sz = len - tag->len_start - tag->len_end;
+	if (sz < 0)
+		return TAG_ERROR;
+
 	if (sx_strncmp(str, tag->start, tag->len_start))
 		return TAG_NONE;
 
 	if (sx_strncmp(str + len - tag->len_end, tag->end, tag->len_end)) /* There probably is a '>' inside the tag */
 		return TAG_PARTIAL;
 	
-	if (len - tag->len_start - tag->len_end < 0)
-		return TAG_ERROR;
-
-	node->tag = __malloc((len - tag->len_start - tag->len_end + 1)*sizeof(SXML_CHAR));
+	node->tag = __malloc((sz + 1)*sizeof(SXML_CHAR));
 	if (node->tag == NULL)
 		return TAG_ERROR;
-	sx_strncpy(node->tag, str + tag->len_start, len - tag->len_start - tag->len_end);
+	sx_strncpy(node->tag, str + tag->len_start, sz;
 	node->tag[len - tag->len_start - tag->len_end] = NULC;
 	node->tag_type = tag->tag_type;
 
