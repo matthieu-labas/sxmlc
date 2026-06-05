@@ -2355,6 +2355,97 @@ int has_html(SXML_CHAR* html)
 	return FALSE;
 }
 
+/*
+ * \brief Decode numeric_character_reference beginning with &# at *html and convert it to UTF-8.
+ * The decoded character is stored at the position pointed by *str.
+ * Caller checked that *html starts with "&#" before calling this function.
+ * if the reference is invalid, returns FALSE and html, *str, str are not modified.
+ * Otherwise, returns TRUE and *str and *html are updated.
+ *
+ * \param html pointer to the string containing the numeric character reference (starting with "&#").
+ * \param str pointer to the string where the decoded character will be stored. It is assumed that there is enough space
+ * to store the decoded character (up to 4 bytes in UTF-8).
+ * \returns TRUE if the reference is valid, FALSE otherwise.
+ */
+static int html_unescape_numeric(SXML_CHAR** html, SXML_CHAR **str) {
+	SXML_CHAR *ptr = (*html) + 2;
+	SXML_CHAR *dest = *str;
+	unsigned long cp = 0;
+	int digit_count = 0;
+
+	if (ptr[0] == C2SX('x') || ptr[0] == C2SX('X')) {
+		ptr++;
+
+		while (ptr[0] != '\0' && ptr[0] != ';' && (digit_count < 8)) {
+			unsigned long val;
+
+			if (ptr[0] >= C2SX('0') && ptr[0] <= C2SX('9')) {
+				val = (unsigned long)(ptr[0] - C2SX('0'));
+			} else if (is_hex && ptr[0] >= C2SX('a') && ptr[0] <= C2SX('f')) {
+				val = (unsigned long)(ptr[0] - C2SX('a') + 10);
+			} else if (is_hex && ptr[0] >= C2SX('A') && ptr[0] <= C2SX('F')) {
+				val = (unsigned long)(ptr[0] - C2SX('A') + 10);
+			} else {
+				return FALSE;
+			}
+
+			cp = (cp << 4) + val;
+			digit_count++;
+			ptr++;
+		}
+	} else {
+		while (ptr[0] != '\0' && ptr[0] != ';' && (digit_count < 8)) {
+			unsigned long val;
+
+			if (ptr[0] >= C2SX('0') && ptr[0] <= C2SX('9')) {
+				val = (unsigned long)(ptr[0] - C2SX('0'));
+			} else {
+				return FALSE;
+			}
+
+			cp = (cp * 10) + val;
+			digit_count++;
+			ptr++;
+		}
+	}
+
+	if (digit_count == 0 || ptr[0] != ';')
+		return FALSE;
+
+#ifndef SXMLC_UNICODE
+	/* not in wide char mode, convert to utf-8 */
+	if (cp <= 0x7F) {
+		dest[0] = (SXML_CHAR)cp;
+	} else if (cp <= 0x7FF) {
+		dest[0] = (SXML_CHAR)(0xC0 | ((cp >> 6) & 0x1F));
+		dest[1] = (SXML_CHAR)(0x80 | (cp & 0x3F));
+		*str = dest + 1;
+	} else if (cp <= 0xFFFF) {
+		dest[0] = (SXML_CHAR)(0xE0 | ((cp >> 12) & 0x0F));
+		dest[1] = (SXML_CHAR)(0x80 | ((cp >> 6) & 0x3F));
+		dest[2] = (SXML_CHAR)(0x80 | (cp & 0x3F));
+		*str = dest + 2;
+	} else if (cp <= 0x10FFFF) {
+		dest[0] = (SXML_CHAR)(0xF0 | ((cp >> 18) & 0x07));
+		dest[1] = (SXML_CHAR)(0x80 | ((cp >> 12) & 0x3F));
+		dest[2] = (SXML_CHAR)(0x80 | ((cp >> 6) & 0x3F));
+		dest[3] = (SXML_CHAR)(0x80 | (cp & 0x3F));
+		*str = dest + 3;
+	} else {
+		return FALSE;
+	}
+#else
+	if (cp <= 0x10FFFF) {
+		dest[0] = (SXML_CHAR)cp;
+	} else {
+		return FALSE;
+	}
+#endif
+
+	*html = ptr;
+	return TRUE;
+}
+
 SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str)
 {
 	SXML_CHAR *ps, *pd;
@@ -2375,7 +2466,10 @@ SXML_CHAR* html2str(SXML_CHAR* html, SXML_CHAR* str)
 				*pd = *ps;
 			continue;
 		}
-		
+
+		if ((*(ps + 1) == C2SX('#')) && html_unescape_numeric(&ps, &pd))
+			continue;
+
 		for (i = 0; HTML_SPECIAL_DICT[i].chr; i++) {
 			if (sx_strncmp(ps, HTML_SPECIAL_DICT[i].html, HTML_SPECIAL_DICT[i].html_len))
 				continue;
