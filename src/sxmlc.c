@@ -2380,9 +2380,9 @@ static int html_unescape_numeric(SXML_CHAR** html, SXML_CHAR **str) {
 
 			if (ptr[0] >= C2SX('0') && ptr[0] <= C2SX('9')) {
 				val = (unsigned long)(ptr[0] - C2SX('0'));
-			} else if (is_hex && ptr[0] >= C2SX('a') && ptr[0] <= C2SX('f')) {
+			} else if (ptr[0] >= C2SX('a') && ptr[0] <= C2SX('f')) {
 				val = (unsigned long)(ptr[0] - C2SX('a') + 10);
-			} else if (is_hex && ptr[0] >= C2SX('A') && ptr[0] <= C2SX('F')) {
+			} else if (ptr[0] >= C2SX('A') && ptr[0] <= C2SX('F')) {
 				val = (unsigned long)(ptr[0] - C2SX('A') + 10);
 			} else {
 				return FALSE;
