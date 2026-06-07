@@ -6,7 +6,6 @@
 #endif
 
 #include <stdio.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -287,23 +286,23 @@ static test_result test_gen_file(char* msg)
 	assert_true(NULL, f != NULL, TEST_WARN, C2SX("Cannot open file for reading"), NOP);
 
 	char* lines[] = {
-		"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
-		"<!-- Pre-comment -->",
-		"<!--",
-		"Another one",
-		"Multi-line...",
-		"-->",
-		"<properties>",
-		"    <!--Hello World!-->",
-		"    <data type=\"code\">a &gt;= b &amp;&amp; b &lt;= c</data>",
-		"    <structure1 name=\"spatioconf\">",
-		"        <structure2 name=\"files\">",
-		"            <property3 name=\"aaa\" value=\"&lt;truc&gt;\"/>",
-		"            <property4 name=\"bbb\"/>",
-		"        </structure2>",
-		"    </structure1>",
-		"    <property7 name=\"eee\" value=\"machin3\"/>",
-		"</properties>",
+		/*  1 */ "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
+		/*  2 */ "<!-- Pre-comment -->",
+		/*  3 */ "<!--",
+		/*  4 */ "Another one",
+		/*  5 */ "Multi-line...",
+		/*  6 */ "-->",
+		/*  7 */ "<properties>",
+		/*  8 */ "    <!--Hello World!-->",
+		/*  9 */ "    <data type=\"code\">a &gt;= b &amp;&amp; b &lt;= c</data>",
+		/* 10 */ "    <structure1 name=\"spatioconf\">",
+		/* 11 */ "        <structure2 name=\"files\">",
+		/* 12 */ "            <property3 name=\"aaa\" value=\"&lt;truc&gt;\"/>",
+		/* 13 */ "            <property4 name=\"bbb\"/>",
+		/* 14 */ "        </structure2>",
+		/* 15 */ "    </structure1>",
+		/* 16 */ "    <property7 name=\"eee\" value=\"machin3\"/>",
+		/* 17 */ "</properties>",
 	};
 	char* line = NULL;
 	size_t n = 0;
