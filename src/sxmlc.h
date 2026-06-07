@@ -33,7 +33,7 @@
 /**
  * \brief Current SXMLC version, as a `const char[]`.
  */
-#define SXMLC_VERSION "4.5.5"
+#define SXMLC_VERSION "4.6.0"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,11 +103,11 @@ extern "C" {
 	#define sx_strchr strchr
 	#define sx_strrchr strrchr
 	#define sx_strcpy strcpy
-	
+
 	/* TODO use safer strncpy_s and strcat_s */
 	#define sx_strncpy strncpy
 	#define sx_strcat strcat
-	
+
 	#define sx_printf printf
 	#define sx_fprintf fprintf
 	#define sx_sprintf sprintf
@@ -251,11 +251,11 @@ typedef struct _XMLNode {
 	SXML_CHAR* text;			/**< Text inside the node, or `NULL` if empty. */
 	XMLAttribute* attributes;	/**< Array of attributes. */
 	int n_attributes;			/**< Number of attributes *in `attributes` array* (might not be the number of *active* attributes). */
-	
+
 	struct _XMLNode* father;	/**< Pointer to father node. `NULL` if root. */
 	struct _XMLNode** children; /**< Array of children nodes. */
 	int n_children;				/**< Number of nodes *in `children` array* (might not be the number of *active* children). */
-	
+
 	TagType tag_type;			/**< Node type. */
 	int active;					/**< 'true' to tell that node is active and should be displayed by 'XMLDoc_print_*()'. */
 
@@ -284,7 +284,7 @@ typedef enum _BOM_TYPE {
 	BOM_UTF_32BE = 0x0000feff,
 	BOM_UTF_32LE = 0xfffe0000
 } BOM_TYPE;
-    
+
 /**
  * \brief An XML document, basically an array of `XMLNode`.
  *
