@@ -122,8 +122,6 @@ extern "C" {
 	#define sx_isspace(c) ((int)c >= 0 && (int)c <= 127 && isspace((int)c))
 
 #if !defined(sx_fopen)
-	#define sx_fopen fopen
-
 	#if defined(WIN32) || defined(WIN64) // On Windows, if the filename has unicode characters in it, assume them to be UTF8 and convert it to wide char before calling _wfopen()
 		FILE* sx_fopen(const SXML_CHAR* filename, const SXML_CHAR* mode);
 	#else // On Linux, simply call fopen()
