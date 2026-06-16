@@ -63,7 +63,7 @@ int XMLSearch_init(XMLSearch* search)
 	search->prev = NULL;
 	search->stop_at = INVALID_XMLNODE_POINTER; /* Because 'NULL' can be a valid value */
 	search->init_value = XML_INIT_DONE;
-	
+
 	return TRUE;
 }
 
@@ -445,7 +445,7 @@ static int _attribute_matches(XMLAttribute* to_test, XMLAttribute* pattern)
 
 	if (to_test == NULL || pattern == NULL)
 		return FALSE;
-	
+
 	/* No test on name => match */
 	if (pattern->name == NULL || pattern->name[0] == NULC)
 		return TRUE;
@@ -505,7 +505,7 @@ int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
 	/* TODO: Should a node match if search has no more 'prev' search and node father is still below the initial search ?
 	 Depends if XPath started with "//" (=> yes) or "/" (=> no).
 	 if (search->prev == NULL && node->father != search->from) return FALSE; ? */
-		
+
 	return TRUE;
 }
 

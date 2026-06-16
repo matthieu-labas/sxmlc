@@ -1740,7 +1740,7 @@ int XMLDoc_parse_file_SAX(const SXML_CHAR* filename, const SAX_Callbacks* sax, v
 	FILE* f = NULL;
 	int ret;
 	SAX_Data sd;
-	SXML_CHAR* fmode = 
+	SXML_CHAR* fmode =
 #ifndef SXMLC_UNICODE
 	C2SX("rt");
 #else
