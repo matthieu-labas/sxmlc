@@ -1231,7 +1231,7 @@ static TagType _parse_special_tag(const SXML_CHAR* str, int len, _TAG* tag, XMLN
  */
 TagType XML_parse_1string(const SXML_CHAR* str, XMLNode* xmlnode)
 {
-	SXML_CHAR *p;
+	const SXML_CHAR *p;
 	XMLAttribute* pt;
 	int n, nn, len, rc, tag_end = 0;
 
