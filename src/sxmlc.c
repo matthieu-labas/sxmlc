@@ -339,7 +339,7 @@ int XMLNode_copy(XMLNode* dst, const XMLNode* src, int copy_children)
 	}
 
 	/* Text */
-	if (dst->text != NULL) {
+	if (src->text != NULL) {
 		dst->text = sx_strdup(src->text);
 		if (dst->text == NULL) goto copy_err;
 	}
