@@ -78,6 +78,8 @@ typedef struct _XMLSearch {
  */
 typedef int (*REGEXPR_COMPARE)(SXML_CHAR* str, SXML_CHAR* pattern);
 
+int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern);
+
 /**
  * \brief Set a new comparison function to evaluate whether a string matches a given pattern.
  *
@@ -190,7 +192,7 @@ int XMLSearch_search_set_children_search(XMLSearch* search, XMLSearch* children_
  * \param quote is the quote character to be used (e.g. `"` or `'`). If <code>'\0'</code>,
  * 		`XML_DEFAULT_QUOTE` will be used.
  *
- * \return `false` for a memory problem, `true` otherwise.
+ * \return `NULL` for a memory problem, `*xpath` otherwise.
  */
 SXML_CHAR* XMLSearch_get_XPath_string(const XMLSearch* search, SXML_CHAR** xpath, SXML_CHAR quote);
 

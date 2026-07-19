@@ -41,6 +41,54 @@
 /* The function used to compare a string to a pattern */
 static REGEXPR_COMPARE regstrcmp_search = regstrcmp;
 
+int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
+{
+	SXML_CHAR *p, *s;
+
+	if (str == NULL && pattern == NULL)
+		return TRUE;
+
+	if (str == NULL || pattern == NULL)
+		return FALSE;
+
+	p = pattern;
+	s = str;
+	for (;;) {
+		switch (*p) {
+			/* Any character matches, go to next one */
+			case C2SX('?'):
+				p++;
+				s++;
+				break;
+
+			/* Go to next character in pattern and wait until it is found in 'str' */
+			case C2SX('*'):
+				for (; *p != NULC; p++) { /* Squeeze '**?*??**' to '*' */
+					if (*p != C2SX('*') && *p != C2SX('?'))
+						break;
+				}
+				for (; *s != NULC; s++) {
+					if (*s == *p)
+						break;
+				}
+				break;
+
+			/* NULL character on pattern has to be matched by 'str' */
+			case 0:
+				return *s ? FALSE : TRUE;
+
+			default:
+				if (*p == C2SX('\\')) /* Escape character */
+					p++;
+				if (*p++ != *s++) /* Characters do not match */
+					return FALSE;
+				break;
+		}
+	}
+
+	return FALSE;
+}
+
 REGEXPR_COMPARE XMLSearch_set_regexpr_compare(REGEXPR_COMPARE fct)
 {
 	REGEXPR_COMPARE previous = regstrcmp_search;
@@ -166,9 +214,10 @@ int XMLSearch_search_add_attribute(XMLSearch* search, const SXML_CHAR* attr_name
 	i = search->n_attributes;
 	pt = (XMLAttribute*)__realloc(search->attributes, (i + 1) * sizeof(XMLAttribute));
 	if (pt == NULL) {
-		if (value)
+		if (value != NULL)
 			__free(value);
-		__free(name);
+		if (name != NULL)
+			__free(name);
 		return -1;
 	}
 
@@ -459,7 +508,7 @@ static int _attribute_matches(XMLAttribute* to_test, XMLAttribute* pattern)
 		return TRUE;
 
 	/* Test on value according to pattern "equal" attribute */
-	return regstrcmp_search(to_test->value, pattern->value) == pattern->active ? TRUE : FALSE;
+	return (!!regstrcmp_search(to_test->value, pattern->value)) == (!!pattern->active) ? TRUE : FALSE; // '!!' to force integer 0 or 1
 }
 
 int XMLSearch_node_matches(const XMLNode* node, const XMLSearch* search)
@@ -543,7 +592,7 @@ XMLNode* XMLSearch_next(const XMLNode* from, XMLSearch* search)
 
 static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 {
-	int i, n, brackets, sz_xpath;
+	int i, n, brackets, sz_xpath, len;
 	SXML_CHAR* p;
 
 	brackets = 0;
@@ -582,12 +631,13 @@ static SXML_CHAR* _get_XPath(const XMLNode* node, SXML_CHAR** xpath)
 			n = 1;
 		} else
 			sx_strcat(*xpath, C2SX(", "));
-		p = &(*xpath)[sx_strlen(*xpath)];
+		len = sx_strlen(*xpath);
+		p = &(*xpath)[len]; // TODO? xpath+len
 
 		/* Standard and Unicode versions of 'sprintf' do not have the same signature! :( */
 		sx_sprintf(p,
 #ifdef SXMLC_UNICODE
-			sz_xpath,
+			sz_xpath - len,
 #endif
 			C2SX("@%s=%c"), node->attributes[i].name, XML_DEFAULT_QUOTE);
 

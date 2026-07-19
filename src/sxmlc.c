@@ -616,7 +616,10 @@ int XMLNode_insert_child(XMLNode* node, XMLNode* child, int index)
 
 	CHECK_NODE(node, -1);
 
-	/* We could process cases "first" and "last" in an optimized way, but we prefer readability to (micro-)optimization */
+	// Special case when no children
+	if (node->n_children == 0)
+		return XMLNode_add_child(node, child);
+
 	if (index < 0) /* Before first => first */
 		index = 0;
 	if (index >= node->n_children) /* After last => last */
@@ -795,7 +798,11 @@ int XMLNode_equal(const XMLNode* node1, const XMLNode* node2)
 	if (node1 == NULL || node2 == NULL || node1->init_value != XML_INIT_DONE || node2->init_value != XML_INIT_DONE)
 		return FALSE;
 
-	if (sx_strcmp(node1->tag, node2->tag))
+	if (node1->tag != NULL && node2->tag != NULL && sx_strcmp(node1->tag, node2->tag))
+		return FALSE;
+	if (node1->tag == NULL && node2->tag != NULL)
+		return FALSE;
+	if (node1->tag != NULL && node2->tag == NULL)
 		return FALSE;
 
 	/* Test all attributes from 'node1' */
@@ -925,13 +932,13 @@ int XMLDoc_add_node(XMLDoc* doc, XMLNode* node)
 int XMLDoc_remove_node(XMLDoc* doc, int i_node, int free_node)
 {
 	XMLNode** pt;
-	if (doc == NULL || doc->init_value != XML_INIT_DONE || i_node < 0 || i_node > doc->n_nodes)
+	if (doc == NULL || doc->init_value != XML_INIT_DONE || i_node < 0 || i_node >= doc->n_nodes)
 		return FALSE;
 
 	/* Before modifying first see if we run out of memory */
-	if (doc->n_nodes == 1)
+	if (doc->n_nodes == 1) {
 		pt = NULL;
-	else {
+	} else {
 		pt = __malloc((doc->n_nodes - 1) * sizeof(XMLNode*));
 		if (pt == NULL)
 			return FALSE;
@@ -1119,7 +1126,7 @@ static int _XMLNode_print(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep
 
 int XMLNode_print_attr_sep(const XMLNode* node, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab)
 {
-	return _XMLNode_print(node, f, tag_sep, child_sep, attr_sep, keep_text_spaces, sz_line, 0, nb_char_tab, 0);
+	return _XMLNode_print(node, f, tag_sep, child_sep, attr_sep, keep_text_spaces, sz_line, 0, nb_char_tab, 0) < 0 ? FALSE : TRUE;
 }
 
 int XMLDoc_print_attr_sep(const XMLDoc* doc, FILE* f, const SXML_CHAR* tag_sep, const SXML_CHAR* child_sep, const SXML_CHAR* attr_sep, int keep_text_spaces, int sz_line, int nb_char_tab)
@@ -2565,52 +2572,4 @@ int fprintHTML(FILE* f, SXML_CHAR* str)
 	}
 
 	return n;
-}
-
-int regstrcmp(SXML_CHAR* str, SXML_CHAR* pattern)
-{
-	SXML_CHAR *p, *s;
-
-	if (str == NULL && pattern == NULL)
-		return TRUE;
-
-	if (str == NULL || pattern == NULL)
-		return FALSE;
-
-	p = pattern;
-	s = str;
-	for (;;) {
-		switch (*p) {
-			/* Any character matches, go to next one */
-			case C2SX('?'):
-				p++;
-				s++;
-				break;
-
-			/* Go to next character in pattern and wait until it is found in 'str' */
-			case C2SX('*'):
-				for (; *p != NULC; p++) { /* Squeeze '**?*??**' to '*' */
-					if (*p != C2SX('*') && *p != C2SX('?'))
-						break;
-				}
-				for (; *s != NULC; s++) {
-					if (*s == *p)
-						break;
-				}
-				break;
-
-			/* NULL character on pattern has to be matched by 'str' */
-			case 0:
-				return *s ? FALSE : TRUE;
-
-			default:
-				if (*p == C2SX('\\')) /* Escape character */
-					p++;
-				if (*p++ != *s++) /* Characters do not match */
-					return FALSE;
-				break;
-		}
-	}
-
-	return FALSE;
 }
